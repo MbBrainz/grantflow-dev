@@ -38,15 +38,14 @@ export async function createNotification(
     await dbCreateNotification({
       userId,
       type: data.type,
-      submissionId: data.submissionId || null,
-      discussionId: data.discussionId || null,
+      submissionId: data.submissionId || undefined,
+      discussionId: data.discussionId || undefined,
       content: JSON.stringify({
         title: data.title,
         message: data.message,
         actionUrl: data.actionUrl,
         metadata: data.metadata,
       }),
-      read: false,
     });
 
     // Send real-time notification via SSE

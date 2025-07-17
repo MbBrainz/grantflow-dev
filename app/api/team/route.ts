@@ -1,6 +1,26 @@
-import { getTeamForUser } from '@/lib/db/queries';
+import { getUser, getUserCommittees } from '@/lib/db/queries';
 
 export async function GET() {
-  const team = await getTeamForUser();
-  return Response.json(team);
+  const user = await getUser();
+  
+  if (!user) {
+    return Response.json({ error: 'Not authenticated' }, { status: 401 });
+  }
+
+  try {
+    const committees = await getUserCommittees(user.id);
+    
+    return Response.json({
+      user,
+      committees: committees.map(c => ({
+        id: c.committee.id,
+        name: c.committee.name,
+        role: c.role,
+        isActive: c.isActive
+      }))
+    });
+  } catch (error) {
+    console.error('[Team API]: Error fetching user committees:', error);
+    return Response.json({ error: 'Failed to fetch committees' }, { status: 500 });
+  }
 }

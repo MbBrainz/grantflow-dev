@@ -1,13 +1,12 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
 import { Manrope } from 'next/font/google';
-import { getUser, getTeamForUser } from '@/lib/db/queries';
 import { SWRConfig } from 'swr';
 import { NotificationProvider } from '@/components/providers/notification-provider';
 
 export const metadata: Metadata = {
-  title: 'Next.js SaaS Starter',
-  description: 'Get started quickly with Next.js, Postgres, and Stripe.'
+  title: 'GrantFlow - Grant Management Platform',
+  description: 'Streamlined grant application and review platform for committees and grantees.'
 };
 
 export const viewport: Viewport = {
@@ -22,25 +21,21 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html
-      lang="en"
-      className={`bg-white dark:bg-gray-950 text-black dark:text-white ${manrope.className}`}
-    >
-      <body className="min-h-[100dvh] bg-gray-50">
-        <NotificationProvider>
-          <SWRConfig
-            value={{
-              fallback: {
-                // We do NOT await here
-                // Only components that read this data will suspend
-                '/api/user': getUser(),
-                '/api/team': getTeamForUser()
-              }
-            }}
-          >
+    <html lang="en">
+      <body className={manrope.className}>
+        <SWRConfig 
+          value={{
+            refreshInterval: 0,
+            revalidateOnFocus: false,
+            revalidateOnReconnect: true,
+            errorRetryCount: 2,
+            errorRetryInterval: 5000,
+          }}
+        >
+          <NotificationProvider>
             {children}
-          </SWRConfig>
-        </NotificationProvider>
+          </NotificationProvider>
+        </SWRConfig>
       </body>
     </html>
   );

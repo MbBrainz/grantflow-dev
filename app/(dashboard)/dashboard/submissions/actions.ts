@@ -19,17 +19,24 @@ const milestoneSchema = z.object({
   dueDate: z.string().optional(),
 });
 
-const submissionSchema = z.object({
-  title: z.string().min(1, 'Title is required').max(200),
-  description: z.string().min(1, 'Description is required').max(500),
-  executiveSummary: z.string().min(1, 'Executive summary is required'),
-  postGrantPlan: z.string().min(1, 'Post-grant plan is required'),
-  githubRepoUrl: z.string().url('Invalid GitHub URL').optional().or(z.literal('')),
+const createSubmissionSchema = z.object({
+  title: z.string().min(3, 'Title must be at least 3 characters'),
+  description: z.string().min(10, 'Description must be at least 10 characters'),
+  executiveSummary: z.string().min(50, 'Executive summary must be at least 50 characters'),
+  postGrantPlan: z.string().min(20, 'Post-grant plan must be at least 20 characters'),
+  githubRepoUrl: z.string().url('Must be a valid URL').optional().or(z.literal('')),
   totalAmount: z.string().min(1, 'Total amount is required'),
-  labels: z.array(z.string()).min(1, 'At least one category is required'),
-  milestones: z.array(milestoneSchema).min(1, 'At least one milestone is required'),
+  committeeId: z.coerce.number().min(1, 'Committee selection is required'),
+  grantProgramId: z.coerce.number().min(1, 'Grant program selection is required'),
+  labels: z.array(z.string()).optional().default([]),
+  milestones: z.array(z.object({
+    title: z.string().min(1, 'Milestone title is required'),
+    description: z.string().min(10, 'Milestone description must be at least 10 characters'),
+    requirements: z.string().min(5, 'Milestone requirements must be at least 5 characters'),
+    amount: z.string().min(1, 'Milestone amount is required'),
+    dueDate: z.string().min(1, 'Due date is required'),
+  })).min(1, 'At least one milestone is required'),
 });
-
 
 
 export const createSubmission = async (prevState: any, formData: FormData) => {
@@ -73,7 +80,7 @@ export const createSubmission = async (prevState: any, formData: FormData) => {
     }
 
     // Validate parsed data
-    const validationResult = submissionSchema.safeParse(parsedData);
+    const validationResult = createSubmissionSchema.safeParse(parsedData);
     if (!validationResult.success) {
       console.error('[createSubmission]: Validation error:', validationResult.error.issues);
       return { error: validationResult.error.issues[0].message };
@@ -111,11 +118,10 @@ export const createSubmission = async (prevState: any, formData: FormData) => {
         totalAmount: totalAmount,
       };
 
-      // Create submission record  
-      // TODO: Update this to use actual committee and grant program selection when marketplace is implemented
+      // Create submission record with proper committee/grant program selection
       const newSubmission: NewSubmission = {
-        grantProgramId: 1, // Temporary: Default grant program (will be selected by user in marketplace)
-        committeeId: 1, // Temporary: Default committee (will be selected by user in marketplace)
+        grantProgramId: data.grantProgramId,
+        committeeId: data.committeeId,
         submitterId: user.id, // Updated field name from userId
         title: data.title,
         description: data.description,

@@ -1,56 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { eq } from 'drizzle-orm';
-import { db } from '@/lib/db/drizzle';
-import { users, teams, teamMembers, activityLogs } from '@/lib/db/schema';
-import { setSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
-
-async function logActivity(
-  teamId: number | null | undefined,
-  userId: number,
-  type: string,
-  ipAddress?: string
-) {
-  if (teamId === null || teamId === undefined) {
-    return;
-  }
-  const newActivity = {
-    teamId,
-    userId,
-    action: type,
-    ipAddress: ipAddress || ''
-  };
-  await db.insert(activityLogs).values(newActivity);
-}
+import { db } from '@/lib/db/drizzle';
+import { users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import { setSession } from '@/lib/auth/session';
 
 export async function GET(request: NextRequest) {
-  console.log('[github_callback]: Processing GitHub OAuth callback');
-  
-  const { searchParams } = new URL(request.url);
+  const searchParams = request.nextUrl.searchParams;
   const code = searchParams.get('code');
   const state = searchParams.get('state');
-  const error = searchParams.get('error');
 
-  if (error) {
-    console.log('[github_callback]: OAuth error', error);
-    return NextResponse.redirect(new URL('/sign-in?error=oauth_error', request.url));
-  }
-
-  if (!code || !state) {
-    console.log('[github_callback]: Missing code or state parameters');
-    return NextResponse.redirect(new URL('/sign-in?error=missing_params', request.url));
-  }
-
-  // Verify state parameter
-  const storedState = request.cookies.get('oauth_state')?.value;
-  if (state !== storedState) {
-    console.log('[github_callback]: Invalid state parameter');
-    return NextResponse.redirect(new URL('/sign-in?error=invalid_state', request.url));
+  if (!code) {
+    console.error('[GitHub OAuth]: No authorization code received');
+    return NextResponse.redirect(new URL('/sign-in?error=oauth_failed', request.url));
   }
 
   try {
+    console.log('[GitHub OAuth]: Processing authorization code');
+
     // Exchange code for access token
-    console.log('[github_callback]: Exchanging code for access token');
     const tokenResponse = await fetch('https://github.com/login/oauth/access_token', {
       method: 'POST',
       headers: {
@@ -60,153 +28,164 @@ export async function GET(request: NextRequest) {
       body: JSON.stringify({
         client_id: process.env.GITHUB_CLIENT_ID,
         client_secret: process.env.GITHUB_CLIENT_SECRET,
-        code,
+        code: code,
       }),
     });
 
+    if (!tokenResponse.ok) {
+      console.error('[GitHub OAuth]: Failed to exchange code for token');
+      return NextResponse.redirect(new URL('/sign-in?error=oauth_failed', request.url));
+    }
+
     const tokenData = await tokenResponse.json();
     
-    if (!tokenData.access_token) {
-      console.log('[github_callback]: Failed to get access token', tokenData);
-      return NextResponse.redirect(new URL('/sign-in?error=token_error', request.url));
+    if (tokenData.error) {
+      console.error('[GitHub OAuth]: Token exchange error:', tokenData);
+      return NextResponse.redirect(new URL('/sign-in?error=oauth_failed', request.url));
     }
 
-    // Fetch user data from GitHub
-    console.log('[github_callback]: Fetching user data from GitHub');
+    const accessToken = tokenData.access_token;
+
+    // Get GitHub user information
     const userResponse = await fetch('https://api.github.com/user', {
       headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`,
-        'Accept': 'application/vnd.github.v3+json',
+        'Authorization': `token ${accessToken}`,
+        'Accept': 'application/json',
       },
     });
 
-    const githubUser = await userResponse.json();
-    console.log('[github_callback]: GitHub user data received', { id: githubUser.id, login: githubUser.login });
-
-    // Fetch user emails to get primary email
-    const emailsResponse = await fetch('https://api.github.com/user/emails', {
-      headers: {
-        'Authorization': `Bearer ${tokenData.access_token}`,
-        'Accept': 'application/vnd.github.v3+json',
-      },
-    });
-
-    const emails = await emailsResponse.json();
-    const primaryEmail = emails.find((email: any) => email.primary)?.email || githubUser.email;
-
-    console.log('[github_callback]: Primary email found', primaryEmail);
-
-    // Check if user exists by githubId first, then by email
-    let existingUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.githubId, githubUser.id.toString()))
-      .limit(1);
-
-    if (existingUser.length === 0 && primaryEmail) {
-      existingUser = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, primaryEmail))
-        .limit(1);
+    if (!userResponse.ok) {
+      console.error('[GitHub OAuth]: Failed to fetch user information');
+      return NextResponse.redirect(new URL('/sign-in?error=oauth_failed', request.url));
     }
 
+    const githubUser = await userResponse.json();
+    console.log('[GitHub OAuth]: Retrieved GitHub user:', githubUser.login);
+
+    // Get user's primary email
+    const emailResponse = await fetch('https://api.github.com/user/emails', {
+      headers: {
+        'Authorization': `token ${accessToken}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    let email = githubUser.email;
+    if (!email && emailResponse.ok) {
+      const emails = await emailResponse.json();
+      const primaryEmail = emails.find((e: any) => e.primary);
+      email = primaryEmail?.email || emails[0]?.email;
+    }
+
+    if (!email) {
+      console.error('[GitHub OAuth]: No email found for GitHub user');
+      return NextResponse.redirect(new URL('/sign-in?error=no_email', request.url));
+    }
+
+    // Check if user already exists
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.githubId, String(githubUser.id)))
+      .limit(1);
+
     let user;
-    let isNewUser = false;
 
     if (existingUser.length > 0) {
-      // Update existing user with GitHub info
-      console.log('[github_callback]: Updating existing user with GitHub info');
+      // User exists, update their information
       user = existingUser[0];
+      console.log('[GitHub OAuth]: Existing user found, updating info');
       
       await db
         .update(users)
         .set({
-          githubId: githubUser.id.toString(),
-          name: user.name || githubUser.name || githubUser.login,
-          email: primaryEmail || user.email,
+          name: githubUser.name || githubUser.login,
+          email: email,
+          updatedAt: new Date(),
         })
         .where(eq(users.id, user.id));
-        
-      // Update user object with new data
+
+      // Update user object with new info for session
       user = {
         ...user,
-        githubId: githubUser.id.toString(),
-        name: user.name || githubUser.name || githubUser.login,
-        email: primaryEmail || user.email,
+        name: githubUser.name || githubUser.login,
+        email: email,
       };
     } else {
-      // Create new user
-      console.log('[github_callback]: Creating new user');
-      isNewUser = true;
-      
-      const [createdUser] = await db
-        .insert(users)
-        .values({
-          email: primaryEmail,
-          name: githubUser.name || githubUser.login,
-          githubId: githubUser.id.toString(),
-          role: 'member', // Default role for GitHub users
-        })
-        .returning();
-
-      user = createdUser;
-
-      // Create a team for new users (following existing pattern)
-      const [createdTeam] = await db
-        .insert(teams)
-        .values({
-          name: `${githubUser.login}'s Team`,
-        })
-        .returning();
-
-      if (createdTeam) {
-        await db
-          .insert(teamMembers)
-          .values({
-            userId: user.id,
-            teamId: createdTeam.id,
-            role: 'owner',
-          });
-
-        await logActivity(createdTeam.id, user.id, 'SIGN_UP');
-      }
-    }
-
-    console.log('[github_callback]: Setting session for user', { userId: user.id });
-    
-    // Set session using existing auth system
-    await setSession(user);
-
-    // Log activity
-    if (!isNewUser) {
-      const userWithTeam = await db
-        .select({ teamId: teamMembers.teamId })
-        .from(teamMembers)
-        .where(eq(teamMembers.userId, user.id))
+      // Check if there's an existing user with this email
+      const userByEmail = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
         .limit(1);
 
-      if (userWithTeam.length > 0) {
-        await logActivity(userWithTeam[0].teamId, user.id, 'SIGN_IN');
+      if (userByEmail.length > 0) {
+        // Link GitHub account to existing email-based account
+        user = userByEmail[0];
+        console.log('[GitHub OAuth]: Linking GitHub to existing email account');
+        
+        await db
+          .update(users)
+          .set({
+            githubId: String(githubUser.id),
+            name: githubUser.name || githubUser.login || user.name,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, user.id));
+
+        // Update user object with GitHub info
+        user = {
+          ...user,
+          githubId: String(githubUser.id),
+          name: githubUser.name || githubUser.login || user.name,
+        };
+      } else {
+        // Create new user
+        console.log('[GitHub OAuth]: Creating new user');
+        
+        const [newUser] = await db
+          .insert(users)
+          .values({
+            name: githubUser.name || githubUser.login,
+            email: email,
+            githubId: String(githubUser.id),
+            role: 'grantee', // Default role for new GitHub users
+            passwordHash: null, // GitHub OAuth users don't have passwords
+          })
+          .returning();
+
+        if (!newUser) {
+          console.error('[GitHub OAuth]: Failed to create new user');
+          return NextResponse.redirect(new URL('/sign-in?error=creation_failed', request.url));
+        }
+
+        user = newUser;
+        console.log('[GitHub OAuth]: New user created successfully');
       }
     }
 
-    // Get redirect URL
-    const redirectTo = request.cookies.get('oauth_redirect')?.value || '/dashboard';
+    // Set session
+    await setSession(user);
+    console.log('[GitHub OAuth]: Session set for user:', user.id);
 
-    console.log('[github_callback]: Redirecting to', redirectTo);
+    // Determine redirect URL
+    let redirectUrl = '/dashboard';
+    if (state) {
+      try {
+        const stateData = JSON.parse(decodeURIComponent(state));
+        if (stateData.redirect) {
+          redirectUrl = stateData.redirect;
+        }
+      } catch (e) {
+        console.warn('[GitHub OAuth]: Failed to parse state parameter:', e);
+      }
+    }
 
-    // Create response with redirect
-    const response = NextResponse.redirect(new URL(redirectTo, request.url));
-    
-    // Clean up OAuth cookies
-    response.cookies.delete('oauth_state');
-    response.cookies.delete('oauth_redirect');
-
-    return response;
+    console.log('[GitHub OAuth]: Authentication successful, redirecting to:', redirectUrl);
+    return NextResponse.redirect(new URL(redirectUrl, request.url));
 
   } catch (error) {
-    console.error('[github_callback]: Error during OAuth callback', error);
-    return NextResponse.redirect(new URL('/sign-in?error=server_error', request.url));
+    console.error('[GitHub OAuth]: Authentication error:', error);
+    return NextResponse.redirect(new URL('/sign-in?error=oauth_failed', request.url));
   }
 } 

@@ -46,8 +46,7 @@ export const postMessage = validatedActionWithUser(
         discussionId: data.discussionId,
         content: data.content,
         messageType: data.messageType,
-        metadata: data.metadata || null,
-        authorId: user.id, // This will be overridden in createMessage function
+        metadata: data.metadata,
       });
 
       console.log('[postMessage]: Message created successfully', { messageId: newMessage.id });
@@ -159,7 +158,6 @@ export const postMessageToSubmission = validatedActionWithUser(
         discussionId: discussion.id,
         content: data.content,
         messageType: data.messageType,
-        authorId: user.id,
       });
 
       console.log('[postMessageToSubmission]: Message posted successfully', { 
@@ -225,7 +223,6 @@ export const postMessageToMilestone = validatedActionWithUser(
         discussionId: discussion.id,
         content: data.content,
         messageType: data.messageType,
-        authorId: user.id,
       });
 
       console.log('[postMessageToMilestone]: Message posted successfully', { 
