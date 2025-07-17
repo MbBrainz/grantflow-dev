@@ -8,7 +8,7 @@ import { getUser, ensureDiscussionForSubmission, ensureDiscussionForMilestone } 
 import { validatedActionWithUser } from '@/lib/auth/middleware';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
-import type { GitHubPRData } from '@/lib/github/octokit';
+
 
 // Validation schemas
 const milestoneSchema = z.object({
@@ -30,49 +30,64 @@ const submissionSchema = z.object({
   milestones: z.array(milestoneSchema).min(1, 'At least one milestone is required'),
 });
 
-async function createGitHubPR(submissionData: any): Promise<string | null> {
-  console.log('[createGitHubPR]: Creating GitHub PR for submission', { title: submissionData.title });
-  
+
+
+export const createSubmission = async (prevState: any, formData: FormData) => {
+  console.log('[createSubmission]: Starting submission creation');
+
+  // Get authenticated user
+  const user = await getUser();
+  if (!user) {
+    return { error: 'User not authenticated' };
+  }
+
   try {
-    const { createGrantProposalPR } = await import('@/lib/github/octokit');
-    
-    // Parse total amount
-    const totalAmount = parseFloat(submissionData.totalAmount);
-    if (isNaN(totalAmount)) {
-      throw new Error('Invalid total amount');
+    // Parse FormData with special handling for JSON fields
+    const rawData = Object.fromEntries(formData);
+    console.log('[createSubmission]: Raw FormData entries:', {
+      ...rawData,
+      labels: typeof rawData.labels === 'string' ? `JSON string: ${rawData.labels.substring(0, 100)}...` : rawData.labels,
+      milestones: typeof rawData.milestones === 'string' ? `JSON string: ${rawData.milestones.substring(0, 100)}...` : rawData.milestones,
+    });
+
+    // Parse JSON fields
+    let parsedData;
+    try {
+      parsedData = {
+        ...rawData,
+        labels: typeof rawData.labels === 'string' ? JSON.parse(rawData.labels) : rawData.labels,
+        milestones: typeof rawData.milestones === 'string' ? JSON.parse(rawData.milestones) : rawData.milestones,
+      };
+      console.log('[createSubmission]: Parsed data:', {
+        ...parsedData,
+        labels: parsedData.labels,
+        labelsType: typeof parsedData.labels,
+        labelsIsArray: Array.isArray(parsedData.labels),
+        labelsLength: Array.isArray(parsedData.labels) ? parsedData.labels.length : 'not array',
+        milestones: Array.isArray(parsedData.milestones) ? parsedData.milestones.length + ' milestones' : 'not array',
+        milestonesType: typeof parsedData.milestones,
+      });
+    } catch (parseError) {
+      console.error('[createSubmission]: JSON parsing error:', parseError);
+      return { error: 'Invalid data format' };
     }
 
-    // Prepare data for GitHub PR
-    const prData: GitHubPRData = {
-      title: submissionData.title,
-      description: submissionData.description,
-      executiveSummary: submissionData.executiveSummary,
-      postGrantPlan: submissionData.postGrantPlan,
-      milestones: submissionData.milestones.map((milestone: any) => ({
-        ...milestone,
-        amount: parseFloat(milestone.amount) || 0,
-      })),
-      labels: submissionData.labels || [],
-      totalAmount: totalAmount,
-    };
+    // Validate parsed data
+    const validationResult = submissionSchema.safeParse(parsedData);
+    if (!validationResult.success) {
+      console.error('[createSubmission]: Validation error:', validationResult.error.errors);
+      return { error: validationResult.error.errors[0].message };
+    }
 
-    const prUrl = await createGrantProposalPR(prData);
-    console.log('[createGitHubPR]: Created PR successfully', { prUrl });
-    
-    return prUrl;
-  } catch (error) {
-    console.error('[createGitHubPR]: Error creating GitHub PR', error);
-    // Return null to continue submission without PR (can be retried later)
-    return null;
-  }
-}
+    const data = validationResult.data;
+    console.log('[createSubmission]: Validation successful, proceeding with submission for user', { 
+      userId: user.id, 
+      title: data.title,
+      labelsCount: data.labels.length,
+      milestonesCount: data.milestones.length,
+    });
 
-export const createSubmission = validatedActionWithUser(
-  submissionSchema,
-  async (data, formData, user) => {
-    console.log('[createSubmission]: Creating new submission for user', { userId: user.id, title: data.title });
-
-    try {
+    // Now continue with the submission logic
       // Parse and validate data
       const totalAmount = parseFloat(data.totalAmount);
       if (isNaN(totalAmount) || totalAmount <= 0) {
@@ -90,21 +105,17 @@ export const createSubmission = validatedActionWithUser(
         return { error: 'Milestones total cannot exceed total funding amount' };
       }
 
-      // Create GitHub PR first
-      const githubPrUrl = await createGitHubPR(data);
-      
       // Store complete form data as JSON
       const completeFormData = {
         ...data,
         totalAmount: totalAmount,
-        githubPrUrl,
       };
 
       // Create submission record
       const newSubmission: NewSubmission = {
         userId: user.id, // Use userId not submitterId
-        githubPrId: githubPrUrl ? githubPrUrl.split('/').pop() : null,
-        status: 'draft', // Start as draft
+        githubPrId: null, // No GitHub PR creation
+        status: 'submitted', // Start as submitted since no PR needed
         labels: JSON.stringify(data.labels), // Store as JSON string
         formData: JSON.stringify(completeFormData), // Store complete form data
       };
@@ -150,30 +161,23 @@ export const createSubmission = validatedActionWithUser(
       await ensureDiscussionForSubmission(createdSubmission.id);
       console.log('[createSubmission]: Created discussion for submission', { submissionId: createdSubmission.id });
 
-      // Update submission status to submitted if PR was created
-      if (githubPrUrl) {
-        await db
-          .update(submissions)
-          .set({ status: 'submitted' })
-          .where(eq(submissions.id, createdSubmission.id));
-      }
+      // Submission is already set to 'submitted' status - no PR needed
 
       // Revalidate the submissions page
       revalidatePath('/dashboard/submissions');
 
       console.log('[createSubmission]: Submission process completed successfully');
       
-      // Redirect to submissions list
-      redirect('/dashboard/submissions');
+      // Return success response (client will handle redirect)
+      return { success: true, submissionId: createdSubmission.id };
 
-    } catch (error) {
-      console.error('[createSubmission]: Error creating submission', error);
-      return { 
-        error: 'Failed to create submission. Please try again.' 
-      };
-    }
+  } catch (error) {
+    console.error('[createSubmission]: Error creating submission', error);
+    return { 
+      error: 'Failed to create submission. Please try again.' 
+    };
   }
-);
+};
 
 // Get user's submissions
 export async function getUserSubmissions() {

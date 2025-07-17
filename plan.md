@@ -173,7 +173,7 @@ notifications: {
 - [x] Implement draft mode with local storage
 - [x] Create submission backend (server actions)
 - [x] Store submission metadata in DB
-- [ ] Remove GitHub PR creation (keep as reference links only)
+- [x] Remove GitHub PR creation (keep as reference links only)
 
 ### D. Discussion & Communication System (✅ COMPLETED)
 - [x] Design discussion thread data model

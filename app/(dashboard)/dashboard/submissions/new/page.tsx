@@ -6,12 +6,14 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Save, Send } from 'lucide-react';
+import { ArrowLeft, Save, Send, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 import { createSubmission } from '../actions';
+import { useToast } from '@/lib/hooks/use-toast';
 
 export default function NewSubmissionPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDraft, setIsDraft] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -110,8 +112,20 @@ export default function NewSubmissionPage() {
     try {
       console.log('[new_submission]: Saving draft', formData);
       localStorage.setItem('grant_draft', JSON.stringify(formData));
+      
+      // Show success toast
+      toast({
+        title: "Draft Saved",
+        description: "Your grant proposal has been saved as a draft.",
+        variant: "success",
+      });
     } catch (error) {
       console.error('[new_submission]: Error saving draft', error);
+      toast({
+        title: "Error",
+        description: "Failed to save draft. Please try again.",
+        variant: "destructive",
+      });
     } finally {
       setIsDraft(false);
     }
@@ -122,39 +136,91 @@ export default function NewSubmissionPage() {
     setError(null);
     
     try {
-      console.log('[new_submission]: Submitting proposal', formData);
+      console.log('[new_submission]: Submitting proposal with detailed logging:', {
+        title: formData.title,
+        description: formData.description?.substring(0, 50) + '...',
+        labelsArray: formData.labels,
+        labelsLength: formData.labels.length,
+        milestonesArray: formData.milestones,
+        milestonesLength: formData.milestones.length,
+        totalAmount: formData.totalAmount,
+      });
       
-      // Create FormData object to match server action expectation
+      // Validate critical data before sending
+      if (!Array.isArray(formData.labels) || formData.labels.length === 0) {
+        throw new Error('Labels must be a non-empty array');
+      }
+      if (!Array.isArray(formData.milestones) || formData.milestones.length === 0) {
+        throw new Error('Milestones must be a non-empty array');
+      }
+      
+      // Create FormData and add fields properly
       const submitFormData = new FormData();
       
       // Add all form fields
       Object.entries(formData).forEach(([key, value]) => {
         if (key === 'labels') {
+          console.log('[new_submission]: Adding labels as JSON:', value);
           submitFormData.append(key, JSON.stringify(value));
         } else if (key === 'milestones') {
+          console.log('[new_submission]: Adding milestones as JSON:', value);
           submitFormData.append(key, JSON.stringify(value));
         } else {
           submitFormData.append(key, String(value));
         }
       });
       
+      // Log what's actually being sent
+      console.log('[new_submission]: FormData entries:');
+      for (const [key, value] of submitFormData.entries()) {
+        console.log(`[new_submission]: ${key}:`, typeof value === 'string' ? value.substring(0, 100) + (value.length > 100 ? '...' : '') : value);
+      }
+      
       // Call server action
       const result = await createSubmission({}, submitFormData);
       
       if (result?.error) {
         setError(result.error);
+        toast({
+          title: "Submission Failed",
+          description: result.error,
+          variant: "destructive",
+        });
         return;
       }
       
-      // Remove draft from local storage on successful submission
-      localStorage.removeItem('grant_draft');
-      
-      // Server action handles redirect, but just in case:
-      // router.push('/dashboard/submissions');
+      if (result?.success) {
+        console.log('[new_submission]: Submission successful with ID:', result.submissionId);
+        
+        // Remove draft from local storage on successful submission
+        localStorage.removeItem('grant_draft');
+        
+        // Show success toast
+        toast({
+          title: "Proposal Submitted!",
+          description: "Your grant proposal has been submitted successfully and is now under review.",
+          variant: "success",
+        });
+        
+        // Redirect to submissions dashboard
+        setTimeout(() => {
+          router.push('/dashboard/submissions');
+        }, 1500);
+      } else {
+        // Handle unexpected response
+        console.error('[new_submission]: Unexpected response:', result);
+        setError('Unexpected response from server');
+      }
       
     } catch (error) {
       console.error('[new_submission]: Error submitting proposal', error);
-      setError('Failed to submit proposal. Please try again.');
+      const errorMessage = 'Failed to submit proposal. Please try again.';
+      setError(errorMessage);
+      toast({
+        title: "Submission Failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -440,16 +506,35 @@ export default function NewSubmissionPage() {
             onClick={saveDraft}
             disabled={isDraft}
           >
-            <Save className="h-4 w-4 mr-2" />
-            {isDraft ? 'Saving...' : 'Save Draft'}
+            {isDraft ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                Saving...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                Save Draft
+              </>
+            )}
           </Button>
 
           <Button
             onClick={submitProposal}
             disabled={isSubmitting || !isFormValid}
+            className="bg-green-600 hover:bg-green-700 text-white"
           >
-            <Send className="h-4 w-4 mr-2" />
-            {isSubmitting ? 'Submitting...' : 'Submit Proposal'}
+            {isSubmitting ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                Submitting...
+              </>
+            ) : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Submit Proposal
+              </>
+            )}
           </Button>
         </div>
       </div>
