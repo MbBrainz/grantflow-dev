@@ -2,35 +2,44 @@
 
 ### **Problem**
 
-Teams completing bounty work submit deliverables across scattered channels - GitHub, Discord, Google Docs. Curators manually track who submitted what, coordinate reviews via chat, and process payouts through multiple transactions. There's no unified place to submit completed work, no transparent review process, and no clear status tracking for teams awaiting approval.
+Grant committees operate in isolation with fragmented workflows - teams submit deliverables across scattered channels (GitHub, Discord, Google Docs), curators manually track submissions, coordinate reviews via chat, and process payouts through multiple transactions. There's no unified marketplace for grant discovery, no standardized review process, and no transparent status tracking for teams seeking funding.
 
 **Solution** 
 
-All-in-one platform where teams submit completed work, curators review collaboratively through integrated discussion system, and approved payouts happen instantly.
+Two-sided marketplace platform where **grant committees** create discoverable profiles and manage their grant programs, while **grantee teams** can discover opportunities, submit applications, and track progress through integrated discussion systems with instant payouts upon approval.
 
 ### **POC Guidelines**
 
-1. **For Teams Completing Work**
-    - Submit deliverables through structured forms
-    - Link GitHub repos/PRs/commits as proof of completion
-    - Track review status in real-time within the platform
-    - Participate in discussions with curators directly in the app
-    - Get notified when curators request changes through in-app messaging
-2. **For Curators**
-    - Access all submissions in unified dashboard with integrated discussions
-    - Review with co-curators using voting system within discussion threads
-    - Request changes with clear feedback through in-app communication
-    - Reference and analyze linked GitHub repositories during review
-    - Trigger instant payouts upon approval
+1. **For Grant Committees**
+    - Create and manage committee profiles with branding, focus areas, and funding criteria
+    - Set up grant programs with clear application requirements and milestone structures
+    - Configure multi-curator approval workflows and voting thresholds
+    - Access unified dashboard to manage all submissions across their programs
+    - Review applications with co-curators using integrated voting system within discussion threads
+    - Request changes with clear feedback through in-app communication system
+    - Reference and analyze linked GitHub repositories during review process
+    - Trigger instant payouts upon milestone approval
+    - Maintain public transparency with visible voting history and review criteria
+
+2. **For Grantee Teams**
+    - Discover grant committees and browse available funding opportunities
+    - Submit applications through structured forms tailored to each committee's requirements
+    - Link GitHub repos/PRs/commits as proof of deliverables and progress
+    - Track application and milestone review status in real-time within the platform
+    - Participate in discussions with curators directly through integrated chat system
+    - Receive notifications when curators request changes or updates
+    - Submit milestone updates with linked code repositories and progress documentation
+    - Maintain transparent project history visible to public and future committees
 3. **Smart Contract Backend**
     - Multi-curator approval logic
     - Automatic payout via bounty precompile
     - Immutable record of reviews and decisions
-4. **Transparency Features**
-    - Public view of submission status and discussion history
-    - Curator voting history within discussions
-    - Time from submission to payout
-    - Clear feedback on requested changes
+4. **Platform Features**
+    - **Committee Discovery:** Browse and compare grant committees with their focus areas, funding amounts, and approval rates
+    - **Public Transparency:** View submission status, discussion history, and voting outcomes for all committees
+    - **Committee Profiles:** Detailed pages showing committee information, past grants, curator bios, and review criteria  
+    - **Cross-Committee Analytics:** Compare committee performance, average payout times, and approval rates
+    - **Grantee Profiles:** Track team history, past grants received, and success rates across committees
 
 ## Main sources of information about grants
 
@@ -68,21 +77,28 @@ Basically 2 phases:
 1. Grant approval phase
 2. Grant Awarding phase
 
-### Overall process of grant approval and rewarding (UPDATED FOR NEW ARCHITECTURE)
+### Overall process of grant approval and rewarding (MULTI-COMMITTEE PLATFORM)
 
-1. Grant Idea submission by 3rd party (through webapp form)
-2. Grant Idea feedback by committee (in webapp discussion thread)
-    1. back and forth between potential grantee and committee in real-time chat
-    2. updates on submission by grantee through webapp
-    3. structured discussion with voting and status tracking
-3. Grant Idea Approval (through webapp voting system)
-4. Committee tracks progress of each milestone through dedicated discussion threads
-5. Updates by Grantee (milestone submissions with GitHub repo/PR/commit links)
-6. Review by committee (in milestone-specific discussion threads)
-    1. similar discussion process to pre-approval phase
-    2. GitHub repo analysis and code review within webapp context
-7. Final review (on-platform voting and approval)
-8. Awarding the grant with multiSig Tx
+**Committee Onboarding:**
+1. Grant committees create profiles with branding, focus areas, and review criteria
+2. Configure curator roles, voting thresholds, and approval workflows
+3. Set up grant programs with funding amounts and milestone requirements
+
+**Grant Application Flow:**
+1. Grantee teams discover and browse committee profiles and available programs
+2. Submit applications to specific committees through customized webapp forms
+3. Committee-specific discussion threads initiated for each submission
+4. Real-time back-and-forth between grantee team and committee curators
+5. Grantee updates submissions based on committee feedback through webapp
+6. Committee approval through configured voting system and thresholds
+
+**Milestone Tracking (Per Committee):**
+7. Committee tracks progress through dedicated milestone discussion threads
+8. Grantee milestone submissions with GitHub repo/PR/commit links
+9. Committee review in milestone-specific discussion threads
+10. GitHub repository analysis and code review within webapp context
+11. Committee voting and approval based on their configured workflow
+12. Automated payout via committee's multi-sig wallet configuration
 
 ### Milestone Assessment process
 
@@ -100,18 +116,30 @@ Sub Problem: Assessment problem
 - Searching though repositories based on the readme is hard
 - Process of async communication within committee and approvals are tedious
 
-## Solution: AI supported Web App that consolidates the submission, back and forth, approval, milestone assessment AND multi-sig rewarding process
+## Solution: AI supported Marketplace Web App that consolidates committee discovery, application submission, collaborative review, milestone tracking AND multi-sig rewarding process
 
-Application should include: 
+**Two-Sided Platform Features:**
 
-- submission form (with cache based draft mode)
+**For Grant Committees:**
+- Committee profile creation and management with branding and focus areas
+- Grant program setup with customizable requirements and milestone structures
+- Curator role management and voting threshold configuration
+- Multi-sig wallet integration for automated payouts
+
+**For Grantee Teams:**
+- Committee discovery and comparison interface
+- Application submission forms (with cache based draft mode) tailored per committee
+- Team profile and grant history tracking
+
+**Shared Platform Features:**
 - **IN-APP discussion system** for all communication between grantees and curators
 - PUBLIC submission review and update process (readable by anyone)
-- submission states (awaiting x or y)
-- Milestone submission forms and processes for Grantee
-- On-Chain MileStone approval using multiSig
-- Milestone State Overview
+- Committee-specific submission states and workflow tracking
+- Milestone submission forms and processes for Grantees
+- On-Chain Milestone approval using committee-specific multiSig wallets
+- Milestone State Overview across all committees
 - **Real-time notifications** for discussion updates
+- Cross-committee analytics and performance metrics
 - Submission and Authentication should be 100% web3 based
 
 This application should NOT include:
@@ -144,40 +172,60 @@ Stack
     - **NO PR CREATION**: GitHub used purely for code repository references
     - Quick overview of edited files from linked repos/PRs/commits
 
-### Updated Submission Flow
+### Updated Multi-Committee Submission Flow
 
-1. 3rd party representative submission:
+**Committee Setup:**
+1. Grant committees create profiles with branding, focus areas, and review criteria
+2. Configure grant programs with funding amounts, requirements, and milestone structures
+3. Set up curator teams and voting workflows
+
+**Grantee Application Process:**
+1. Grantee teams browse committee marketplace:
+    1. Compare committee profiles, focus areas, and funding amounts
+    2. Review past grants, approval rates, and average processing times
+    3. Select appropriate committee(s) for their project type
+2. Team application submission:
     1. Logs in via GitHub OAuth (authentication only)
-    2. fills in form according to specs and extra info
-    3. fixed set of labels for type of project (multi-selectable)
-    4. links to GitHub repositories/PRs/commits for deliverables
-    5. including a wallet on which it wants to receive funds 
-2. web-app confirms ownership of wallet through the submission
-3. form submits and creates:
-    - Submission record in database
-    - Dedicated discussion thread for the submission
-    - Initial status tracking
-4. **Discussion Phase:**
-    - All communication happens within the webapp
-    - Curators and grantees communicate in real-time
+    2. Selects target committee and available grant program
+    3. Fills in committee-specific application form
+    4. Adds project labels relevant to committee's focus areas
+    5. Links GitHub repositories/PRs/commits for deliverables
+    6. Provides wallet address for potential funding
+3. Application processing:
+    - Web-app confirms wallet ownership through submission
+    - Creates submission record linked to specific committee
+    - Initiates committee-specific discussion thread
+    - Sets initial status tracking based on committee workflow
+
+**Committee Review Process:**
+4. **Committee Discussion Phase:**
+    - All communication happens within webapp discussion threads
+    - Committee curators collaborate using integrated voting system
     - GitHub repositories are referenced and analyzed within discussions
-    - Voting and approval happens through webapp interface
-    - Public can read all discussions and status updates
-5. **Milestone Updates:**
+    - Voting and approval follows committee's configured workflow
+    - Public transparency with visible discussion history and voting outcomes
+
+**Milestone Management:**
+5. **Committee-Specific Milestone Updates:**
     - Grantees submit milestone updates through webapp
     - Link specific GitHub repos/PRs/commits as deliverables
-    - Dedicated discussion threads per milestone
-    - Curator review and approval through webapp voting system
+    - Dedicated discussion threads per milestone within committee context
+    - Committee review and approval through their configured voting system
+    - Automated payouts via committee's multi-sig wallet setup
 
 ### Key Architectural Changes
 
-**FROM:** GitHub-centric workflow with PR creation and comment-based discussion
-**TO:** Webapp-centric workflow with integrated discussion system and GitHub as code reference
+**FROM:** Single committee with GitHub-centric workflow and PR creation
+**TO:** Multi-committee marketplace platform with webapp-centric workflows and GitHub as code reference
 
-**Benefits:**
-- Unified platform for all communication
-- Better structure for voting and approval workflows
-- Enhanced transparency with public discussion viewing
-- Real-time updates and notifications
-- AI integration opportunities for discussion analysis
-- Cleaner separation between code repositories and review process 
+**Platform Benefits:**
+- **Committee Discovery:** Centralized marketplace for grant opportunities with committee comparison
+- **Scalable Governance:** Multiple committees can operate independently with custom workflows
+- **Unified Communication:** All discussions happen within webapp regardless of committee
+- **Cross-Committee Analytics:** Performance metrics and comparison across different committees
+- **Enhanced Transparency:** Public visibility into all committee operations and decision-making
+- **Standardized Process:** Consistent application and review experience across committees
+- **Real-time Collaboration:** Live updates and notifications for all committee activities
+- **AI Integration:** Opportunities for discussion analysis and review assistance across platform
+- **Portfolio Management:** Teams can track applications across multiple committees
+- **Committee Autonomy:** Each committee maintains control over their specific requirements and processes 

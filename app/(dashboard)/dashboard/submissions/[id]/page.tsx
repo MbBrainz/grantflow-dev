@@ -32,6 +32,13 @@ async function getSubmissionWithMilestones(id: number) {
     return {
       ...submission[0],
       milestones: submissionMilestones,
+      // Legacy support - create formData from structured fields for backward compatibility
+      formData: JSON.stringify({
+        title: submission[0].title,
+        description: submission[0].description,
+        executiveSummary: submission[0].executiveSummary,
+        postGrantPlan: submission[0].postGrantPlan,
+      }),
     };
   } catch (error) {
     console.error('[getSubmissionWithMilestones]: Error fetching submission', error);

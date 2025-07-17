@@ -75,8 +75,8 @@ export const createSubmission = async (prevState: any, formData: FormData) => {
     // Validate parsed data
     const validationResult = submissionSchema.safeParse(parsedData);
     if (!validationResult.success) {
-      console.error('[createSubmission]: Validation error:', validationResult.error.errors);
-      return { error: validationResult.error.errors[0].message };
+      console.error('[createSubmission]: Validation error:', validationResult.error.issues);
+      return { error: validationResult.error.issues[0].message };
     }
 
     const data = validationResult.data;
@@ -111,13 +111,23 @@ export const createSubmission = async (prevState: any, formData: FormData) => {
         totalAmount: totalAmount,
       };
 
-      // Create submission record
+      // Create submission record  
+      // TODO: Update this to use actual committee and grant program selection when marketplace is implemented
       const newSubmission: NewSubmission = {
-        userId: user.id, // Use userId not submitterId
-        githubPrId: null, // No GitHub PR creation
-        status: 'submitted', // Start as submitted since no PR needed
-        labels: JSON.stringify(data.labels), // Store as JSON string
-        formData: JSON.stringify(completeFormData), // Store complete form data
+        grantProgramId: 1, // Temporary: Default grant program (will be selected by user in marketplace)
+        committeeId: 1, // Temporary: Default committee (will be selected by user in marketplace)
+        submitterId: user.id, // Updated field name from userId
+        title: data.title,
+        description: data.description,
+        executiveSummary: data.executiveSummary,
+        milestones: JSON.stringify(data.milestones), // Store milestones as JSON in submission
+        postGrantPlan: data.postGrantPlan,
+        labels: JSON.stringify(data.labels),
+        githubRepoUrl: data.githubRepoUrl || null,
+        walletAddress: null, // TODO: Add wallet address field to form
+        status: 'pending', // Start as pending for committee review
+        totalAmount: Number(data.totalAmount.replace(/,/g, '')),
+        appliedAt: new Date(),
       };
 
       const [createdSubmission] = await db
@@ -137,8 +147,12 @@ export const createSubmission = async (prevState: any, formData: FormData) => {
         
         const newMilestone: NewMilestone = {
           submissionId: createdSubmission.id,
+          committeeId: 1, // Temporary: Use same committee as submission
           title: milestone.title,
           description: combinedDescription, // Include requirements in description
+          requirements: milestone.requirements,
+          amount: Number(milestone.amount.replace(/,/g, '')),
+          dueDate: milestone.dueDate ? new Date(milestone.dueDate) : null,
           status: 'pending',
         };
         
@@ -190,7 +204,7 @@ export async function getUserSubmissions() {
     const userSubmissions = await db
       .select()
       .from(submissions)
-      .where(eq(submissions.userId, user.id))
+      .where(eq(submissions.submitterId, user.id))
       .orderBy(submissions.createdAt);
 
     return userSubmissions;

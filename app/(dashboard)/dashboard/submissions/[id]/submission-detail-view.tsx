@@ -11,8 +11,26 @@ import { useRouter } from 'next/navigation';
 import { getSubmissionDiscussion, getSubmissionReviews, postMessageToSubmission } from '../discussion-actions';
 import type { Submission, Milestone, User } from '@/lib/db/schema';
 
-interface SubmissionWithMilestones extends Submission {
-  milestones: Milestone[];
+interface SubmissionWithMilestones {
+  id: number;
+  grantProgramId: number;
+  committeeId: number;
+  submitterId: number;
+  title: string;
+  description: string | null;
+  executiveSummary: string | null;
+  milestones: Milestone[]; // Related milestone records
+  postGrantPlan: string | null;
+  labels: string | null;
+  githubRepoUrl: string | null;
+  walletAddress: string | null;
+  status: string;
+  totalAmount: number | null;
+  appliedAt: Date;
+  createdAt: Date;
+  updatedAt: Date;
+  // Legacy field support for backward compatibility
+  formData?: string | null;
 }
 
 interface SubmissionDetailViewProps {
@@ -45,7 +63,7 @@ export function SubmissionDetailView({ submission, currentUser }: SubmissionDeta
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const formData = parseFormData(submission.formData);
+  const formData = parseFormData(submission.formData || null);
   const labels = submission.labels ? JSON.parse(submission.labels) : [];
 
   useEffect(() => {

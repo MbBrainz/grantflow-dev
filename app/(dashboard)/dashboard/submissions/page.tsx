@@ -118,12 +118,7 @@ export default async function SubmissionsPage() {
     underReview: submissions.filter(s => s.status === 'submitted' || s.status === 'under_review').length,
     approved: submissions.filter(s => s.status === 'approved').length,
     totalFunding: submissions.reduce((sum, s) => {
-      try {
-        const formData = JSON.parse(s.formData || '{}');
-        return sum + (parseFloat(formData.totalAmount) || 0);
-      } catch {
-        return sum;
-      }
+      return sum + (s.totalAmount || 0);
     }, 0),
   };
 

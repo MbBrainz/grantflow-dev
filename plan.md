@@ -1,40 +1,84 @@
-# GrantFlow POC – Project Plan
+# GrantFlow Marketplace – Project Plan
 
-## 1. Core Features & Flows
+## 1. Core Features & Flows (Two-Sided Platform)
 
-### A. Submission Flow (Grantee)
+### A. Committee Onboarding & Management
+- **Committee Registration:** GitHub OAuth + committee profile creation
+- **Committee Profile Setup:**
+  - Branding (logo, description, focus areas)
+  - Grant programs with funding amounts and requirements
+  - Review criteria and milestone structures
+  - Public transparency settings
+- **Curator Management:**
+  - Invite and manage curator team members
+  - Configure roles and permissions
+  - Set voting thresholds and approval workflows
+- **Multi-sig Wallet Integration:**
+  - Connect committee wallet for automated payouts
+  - Configure payout rules and milestone triggers
+- **Committee Analytics:**
+  - Track grant performance, approval rates
+  - Monitor time-to-payout metrics
+  - Public transparency dashboard
+
+### B. Committee Discovery & Marketplace
+- **Browse Committees:** Public directory of all grant committees
+- **Committee Comparison:** Side-by-side comparison of focus areas, funding amounts, approval rates
+- **Search & Filter:** By technology stack, funding range, geographic focus
+- **Committee Detail Pages:** Full profiles with past grants, curator bios, review criteria
+- **Application Requirements:** Clear view of what each committee expects
+
+### C. Submission Flow (Grantee)
+- **Committee Selection:** Browse marketplace and select target committee(s)
 - **GitHub Auth:** Users authenticate via GitHub OAuth (using existing auth system)
-- **Structured Submission Form:**
+- **Committee-Specific Application Form:**
+  - Dynamic form based on committee requirements
   - Executive summary, milestones, post-grant plan
-  - Project type labels (multi-select)
-  - GitHub repo link for deliverables (reference only)
-  - Draft mode (local cache)
-- **Submission Publishing:**
-  - On submit: store complete metadata in DB, create initial status
-  - GitHub repo links tracked for reference and code verification
-  - All discussion happens within the webapp
+  - Committee-relevant project labels and categories
+  - GitHub repo links for deliverables (reference only)
+  - Wallet address for funding
+  - Draft mode (local cache) per committee application
+- **Application Submission:**
+  - Submit to specific committee with tailored metadata
+  - Create committee-specific discussion thread
+  - Initialize committee's review workflow
+  - All communication happens within the webapp
 
-### B. Review & Curation (Curators)
-- **Unified Dashboard:** All submissions with in-app discussion threads
-- **Filter & Search:** By status, label, project type, etc.
-- **Review Interface:** View details, linked repos, discussion history
-- **In-App Discussion:** Real-time chat system per submission
-- **Voting System:** Multi-curator approval logic within webapp
-- **Request Changes:** Direct feedback through webapp discussion
-- **Approve & Payout:** Trigger on-chain payout (multi-sig)
+### D. Review & Curation (Committee-Specific)
+- **Committee Dashboard:** All submissions for their committee with discussion threads
+- **Committee Workflow:** Custom voting thresholds and approval processes
+- **Filter & Search:** By status, label, project type within committee scope
+- **Review Interface:** View application details, linked repos, discussion history
+- **Multi-Curator Collaboration:** Real-time discussion system per submission
+- **Committee Voting System:** Custom approval logic based on committee configuration
+- **Request Changes:** Direct feedback through committee-specific discussion threads
+- **Committee Payout:** Trigger payouts via committee's configured multi-sig wallet
 
-### C. Milestone Tracking
-- **Milestone Submission:** Form for milestone deliverables with GitHub links
-- **Progress Updates:** Status tracking per milestone with discussion threads
+### E. Milestone Tracking (Committee-Specific)
+- **Committee Milestone Workflow:** Each committee configures their milestone requirements
+- **Milestone Submission:** Forms tailored to committee's milestone structure
+- **Progress Tracking:** Committee-specific status tracking with discussion threads
 - **Code Verification:** GitHub repo/PR/commit links for deliverable proof
-- **Conditional Payouts:** Release funds on milestone approval
+- **Committee Payouts:** Release funds based on committee's approval workflow and multi-sig setup
 
-### D. Milestone Submission Flow
-make sure that when the when submitting a milestone completion review request, the exact commits, or pull requests are added to the request. 
-All the relevant information should be pre-queried from github and then manually reviewd by the submitter( grantee). 
-exactly mark which files and which code changes are responsible for the new milestone improvements. 
-The grantee should be helped letting the github be read, compared to the previous milestone and then creates 
-a file overview that has preselected files and folders that are already marked by the system based on the changes.
+### F. Enhanced Milestone Submission Flow
+When submitting milestone completion review requests:
+- **Exact Commit Tracking:** Specific commits and pull requests must be linked to each milestone
+- **AI-Assisted Code Analysis:** Pre-query GitHub to analyze changes since previous milestone
+- **File Change Overview:** System automatically detects and highlights:
+  - Modified files and folders
+  - Lines of code changed
+  - New vs. existing code contributions
+  - AI vs. human generated code detection
+- **Manual Review by Grantee:** Review and confirm system-detected changes before submission
+- **Committee Code Verification:** Curators can easily see exactly what was built for each milestone
+
+### G. Platform Analytics & Transparency
+- **Cross-Committee Metrics:** Compare committee performance, approval rates, funding amounts
+- **Public Transparency:** All committee decisions and discussions are publicly viewable
+- **Grantee Portfolio:** Track team history across multiple committees and grants
+- **Committee Reputation:** Public scoring based on payout speed, feedback quality, success rates
+- **Market Insights:** Analytics on funding trends, popular project types, success patterns
 
 
 ### D. Discussion & Communication System (✅ COMPLETED)
@@ -92,8 +136,9 @@ a file overview that has preselected files and folders that are already marked b
 
 ### External Integrations
 - **GitHub API** for repo/PR/commit verification (read-only)
-- **On-chain contracts** for payouts (TBD)
-- **Vercel AI SDK** for grant analysis
+- **Multi-sig Wallet Integration** for committee-specific payouts
+- **Vercel AI SDK** for grant analysis and code review assistance
+- **Web3 Infrastructure** for committee wallet connections and payout automation
 
 ### Notifications & Real-time Features
 - **Server-Sent Events (SSE)** for real-time notifications
@@ -121,59 +166,106 @@ a file overview that has preselected files and folders that are already marked b
 // Users (extend existing)
 users: {
   id, name, email, passwordHash,
-  githubId, walletAddress, role,
+  githubId, walletAddress, role, // 'grantee' | 'curator' | 'admin'
   createdAt, updatedAt
 }
 
-// Grant submissions
+// Grant committees/organizations
+committees: {
+  id, name, description, logoUrl,
+  focusAreas, websiteUrl, githubOrg,
+  walletAddress, isActive, 
+  votingThreshold, approvalWorkflow,
+  createdAt, updatedAt
+}
+
+// Committee members (curators)
+committeeCurators: {
+  id, committeeId, userId, role, // 'admin' | 'curator' | 'reviewer'
+  permissions, joinedAt, isActive
+}
+
+// Grant programs (per committee)
+grantPrograms: {
+  id, committeeId, name, description,
+  fundingAmount, requirements, 
+  applicationTemplate, milestoneStructure,
+  isActive, createdAt, updatedAt
+}
+
+// Grant submissions (linked to committees)
 submissions: {
-  id, title, description, executiveSummary,
+  id, grantProgramId, committeeId, submitterId,
+  title, description, executiveSummary,
   milestones, postGrantPlan, labels,
-  githubRepoUrl, // Reference only, no PR creation
-  submitterId, status, totalAmount,
+  githubRepoUrl, walletAddress, // Grantee wallet
+  status, totalAmount, appliedAt,
   createdAt, updatedAt
 }
 
-// Discussion threads
+// Discussion threads (committee-specific)
 discussions: {
-  id, submissionId, milestoneId?, type, // 'submission' | 'milestone'
-  createdAt, updatedAt
+  id, submissionId, milestoneId?, committeeId,
+  type, // 'submission' | 'milestone' | 'committee_internal'
+  isPublic, createdAt, updatedAt
 }
 
 // Discussion messages
 messages: {
   id, discussionId, authorId, content,
-  messageType, // 'comment' | 'status_change' | 'vote'
-  metadata, // For structured data like votes
+  messageType, // 'comment' | 'status_change' | 'vote' | 'committee_decision'
+  metadata, // For structured data like votes, committee decisions
   createdAt, updatedAt
 }
 
-// Milestone tracking
+// Milestone tracking (per submission)
 milestones: {
-  id, submissionId, title, description,
+  id, submissionId, committeeId, title, description,
   requirements, amount, dueDate,
   status, deliverables, githubRepoUrl,
-  githubPrUrl?, githubCommitHash?,
-  createdAt, updatedAt
+  githubPrUrl?, githubCommitHash?, codeAnalysis,
+  submittedAt, reviewedAt, createdAt, updatedAt
 }
 
-// Curator reviews
+// Committee curator reviews
 reviews: {
-  id, submissionId, milestoneId?, curatorId, 
-  vote, feedback, discussionId,
+  id, submissionId, milestoneId?, committeeId, curatorId, 
+  vote, feedback, discussionId, reviewType,
+  weight, isBinding, createdAt, updatedAt
+}
+
+// Payout tracking (committee-specific)
+payouts: {
+  id, submissionId, milestoneId, committeeId,
+  amount, transactionHash, status,
+  triggeredBy, approvedBy, // curator IDs
+  walletFrom, walletTo, // committee -> grantee
+  createdAt, processedAt
+}
+
+// Notifications (committee-aware)
+notifications: {
+  id, userId, committeeId?, type, 
+  submissionId?, discussionId?, milestoneId?,
+  read, content, priority,
+  createdAt, readAt
+}
+
+// Committee analytics
+committeeAnalytics: {
+  id, committeeId, period, // 'monthly' | 'quarterly' | 'yearly'
+  totalSubmissions, approvedSubmissions,
+  totalFunding, averageApprovalTime,
+  curatorActivity, publicRating,
   createdAt, updatedAt
 }
 
-// Payout tracking
-payouts: {
-  id, submissionId, milestoneId, amount,
-  transactionHash, status, createdAt
-}
-
-// Notifications
-notifications: {
-  id, userId, type, submissionId, discussionId?,
-  read, content, createdAt
+// Platform-wide metrics
+platformMetrics: {
+  id, period, totalCommittees, totalSubmissions,
+  totalFunding, averageSuccess Rate,
+  popularTags, trendingCommittees,
+  createdAt, updatedAt
 }
 ```
 
@@ -216,18 +308,33 @@ notifications: {
 - [x] Review workflow and status updates
 - [x] Role-based access control for curators
 
-### F. Milestone & Payout Management 
-- [ ] Milestone submission forms with GitHub links
-- [ ] Github changes marking requirements for grantee to display 
-- [ ] Progress tracking interface with discussion per milestone
-- [ ] Payout approval workflow (Stripe features temporarily disabled)
-- [ ] On-chain integration (contracts TBD)
+### F. Committee Onboarding & Management 🆕
+- [ ] Committee registration and profile creation
+- [ ] Grant program setup and configuration
+- [ ] Curator team management and permissions
+- [ ] Multi-sig wallet integration
+- [ ] Committee workflow customization
 
-### G. Public Transparency Features 
-- [ ] Public submission status pages with discussion history
-- [ ] Curator voting history
-- [ ] Analytics dashboard
-- [ ] Time-to-payout metrics
+### G. Marketplace & Discovery Features 🆕
+- [ ] Committee browsing and comparison interface
+- [ ] Advanced search and filtering by focus areas
+- [ ] Committee detail pages with analytics
+- [ ] Public committee reputation scoring
+- [ ] Cross-committee application tracking
+
+### H. Enhanced Milestone & Payout Management 
+- [ ] Committee-specific milestone workflows
+- [ ] AI-assisted GitHub code analysis
+- [ ] Automated file change detection
+- [ ] Committee-configured payout triggers
+- [ ] Multi-committee milestone comparison
+
+### I. Platform Analytics & Transparency 
+- [ ] Cross-committee performance metrics
+- [ ] Public transparency dashboard
+- [ ] Committee and grantee reputation systems
+- [ ] Market insights and trend analysis
+- [ ] Platform-wide success metrics
 
 ---
 
@@ -249,11 +356,20 @@ notifications: {
 ### Phase 3 ✅ COMPLETED (SSE Notifications)
 1. ✅ **Real-time Updates:** Live discussion updates with WebSocket/SSE
 2. ✅ **Notification System:** Real-time alerts for discussion activity with proper auth handling
-3. **Milestone Tracking:** Enhanced with discussion per milestone
-4. **Public Transparency:** Status pages with discussion history
-5. **Wallet Integration:** Connect for payouts
-6. **Payment System:** Re-enable Stripe or implement on-chain payouts
-7. **Advanced Features:** Analytics, AI integration 
+
+### Phase 4 (Committee Marketplace Platform) 🆕
+1. **Committee Onboarding:** Registration, profile creation, and program setup
+2. **Marketplace Interface:** Committee discovery and comparison features
+3. **Multi-Committee Submissions:** Dynamic forms and committee-specific workflows
+4. **Committee Management:** Curator permissions and voting configuration
+5. **Wallet Integration:** Committee multi-sig setup for automated payouts
+
+### Phase 5 (Enhanced Platform Features)
+1. **Advanced Analytics:** Cross-committee metrics and reputation scoring
+2. **AI Integration:** GitHub code analysis and review assistance
+3. **Enhanced Milestone Tracking:** Automated change detection and verification
+4. **Public Transparency:** Platform-wide visibility and accountability
+5. **Market Intelligence:** Funding trends and success pattern analysis 
 
 ### Notifications System (✅ COMPLETED - Jan 2025)
 - **SSE Authentication Fix:** Fixed 401 errors on unauthenticated pages
@@ -266,7 +382,22 @@ notifications: {
   - Real-time discussion updates and vote notifications
 - **No External Dependencies:** Focus on active user experience
   - No email or push notification integrations
-  - Pure SSE-based real-time communication 
+  - Pure SSE-based real-time communication
+
+### Marketplace Architecture Transformation (🚀 PLANNED - 2025)
+- **Multi-Committee Support:** Platform evolution from single to multi-committee
+  - Committee registration and profile management system
+  - Independent committee workflows and configurations
+  - Committee-specific grant programs and requirements
+- **Discovery & Comparison:** Marketplace features for committee selection
+  - Advanced search and filtering capabilities
+  - Committee analytics and reputation scoring
+  - Cross-committee performance metrics
+- **Enhanced Database Schema:** Support for committee-centric operations
+  - Committee entities with curator management
+  - Grant programs per committee with custom templates
+  - Committee-specific discussions, reviews, and payouts
+  - Platform-wide analytics and metrics tracking 
 
 ---
 

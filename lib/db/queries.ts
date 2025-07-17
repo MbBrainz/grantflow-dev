@@ -247,7 +247,9 @@ export async function getNotificationsForUser() {
       submission: {
         columns: {
           id: true,
-          formData: true
+          title: true,
+          description: true,
+          status: true
         }
       },
       discussion: {
@@ -338,7 +340,7 @@ export async function getAllSubmissionsForReview(statusFilter?: string) {
   return await db.query.submissions.findMany({
     where: whereClause,
     with: {
-      user: {
+      submitter: {
         columns: {
           id: true,
           name: true,
@@ -361,7 +363,7 @@ export async function getSubmissionWithReviews(submissionId: number) {
   return await db.query.submissions.findFirst({
     where: eq(submissions.id, submissionId),
     with: {
-      user: {
+      submitter: {
         columns: {
           id: true,
           name: true,
@@ -432,8 +434,20 @@ export async function ensureDiscussionForSubmission(submissionId: number) {
   });
 
   if (!existingDiscussion) {
+    // Get the committee ID from the submission
+    const submission = await db
+      .select({ committeeId: submissions.committeeId })
+      .from(submissions)
+      .where(eq(submissions.id, submissionId))
+      .limit(1);
+
+    if (!submission[0]) {
+      throw new Error('Submission not found');
+    }
+
     return await createDiscussion({
       submissionId,
+      committeeId: submission[0].committeeId,
       type: 'submission'
     });
   }
@@ -448,8 +462,20 @@ export async function ensureDiscussionForMilestone(milestoneId: number) {
   });
 
   if (!existingDiscussion) {
+    // Get the committee ID from the milestone
+    const milestone = await db
+      .select({ committeeId: milestones.committeeId })
+      .from(milestones)
+      .where(eq(milestones.id, milestoneId))
+      .limit(1);
+
+    if (!milestone[0]) {
+      throw new Error('Milestone not found');
+    }
+
     return await createDiscussion({
       milestoneId,
+      committeeId: milestone[0].committeeId,
       type: 'milestone'
     });
   }
