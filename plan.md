@@ -191,13 +191,13 @@ notifications: {
 - [x] Review workflow and status updates
 - [x] Role-based access control for curators
 
-### F. Milestone & Payout Management (Future Phase)
+### F. Milestone & Payout Management 
 - [ ] Milestone submission forms with GitHub links
 - [ ] Progress tracking interface with discussion per milestone
 - [ ] Payout approval workflow (Stripe features temporarily disabled)
 - [ ] On-chain integration (contracts TBD)
 
-### G. Public Transparency Features (Future Phase)
+### G. Public Transparency Features 
 - [ ] Public submission status pages with discussion history
 - [ ] Curator voting history
 - [ ] Analytics dashboard
@@ -220,7 +220,7 @@ notifications: {
 4. ✅ **Status Updates:** Submission status tied to discussion votes
 5. ✅ **Role-Based Access:** Curator permissions and voting restrictions
 
-### Phase 3 (Future Implementation)
+### Phase 3 
 1. **Real-time Updates:** Live discussion updates with WebSocket/SSE
 2. **Notification System:** Real-time alerts for discussion activity
 3. **Milestone Tracking:** Enhanced with discussion per milestone

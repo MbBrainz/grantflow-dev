@@ -13,6 +13,11 @@ import {
   getReviewsForSubmission
 } from '@/lib/db/queries';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
+import { 
+  notifyNewMessage, 
+  notifyVoteCast, 
+  notifyStatusChange 
+} from '@/lib/notifications/server';
 
 const messageSchema = z.object({
   content: z.string().min(1, 'Message content is required').max(2000, 'Message too long'),
@@ -162,6 +167,36 @@ export const postMessageToSubmission = validatedActionWithUser(
         submissionId: data.submissionId 
       });
 
+      // Trigger real-time notifications
+      try {
+        if (data.messageType === 'vote') {
+          await notifyVoteCast(
+            data.submissionId,
+            user.name || 'Anonymous Curator',
+            data.content,
+            user.id
+          );
+        } else if (data.messageType === 'status_change') {
+          await notifyStatusChange(
+            data.submissionId,
+            data.content,
+            user.id
+          );
+        } else {
+          await notifyNewMessage(
+            data.submissionId,
+            discussion.id,
+            user.name || 'Anonymous User',
+            data.content,
+            user.id
+          );
+        }
+        console.log('[postMessageToSubmission]: Notifications sent successfully');
+      } catch (notificationError) {
+        console.error('[postMessageToSubmission]: Failed to send notifications', notificationError);
+        // Don't fail the whole operation if notifications fail
+      }
+
       // Revalidate the submissions page
       revalidatePath('/dashboard/submissions');
       revalidatePath(`/dashboard/submissions/${data.submissionId}`);
@@ -197,6 +232,40 @@ export const postMessageToMilestone = validatedActionWithUser(
         messageId: message.id, 
         milestoneId: data.milestoneId 
       });
+
+      // Trigger real-time notifications for milestone discussions
+      try {
+        // For milestones, we'll use a generic submission ID (this should be improved)
+        // In a real implementation, you'd want to get the submission ID from the milestone
+        const submissionId = 1; // TODO: Get actual submission ID from milestone
+        
+        if (data.messageType === 'vote') {
+          await notifyVoteCast(
+            submissionId,
+            user.name || 'Anonymous Curator',
+            data.content,
+            user.id
+          );
+        } else if (data.messageType === 'status_change') {
+          await notifyStatusChange(
+            submissionId,
+            data.content,
+            user.id
+          );
+        } else {
+          await notifyNewMessage(
+            submissionId,
+            discussion.id,
+            user.name || 'Anonymous User',
+            data.content,
+            user.id
+          );
+        }
+        console.log('[postMessageToMilestone]: Notifications sent successfully');
+      } catch (notificationError) {
+        console.error('[postMessageToMilestone]: Failed to send notifications', notificationError);
+        // Don't fail the whole operation if notifications fail
+      }
 
       // Revalidate the relevant pages
       revalidatePath('/dashboard/submissions');

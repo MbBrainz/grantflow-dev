@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { MessageCircle, Send, Clock, User } from 'lucide-react';
+import { MessageCircle, Send, Clock, User, Wifi, WifiOff, AlertCircle } from 'lucide-react';
 import type { Discussion, Message, User as UserType } from '@/lib/db/schema';
+import { useSubmissionNotifications, useConnectionStatus } from '@/lib/notifications/client';
 
 interface DiscussionMessage extends Message {
   author: {
@@ -60,6 +61,30 @@ export function DiscussionThread({
   const [newMessage, setNewMessage] = useState('');
   const [isPending, startTransition] = useTransition();
 
+  // Real-time notifications for this submission
+  const notificationStatus = useSubmissionNotifications(submissionId);
+  const connectionStatus = useConnectionStatus();
+
+  // Auto-refresh page when new messages arrive for this discussion
+  useEffect(() => {
+    const handleNewMessage = () => {
+      console.log('[DiscussionThread]: New message notification received, refreshing...');
+      // Simple page refresh for now - could be optimized to just refetch discussion data
+      window.location.reload();
+    };
+
+    // Set up listener for new messages in this submission
+    if (submissionId && (window as any).handleRealtimeNotification) {
+      const originalHandler = (window as any).handleRealtimeNotification;
+      (window as any).handleRealtimeNotification = (notification: any) => {
+        originalHandler?.(notification);
+        if (notification.type === 'new_message' && notification.submissionId === submissionId) {
+          handleNewMessage();
+        }
+      };
+    }
+  }, [submissionId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
@@ -88,6 +113,26 @@ export function DiscussionThread({
         <span className="text-sm text-gray-500 dark:text-gray-400">
           ({messages.length} message{messages.length !== 1 ? 's' : ''})
         </span>
+        
+        {/* Real-time connection status */}
+        <div className="flex items-center gap-1 ml-auto">
+          {connectionStatus.isConnected ? (
+            <>
+              <Wifi className="w-4 h-4 text-green-500" />
+              <span className="text-xs text-green-600 dark:text-green-400">Live</span>
+            </>
+          ) : connectionStatus.isConnecting ? (
+            <>
+              <AlertCircle className="w-4 h-4 text-yellow-500 animate-pulse" />
+              <span className="text-xs text-yellow-600 dark:text-yellow-400">Connecting...</span>
+            </>
+          ) : (
+            <>
+              <WifiOff className="w-4 h-4 text-gray-400" />
+              <span className="text-xs text-gray-500 dark:text-gray-400">Offline</span>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Messages List */}

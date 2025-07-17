@@ -37,6 +37,8 @@
     "polkadot-api": "^1.15.0",
     "postcss": "^8.5.3",
     "postgres": "^3.4.5",
+    "pusher": "^5.2.0",
+    "pusher-js": "^8.4.0",
     "radix-ui": "^1.4.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
