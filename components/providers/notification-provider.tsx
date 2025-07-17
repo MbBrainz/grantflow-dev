@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, createContext, useContext, ReactNode } from 'react';
+import { useEffect, createContext, useContext, ReactNode, useState } from 'react';
 import { useNotificationStream, useConnectionStatus } from '@/lib/notifications/client';
 import { Toaster } from '@/components/ui/toaster';
+import useSWR from 'swr';
+import { User } from '@/lib/db/schema';
 
 interface NotificationContextType {
   isConnected: boolean;
@@ -25,13 +27,30 @@ interface NotificationProviderProps {
   children: ReactNode;
 }
 
-export function NotificationProvider({ children }: NotificationProviderProps) {
-  // Initialize the notification stream for the entire app
-  const notificationStream = useNotificationStream();
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-  // Auto-reconnect on connection failures
+export function NotificationProvider({ children }: NotificationProviderProps) {
+  // Check if user is authenticated before initializing notifications
+  const { data: user, error: userError } = useSWR<User>('/api/user', fetcher);
+  const [shouldConnect, setShouldConnect] = useState(false);
+
+  // Only attempt to connect if user is authenticated
   useEffect(() => {
-    if (notificationStream.error && !notificationStream.isConnecting) {
+    if (user && !userError) {
+      console.log('[NotificationProvider]: User authenticated, enabling notifications');
+      setShouldConnect(true);
+    } else {
+      console.log('[NotificationProvider]: No authenticated user, skipping notifications');
+      setShouldConnect(false);
+    }
+  }, [user, userError]);
+
+  // Initialize the notification stream only for authenticated users
+  const notificationStream = useNotificationStream(shouldConnect);
+
+  // Auto-reconnect on connection failures (only if should connect)
+  useEffect(() => {
+    if (shouldConnect && notificationStream.error && !notificationStream.isConnecting) {
       console.log('[NotificationProvider]: Connection error detected, attempting reconnect in 5 seconds');
       const reconnectTimer = setTimeout(() => {
         if (notificationStream.reconnect) {
@@ -41,10 +60,12 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
       return () => clearTimeout(reconnectTimer);
     }
-  }, [notificationStream.error, notificationStream.isConnecting, notificationStream.reconnect]);
+  }, [shouldConnect, notificationStream.error, notificationStream.isConnecting, notificationStream.reconnect]);
 
   // Log connection status changes
   useEffect(() => {
+    if (!shouldConnect) return;
+    
     if (notificationStream.isConnected) {
       console.log('[NotificationProvider]: ✅ Real-time notifications active');
     } else if (notificationStream.isConnecting) {
@@ -52,13 +73,13 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     } else if (notificationStream.error) {
       console.log('[NotificationProvider]: ❌ Notification connection failed:', notificationStream.error);
     }
-  }, [notificationStream.isConnected, notificationStream.isConnecting, notificationStream.error]);
+  }, [shouldConnect, notificationStream.isConnected, notificationStream.isConnecting, notificationStream.error]);
 
   const contextValue: NotificationContextType = {
-    isConnected: notificationStream.isConnected,
-    isConnecting: notificationStream.isConnecting,
-    error: notificationStream.error,
-    reconnect: notificationStream.reconnect || (() => {})
+    isConnected: shouldConnect ? notificationStream.isConnected : false,
+    isConnecting: shouldConnect ? notificationStream.isConnecting : false,
+    error: shouldConnect ? notificationStream.error : null,
+    reconnect: shouldConnect ? (notificationStream.reconnect || (() => {})) : (() => {})
   };
 
   return (
@@ -67,8 +88,8 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       {/* Toast notifications will be rendered here */}
       <Toaster />
       
-      {/* Optional: Global connection status indicator */}
-      {notificationStream.error && (
+      {/* Optional: Global connection status indicator (only show for authenticated users) */}
+      {shouldConnect && notificationStream.error && (
         <div className="fixed bottom-4 right-4 z-50">
           <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded shadow-lg">
             <div className="flex items-center">

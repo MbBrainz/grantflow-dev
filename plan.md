@@ -29,6 +29,14 @@
 - **Code Verification:** GitHub repo/PR/commit links for deliverable proof
 - **Conditional Payouts:** Release funds on milestone approval
 
+### D. Milestone Submission Flow
+make sure that when the when submitting a milestone completion review request, the exact commits, or pull requests are added to the request. 
+All the relevant information should be pre-queried from github and then manually reviewd by the submitter( grantee). 
+exactly mark which files and which code changes are responsible for the new milestone improvements. 
+The grantee should be helped letting the github be read, compared to the previous milestone and then creates 
+a file overview that has preselected files and folders that are already marked by the system based on the changes.
+
+
 ### D. Discussion & Communication System (✅ COMPLETED)
 - [x] Design discussion thread data model
 - [x] Build real-time chat components
@@ -86,6 +94,23 @@
 - **GitHub API** for repo/PR/commit verification (read-only)
 - **On-chain contracts** for payouts (TBD)
 - **Vercel AI SDK** for grant analysis
+
+### Notifications & Real-time Features
+- **Server-Sent Events (SSE)** for real-time notifications
+  - In-app notification delivery
+  - Connection status indicators
+  - Auto page refresh on relevant updates
+- **Toast Notifications** for immediate user feedback
+- **No External Notifications**
+  - No email integration
+  - No mobile/push notifications
+  - Focus on active user experience
+- **Real-time Updates**
+  - Discussion/message updates
+  - Vote notifications
+  - Status change alerts
+  - Submission updates
+
 
 ---
 
@@ -193,6 +218,7 @@ notifications: {
 
 ### F. Milestone & Payout Management 
 - [ ] Milestone submission forms with GitHub links
+- [ ] Github changes marking requirements for grantee to display 
 - [ ] Progress tracking interface with discussion per milestone
 - [ ] Payout approval workflow (Stripe features temporarily disabled)
 - [ ] On-chain integration (contracts TBD)
@@ -220,14 +246,27 @@ notifications: {
 4. ✅ **Status Updates:** Submission status tied to discussion votes
 5. ✅ **Role-Based Access:** Curator permissions and voting restrictions
 
-### Phase 3 
-1. **Real-time Updates:** Live discussion updates with WebSocket/SSE
-2. **Notification System:** Real-time alerts for discussion activity
+### Phase 3 ✅ COMPLETED (SSE Notifications)
+1. ✅ **Real-time Updates:** Live discussion updates with WebSocket/SSE
+2. ✅ **Notification System:** Real-time alerts for discussion activity with proper auth handling
 3. **Milestone Tracking:** Enhanced with discussion per milestone
 4. **Public Transparency:** Status pages with discussion history
 5. **Wallet Integration:** Connect for payouts
 6. **Payment System:** Re-enable Stripe or implement on-chain payouts
 7. **Advanced Features:** Analytics, AI integration 
+
+### Notifications System (✅ COMPLETED - Jan 2025)
+- **SSE Authentication Fix:** Fixed 401 errors on unauthenticated pages
+  - NotificationProvider now only connects for authenticated users
+  - Added conditional SSE connection based on user authentication status
+  - Eliminated errors on landing page and public routes
+- **Real-time Features:** Server-Sent Events for live notifications
+  - In-app notification delivery with toast messages
+  - Connection status indicators and auto-reconnection
+  - Real-time discussion updates and vote notifications
+- **No External Dependencies:** Focus on active user experience
+  - No email or push notification integrations
+  - Pure SSE-based real-time communication 
 
 ---
 

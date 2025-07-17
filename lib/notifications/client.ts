@@ -24,7 +24,7 @@ interface NotificationConnectionState {
 }
 
 // Hook for managing SSE connection and receiving real-time notifications
-export function useNotificationStream() {
+export function useNotificationStream(shouldConnect: boolean = true) {
   const [state, setState] = useState<NotificationConnectionState>({
     isConnected: false,
     isConnecting: false,
@@ -38,6 +38,12 @@ export function useNotificationStream() {
   const maxReconnectAttempts = 5;
 
   const connect = useCallback(() => {
+    // Don't connect if shouldConnect is false
+    if (!shouldConnect) {
+      console.log('[notifications-client]: Connection disabled, skipping SSE');
+      return;
+    }
+
     if (eventSourceRef.current) {
       console.log('[notifications-client]: Already connected or connecting');
       return;
@@ -47,7 +53,9 @@ export function useNotificationStream() {
     setState(prev => ({ ...prev, isConnecting: true, error: null }));
 
     try {
-      const eventSource = new EventSource('/api/notifications/stream');
+      const eventSource = new EventSource('/api/notifications/stream', {
+        withCredentials: true
+      });
       eventSourceRef.current = eventSource;
 
       eventSource.onopen = () => {
@@ -99,8 +107,8 @@ export function useNotificationStream() {
           error: 'Connection lost'
         }));
 
-        // Attempt to reconnect with exponential backoff
-        if (reconnectAttempts.current < maxReconnectAttempts) {
+        // Attempt to reconnect with exponential backoff (only if shouldConnect is true)
+        if (shouldConnect && reconnectAttempts.current < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
           reconnectAttempts.current++;
           
@@ -112,8 +120,8 @@ export function useNotificationStream() {
             connect();
           }, delay);
         } else {
-          console.error('[notifications-client]: Max reconnection attempts reached');
-          setState(prev => ({ ...prev, error: 'Unable to connect to notifications' }));
+          console.error('[notifications-client]: Max reconnection attempts reached or connection disabled');
+          setState(prev => ({ ...prev, error: shouldConnect ? 'Unable to connect to notifications' : null }));
         }
       };
 
@@ -125,7 +133,7 @@ export function useNotificationStream() {
         error: 'Failed to connect'
       }));
     }
-  }, []);
+  }, [shouldConnect]);
 
   const disconnect = useCallback(() => {
     console.log('[notifications-client]: Disconnecting SSE');
@@ -148,19 +156,25 @@ export function useNotificationStream() {
     });
   }, []);
 
-  // Auto-connect on mount, disconnect on unmount
+  // Auto-connect on mount when shouldConnect is true, disconnect on unmount or when shouldConnect becomes false
   useEffect(() => {
-    connect();
+    if (shouldConnect) {
+      connect();
+    } else {
+      disconnect();
+    }
     return disconnect;
-  }, [connect, disconnect]);
+  }, [connect, disconnect, shouldConnect]);
 
   return {
     ...state,
     connect,
     disconnect,
     reconnect: () => {
-      disconnect();
-      setTimeout(connect, 1000);
+      if (shouldConnect) {
+        disconnect();
+        setTimeout(connect, 1000);
+      }
     }
   };
 }
