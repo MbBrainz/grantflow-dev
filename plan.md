@@ -228,3 +228,29 @@ notifications: {
 5. **Wallet Integration:** Connect for payouts
 6. **Payment System:** Re-enable Stripe or implement on-chain payouts
 7. **Advanced Features:** Analytics, AI integration 
+
+---
+
+## 6. Technical Updates & Migrations
+
+### ✅ Next.js 15 Migration (Completed - Jan 2025)
+- **Upgraded Framework:** Next.js 15.4.0-canary.47 → 15.4.1 (stable)
+- **Dependencies Updated:** React 19.1.0, TypeScript types updated
+- **Async APIs Compatibility:** All cookies(), headers(), params usage properly awaited
+- **Configuration Updates:** Removed experimental features not available in stable
+  - Removed `experimental.ppr` (Partial Prerendering)
+  - Removed `experimental.nodeMiddleware`
+- **Code Structure:** Moved notification utilities to separate files for Next.js 15 compatibility
+- **Peer Dependencies:** Updated zod to 3.25.76 for drizzle-zod compatibility
+- **Build Verified:** All builds passing, no breaking changes detected
+
+### Key Benefits from Next.js 15:
+- **React 19 Support:** Latest React features and improvements
+- **Performance:** Better hydration and optimization
+- **Developer Experience:** Improved error messages and debugging
+- **Future-Ready:** Foundation for upcoming features like PPR when stable
+
+---
+
+### Phase 4 (Mobile PWA)
+1. **PWA Install prompt** Modal that shows install prompt to user using [pwa-install](https://github.com/khmyznikov/pwa-install)

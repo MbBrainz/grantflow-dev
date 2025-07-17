@@ -2,7 +2,7 @@ import {
   createNotification as dbCreateNotification,
   getUser 
 } from '@/lib/db/queries';
-import { sendNotificationToUser, broadcastNotification } from '@/app/api/notifications/stream/route';
+import { sendNotificationToUser, broadcastNotification } from '@/lib/notifications/utils';
 
 // Notification types
 export const NOTIFICATION_TYPES = {
