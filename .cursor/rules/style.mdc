@@ -1,0 +1,6 @@
+---
+alwaysApply: true
+---
+When writing typescript code:
+- console.log should always have a string literal that starts with "[funtion_name]:" and some indicative words, and then the relevant parameters in the string literal using ${param}. Incase of an object, please use JSON.stringify(param, null, 2)% 
+- logg errors the following way: logger.error(error, "message") 

@@ -1,3 +1,7 @@
+// Stripe features are temporarily disabled
+// All Stripe functionality has been commented out to focus on the core grant platform
+
+/*
 import Stripe from 'stripe';
 import { redirect } from 'next/navigation';
 import { Team } from '@/lib/db/schema';
@@ -148,17 +152,15 @@ export async function handleSubscriptionChange(
 
 export async function getStripePrices() {
   const prices = await stripe.prices.list({
-    expand: ['data.product'],
+    limit: 100,
     active: true,
-    type: 'recurring'
+    expand: ['data.product']
   });
 
   return prices.data.map((price) => ({
     id: price.id,
-    productId:
-      typeof price.product === 'string' ? price.product : price.product.id,
+    productId: typeof price.product === 'string' ? price.product : price.product.id,
     unitAmount: price.unit_amount,
-    currency: price.currency,
     interval: price.recurring?.interval,
     trialPeriodDays: price.recurring?.trial_period_days
   }));
@@ -166,17 +168,32 @@ export async function getStripePrices() {
 
 export async function getStripeProducts() {
   const products = await stripe.products.list({
-    active: true,
-    expand: ['data.default_price']
+    limit: 100,
+    active: true
   });
 
   return products.data.map((product) => ({
     id: product.id,
     name: product.name,
-    description: product.description,
-    defaultPriceId:
-      typeof product.default_price === 'string'
-        ? product.default_price
-        : product.default_price?.id
+    description: product.description
   }));
+}
+*/
+
+// Placeholder exports to prevent import errors
+export const stripe = null;
+export async function createCheckoutSession() {
+  throw new Error('Stripe features are disabled');
+}
+export async function createCustomerPortalSession() {
+  throw new Error('Stripe features are disabled');
+}
+export async function handleSubscriptionChange() {
+  throw new Error('Stripe features are disabled');
+}
+export async function getStripePrices() {
+  return [];
+}
+export async function getStripeProducts() {
+  return [];
 }

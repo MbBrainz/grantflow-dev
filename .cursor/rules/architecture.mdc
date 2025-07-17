@@ -1,0 +1,5 @@
+---
+alwaysApply: true
+---
+# type definitions
+This application uses a drizzle-orm typescript first db definition and so most of the types originate from the @./src/db/schema.ts. Other important types like Activity are are defined in @./src/types/index.ts . This project is already large, so chances are that there is already a (base) type that you can extend or use to solve a new problem. Make sure to search for types before defining new ones.

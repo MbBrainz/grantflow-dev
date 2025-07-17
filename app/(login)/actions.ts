@@ -19,7 +19,7 @@ import {
 import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { createCheckoutSession } from '@/lib/payments/stripe';
+// import { createCheckoutSession } from '@/lib/payments/stripe'; // Disabled
 import { getUser, getUserWithTeam } from '@/lib/db/queries';
 import {
   validatedAction,
@@ -73,6 +73,15 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   const { user: foundUser, team: foundTeam } = userWithTeam[0];
 
+  // Check if user has a password hash (GitHub OAuth users might not have one)
+  if (!foundUser.passwordHash) {
+    return {
+      error: 'Please sign in with GitHub for this account.',
+      email,
+      password
+    };
+  }
+
   const isPasswordValid = await comparePasswords(
     password,
     foundUser.passwordHash
@@ -93,8 +102,8 @@ export const signIn = validatedAction(signInSchema, async (data, formData) => {
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
-    const priceId = formData.get('priceId') as string;
-    return createCheckoutSession({ team: foundTeam, priceId });
+    // Stripe checkout is disabled, redirect to pricing page instead
+    redirect('/pricing');
   }
 
   redirect('/dashboard');
@@ -214,8 +223,8 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
 
   const redirectTo = formData.get('redirect') as string | null;
   if (redirectTo === 'checkout') {
-    const priceId = formData.get('priceId') as string;
-    return createCheckoutSession({ team: createdTeam, priceId });
+    // Stripe checkout is disabled, redirect to pricing page instead
+    redirect('/pricing');
   }
 
   redirect('/dashboard');
@@ -238,6 +247,15 @@ export const updatePassword = validatedActionWithUser(
   updatePasswordSchema,
   async (data, _, user) => {
     const { currentPassword, newPassword, confirmPassword } = data;
+
+    if (!user.passwordHash) {
+      return {
+        currentPassword,
+        newPassword,
+        confirmPassword,
+        error: 'Cannot change password for GitHub OAuth accounts.'
+      };
+    }
 
     const isPasswordValid = await comparePasswords(
       currentPassword,
@@ -296,6 +314,13 @@ export const deleteAccount = validatedActionWithUser(
   deleteAccountSchema,
   async (data, _, user) => {
     const { password } = data;
+
+    if (!user.passwordHash) {
+      return {
+        password,
+        error: 'Cannot delete account. Please contact support for GitHub OAuth accounts.'
+      };
+    }
 
     const isPasswordValid = await comparePasswords(password, user.passwordHash);
     if (!isPasswordValid) {

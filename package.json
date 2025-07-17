@@ -8,9 +8,16 @@
     "db:seed": "npx tsx lib/db/seed.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:push": "drizzle-kit push",
+    "verify:github": "npx tsx scripts/verify-github-setup.ts"
   },
   "dependencies": {
+    "@octokit/app": "^16.0.1",
+    "@octokit/auth-app": "^8.0.2",
+    "@octokit/rest": "^22.0.0",
+    "@radix-ui/react-slot": "^1.2.3",
+    "@supabase/supabase-js": "^2.52.0",
     "@tailwindcss/postcss": "4.1.7",
     "@types/node": "^22.15.18",
     "@types/react": "19.1.4",
@@ -22,21 +29,24 @@
     "dotenv": "^16.5.0",
     "drizzle-kit": "^0.31.1",
     "drizzle-orm": "^0.43.1",
+    "drizzle-zod": "^0.8.2",
     "jose": "^6.0.11",
     "lucide-react": "^0.511.0",
     "next": "15.4.0-canary.47",
+    "polkadot-api": "^1.15.0",
     "postcss": "^8.5.3",
     "postgres": "^3.4.5",
     "radix-ui": "^1.4.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "react-hook-form": "^7.60.0",
     "server-only": "^0.0.1",
-    "stripe": "^18.1.0",
     "swr": "^2.3.3",
     "tailwind-merge": "^3.3.0",
     "tailwindcss": "4.1.7",
     "tw-animate-css": "^1.3.0",
     "typescript": "^5.8.3",
     "zod": "^3.24.4"
-  }
+  },
+  "packageManager": "pnpm@10.5.0+sha512.11106a5916c7406fe4b8cb8e3067974b8728f47308a4f5ac5e850304afa6f57e2847d7950dfe78877d8d36bfb401d381c4215db3a4c3547ffa63c14333a6fa51"
 }

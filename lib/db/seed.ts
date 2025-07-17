@@ -1,11 +1,12 @@
-import { stripe } from '../payments/stripe';
+// import { stripe } from '../payments/stripe'; // Disabled
 import { db } from './drizzle';
 import { users, teams, teamMembers } from './schema';
 import { hashPassword } from '@/lib/auth/session';
 
 async function createStripeProducts() {
-  console.log('Creating Stripe products and prices...');
-
+  console.log('Skipping Stripe products creation (Stripe features disabled)');
+  // Stripe product creation is disabled to focus on the core grant platform
+  /*
   const baseProduct = await stripe.products.create({
     name: 'Base',
     description: 'Base subscription plan',
@@ -35,8 +36,9 @@ async function createStripeProducts() {
       trial_period_days: 7,
     },
   });
-
-  console.log('Stripe products and prices created successfully.');
+  */
+  
+  console.log('Skipped Stripe products creation.');
 }
 
 async function seed() {
@@ -44,6 +46,7 @@ async function seed() {
   const password = 'admin123';
   const passwordHash = await hashPassword(password);
 
+  // Create regular admin user
   const [user] = await db
     .insert(users)
     .values([
@@ -56,6 +59,25 @@ async function seed() {
     .returning();
 
   console.log('Initial user created.');
+
+  // Create a curator user for testing voting functionality
+  const curatorEmail = 'curator@test.com';
+  const curatorPassword = 'curator123';
+  const curatorPasswordHash = await hashPassword(curatorPassword);
+
+  const [curator] = await db
+    .insert(users)
+    .values([
+      {
+        email: curatorEmail,
+        passwordHash: curatorPasswordHash,
+        role: "curator",
+        name: "Test Curator"
+      },
+    ])
+    .returning();
+
+  console.log('Curator user created:', curatorEmail);
 
   const [team] = await db
     .insert(teams)
@@ -70,7 +92,18 @@ async function seed() {
     role: 'owner',
   });
 
+  // Add curator to the team as well
+  await db.insert(teamMembers).values({
+    teamId: team.id,
+    userId: curator.id,
+    role: 'member',
+  });
+
   await createStripeProducts();
+
+  console.log('Seed data created successfully.');
+  console.log('Admin user:', email, '/ password:', password);
+  console.log('Curator user:', curatorEmail, '/ password:', curatorPassword);
 }
 
 seed()

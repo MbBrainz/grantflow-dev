@@ -1,8 +1,21 @@
 import { desc, and, eq, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
-import { activityLogs, teamMembers, teams, users } from './schema';
+import {
+  activityLogs,
+  teamMembers,
+  teams,
+  users,
+  submissions,
+  milestones,
+  discussions,
+  messages,
+  notifications,
+  reviews
+} from './schema';
 import { cookies } from 'next/headers';
 import { verifyToken } from '@/lib/auth/session';
+import type { NewDiscussion, NewMessage, NewNotification, NewReview } from './schema';
+import { sql } from 'drizzle-orm';
 
 export async function getUser() {
   const sessionCookie = (await cookies()).get('session');
@@ -127,4 +140,319 @@ export async function getTeamForUser() {
   });
 
   return result?.team || null;
+}
+
+// Discussion System Functions
+
+export async function createDiscussion(data: NewDiscussion) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const result = await db.insert(discussions).values(data).returning();
+  return result[0];
+}
+
+export async function getDiscussionForSubmission(submissionId: number) {
+  return await db.query.discussions.findFirst({
+    where: and(eq(discussions.submissionId, submissionId), eq(discussions.type, 'submission')),
+    with: {
+      messages: {
+        with: {
+          author: {
+            columns: {
+              id: true,
+              name: true,
+              role: true
+            }
+          }
+        },
+        orderBy: [messages.createdAt]
+      }
+    }
+  });
+}
+
+export async function getDiscussionForMilestone(milestoneId: number) {
+  return await db.query.discussions.findFirst({
+    where: and(eq(discussions.milestoneId, milestoneId), eq(discussions.type, 'milestone')),
+    with: {
+      messages: {
+        with: {
+          author: {
+            columns: {
+              id: true,
+              name: true,
+              role: true
+            }
+          }
+        },
+        orderBy: [messages.createdAt]
+      }
+    }
+  });
+}
+
+export async function createMessage(data: NewMessage) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const result = await db.insert(messages).values({
+    ...data,
+    authorId: user.id
+  }).returning();
+
+  // Update discussion timestamp
+  await db
+    .update(discussions)
+    .set({ updatedAt: new Date() })
+    .where(eq(discussions.id, data.discussionId));
+
+  return result[0];
+}
+
+export async function getMessagesForDiscussion(discussionId: number) {
+  return await db.query.messages.findMany({
+    where: eq(messages.discussionId, discussionId),
+    with: {
+      author: {
+        columns: {
+          id: true,
+          name: true,
+          role: true
+        }
+      }
+    },
+    orderBy: [messages.createdAt]
+  });
+}
+
+export async function createNotification(data: NewNotification) {
+  const result = await db.insert(notifications).values(data).returning();
+  return result[0];
+}
+
+export async function getNotificationsForUser() {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  return await db.query.notifications.findMany({
+    where: eq(notifications.userId, user.id),
+    with: {
+      submission: {
+        columns: {
+          id: true,
+          formData: true
+        }
+      },
+      discussion: {
+        columns: {
+          id: true,
+          type: true
+        }
+      }
+    },
+    orderBy: [desc(notifications.createdAt)]
+  });
+}
+
+export async function markNotificationAsRead(notificationId: number) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  await db
+    .update(notifications)
+    .set({ read: true })
+    .where(and(eq(notifications.id, notificationId), eq(notifications.userId, user.id)));
+}
+
+export async function createReview(data: NewReview) {
+  const user = await getUser();
+  if (!user) {
+    throw new Error('User not authenticated');
+  }
+
+  const result = await db.insert(reviews).values({
+    ...data,
+    curatorId: user.id
+  }).returning();
+
+  return result[0];
+}
+
+export async function getReviewsForSubmission(submissionId: number) {
+  return await db.query.reviews.findMany({
+    where: eq(reviews.submissionId, submissionId),
+    with: {
+      curator: {
+        columns: {
+          id: true,
+          name: true,
+          role: true
+        }
+      },
+      discussion: {
+        columns: {
+          id: true,
+          type: true
+        }
+      }
+    },
+    orderBy: [desc(reviews.createdAt)]
+  });
+}
+
+export async function getReviewsForMilestone(milestoneId: number) {
+  return await db.query.reviews.findMany({
+    where: eq(reviews.milestoneId, milestoneId),
+    with: {
+      curator: {
+        columns: {
+          id: true,
+          name: true,
+          role: true
+        }
+      },
+      discussion: {
+        columns: {
+          id: true,
+          type: true
+        }
+      }
+    },
+    orderBy: [desc(reviews.createdAt)]
+  });
+}
+
+// Curator-specific queries for dashboard
+export async function getAllSubmissionsForReview(statusFilter?: string) {
+  const whereClause = statusFilter ? eq(submissions.status, statusFilter) : undefined;
+
+  return await db.query.submissions.findMany({
+    where: whereClause,
+    with: {
+      user: {
+        columns: {
+          id: true,
+          name: true,
+          email: true
+        }
+      },
+      milestones: {
+        columns: {
+          id: true,
+          title: true,
+          status: true
+        }
+      }
+    },
+    orderBy: [desc(submissions.createdAt)]
+  });
+}
+
+export async function getSubmissionWithReviews(submissionId: number) {
+  return await db.query.submissions.findFirst({
+    where: eq(submissions.id, submissionId),
+    with: {
+      user: {
+        columns: {
+          id: true,
+          name: true,
+          email: true,
+          role: true
+        }
+      },
+      milestones: {
+        columns: {
+          id: true,
+          title: true,
+          description: true,
+          status: true
+        }
+      }
+    }
+  });
+}
+
+export async function getSubmissionStats() {
+  const [submissionCount] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(submissions);
+
+  const [submittedCount] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(submissions)
+    .where(eq(submissions.status, 'submitted'));
+
+  const [underReviewCount] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(submissions)
+    .where(eq(submissions.status, 'under_review'));
+
+  const [approvedCount] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(submissions)
+    .where(eq(submissions.status, 'approved'));
+
+  const [rejectedCount] = await db
+    .select({ count: sql<number>`count(*)` })
+    .from(submissions)
+    .where(eq(submissions.status, 'rejected'));
+
+  return {
+    total: submissionCount.count || 0,
+    submitted: submittedCount.count || 0,
+    underReview: underReviewCount.count || 0,
+    approved: approvedCount.count || 0,
+    rejected: rejectedCount.count || 0,
+  };
+}
+
+export async function checkIsCurator(userId: number) {
+  const user = await db
+    .select({ role: users.role })
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  return user.length > 0 && (user[0].role === 'curator' || user[0].role === 'admin');
+}
+
+// Helper function to create discussion when submission is created
+export async function ensureDiscussionForSubmission(submissionId: number) {
+  const existingDiscussion = await db.query.discussions.findFirst({
+    where: and(eq(discussions.submissionId, submissionId), eq(discussions.type, 'submission'))
+  });
+
+  if (!existingDiscussion) {
+    return await createDiscussion({
+      submissionId,
+      type: 'submission'
+    });
+  }
+
+  return existingDiscussion;
+}
+
+// Helper function to create discussion when milestone is created
+export async function ensureDiscussionForMilestone(milestoneId: number) {
+  const existingDiscussion = await db.query.discussions.findFirst({
+    where: and(eq(discussions.milestoneId, milestoneId), eq(discussions.type, 'milestone'))
+  });
+
+  if (!existingDiscussion) {
+    return await createDiscussion({
+      milestoneId,
+      type: 'milestone'
+    });
+  }
+
+  return existingDiscussion;
 }

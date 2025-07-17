@@ -1,0 +1,23 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Stack specification
+## main frameworks
+- nextjs app router
+- nextjs react
+- Typescript
+- vitest for testing
+- tailwindcss
+- shadcn-ui
+- commander.js for cli
+- postgreSQL db with `codebase-first` appoach: TypeScript Drizzle schema as a source of truth
+- drizzle ORM 
+- vercel ai-sdk for llm interactions
+- grammy.dev Grammy for telegram bot framework
+
+## Package manager and cli ops
+- pnpm is our main AND ONLY package manager
+

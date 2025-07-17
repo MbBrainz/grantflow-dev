@@ -1,3 +1,7 @@
+// Payment actions are temporarily disabled
+// All payment functionality has been commented out to focus on the core grant platform
+
+/*
 'use server';
 
 import { redirect } from 'next/navigation';
@@ -13,3 +17,13 @@ export const customerPortalAction = withTeam(async (_, team) => {
   const portalSession = await createCustomerPortalSession(team);
   redirect(portalSession.url);
 });
+*/
+
+// Placeholder exports to prevent import errors
+export async function checkoutAction() {
+  throw new Error('Payment features are disabled');
+}
+
+export async function customerPortalAction() {
+  throw new Error('Payment features are disabled');
+}

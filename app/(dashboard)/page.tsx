@@ -85,11 +85,11 @@ export default function HomePage() {
               </div>
               <div className="mt-5">
                 <h2 className="text-lg font-medium text-gray-900">
-                  Stripe Integration
+                  GitHub Integration
                 </h2>
                 <p className="mt-2 text-base text-gray-500">
-                  Seamless payment processing and subscription management with
-                  industry-leading Stripe integration.
+                  Seamless grant submission through GitHub PR creation and 
+                  collaborative review workflows.
                 </p>
               </div>
             </div>

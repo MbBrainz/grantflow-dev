@@ -9,7 +9,7 @@ import {
   CardTitle,
   CardFooter
 } from '@/components/ui/card';
-import { customerPortalAction } from '@/lib/payments/actions';
+// import { customerPortalAction } from '@/lib/payments/actions'; // Disabled
 import { useActionState } from 'react';
 import { TeamDataWithMembers, User } from '@/lib/db/schema';
 import { removeTeamMember, inviteTeamMember } from '@/app/(login)/actions';
@@ -38,8 +38,6 @@ function SubscriptionSkeleton() {
 }
 
 function ManageSubscription() {
-  const { data: teamData } = useSWR<TeamDataWithMembers>('/api/team', fetcher);
-
   return (
     <Card className="mb-8">
       <CardHeader>
@@ -50,21 +48,15 @@ function ManageSubscription() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
             <div className="mb-4 sm:mb-0">
               <p className="font-medium">
-                Current Plan: {teamData?.planName || 'Free'}
+                Current Plan: Free (Subscription features disabled)
               </p>
               <p className="text-sm text-muted-foreground">
-                {teamData?.subscriptionStatus === 'active'
-                  ? 'Billed monthly'
-                  : teamData?.subscriptionStatus === 'trialing'
-                  ? 'Trial period'
-                  : 'No active subscription'}
+                Payment features are temporarily disabled while we focus on the grant platform
               </p>
             </div>
-            <form action={customerPortalAction}>
-              <Button type="submit" variant="outline">
-                Manage Subscription
-              </Button>
-            </form>
+            <Button variant="outline" disabled>
+              Manage Subscription (Disabled)
+            </Button>
           </div>
         </div>
       </CardContent>
