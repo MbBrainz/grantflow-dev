@@ -972,16 +972,57 @@ export async function checkIsCurator(userId: number) {
 }
 
 export async function getAllSubmissionsForReview(statusFilter?: string) {
-  const whereClause = statusFilter ? eq(submissions.status, statusFilter) : undefined;
+  const user = await getUser();
+  if (!user) {
+    return [];
+  }
+
+  // Get committees where user is a curator
+  const userCommittees = await db
+    .select({ committeeId: committeeCurators.committeeId })
+    .from(committeeCurators)
+    .where(and(
+      eq(committeeCurators.userId, user.id),
+      eq(committeeCurators.isActive, true)
+    ));
+
+  // If user is not a curator of any committee, return empty
+  if (userCommittees.length === 0) {
+    return [];
+  }
+
+  const committeeIds = userCommittees.map(c => c.committeeId);
+
+  // Build where conditions
+  let whereConditions = [
+    sql`${submissions.committeeId} IN (${sql.join(committeeIds.map(id => sql`${id}`), sql`, `)})`,
+  ];
+
+  if (statusFilter) {
+    whereConditions.push(eq(submissions.status, statusFilter));
+  }
 
   return await db.query.submissions.findMany({
-    where: whereClause,
+    where: and(...whereConditions),
     with: {
       submitter: {
         columns: {
           id: true,
           name: true,
           email: true
+        }
+      },
+      committee: {
+        columns: {
+          id: true,
+          name: true
+        }
+      },
+      grantProgram: {
+        columns: {
+          id: true,
+          name: true,
+          fundingAmount: true
         }
       },
       milestones: {
@@ -997,11 +1038,45 @@ export async function getAllSubmissionsForReview(statusFilter?: string) {
 }
 
 export async function getSubmissionStats() {
-  const totalResult = await db.select().from(submissions);
-  const submittedResult = await db.select().from(submissions).where(eq(submissions.status, 'submitted'));
-  const underReviewResult = await db.select().from(submissions).where(eq(submissions.status, 'under_review'));
-  const approvedResult = await db.select().from(submissions).where(eq(submissions.status, 'approved'));
-  const rejectedResult = await db.select().from(submissions).where(eq(submissions.status, 'rejected'));
+  const user = await getUser();
+  if (!user) {
+    return {
+      total: 0,
+      submitted: 0,
+      underReview: 0,
+      approved: 0,
+      rejected: 0,
+    };
+  }
+
+  // Get committees where user is a curator
+  const userCommittees = await db
+    .select({ committeeId: committeeCurators.committeeId })
+    .from(committeeCurators)
+    .where(and(
+      eq(committeeCurators.userId, user.id),
+      eq(committeeCurators.isActive, true)
+    ));
+
+  // If user is not a curator of any committee, return zeros
+  if (userCommittees.length === 0) {
+    return {
+      total: 0,
+      submitted: 0,
+      underReview: 0,
+      approved: 0,
+      rejected: 0,
+    };
+  }
+
+  const committeeIds = userCommittees.map(c => c.committeeId);
+  const committeeFilter = sql`${submissions.committeeId} IN (${sql.join(committeeIds.map(id => sql`${id}`), sql`, `)})`;
+
+  const totalResult = await db.select().from(submissions).where(committeeFilter);
+  const submittedResult = await db.select().from(submissions).where(and(committeeFilter, eq(submissions.status, 'pending')));
+  const underReviewResult = await db.select().from(submissions).where(and(committeeFilter, eq(submissions.status, 'under_review')));
+  const approvedResult = await db.select().from(submissions).where(and(committeeFilter, eq(submissions.status, 'approved')));
+  const rejectedResult = await db.select().from(submissions).where(and(committeeFilter, eq(submissions.status, 'rejected')));
 
   return {
     total: totalResult.length || 0,

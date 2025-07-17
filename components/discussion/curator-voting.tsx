@@ -84,14 +84,7 @@ export function CuratorVoting({
     startTransition(async () => {
       try {
         // Create a vote message in the discussion
-        const voteData = {
-          content: `**${selectedVote.replace('_', ' ').toUpperCase()}** ${feedback ? `\n\n${feedback}` : ''}`,
-          messageType: 'vote' as const,
-          metadata: JSON.stringify({
-            vote: selectedVote,
-            feedback: feedback || null
-          })
-        };
+        const content = `**${selectedVote.replace('_', ' ').toUpperCase()}** ${feedback ? `\n\n${feedback}` : ''}`;
 
         // Use the existing postMessageToSubmission or postMessageToMilestone action
         const { postMessageToSubmission, postMessageToMilestone } = await import('@/app/(dashboard)/dashboard/submissions/discussion-actions');
@@ -99,15 +92,15 @@ export function CuratorVoting({
         let result;
         if (milestoneId) {
           result = await postMessageToMilestone({
-            content: voteData.content,
-            milestoneId,
-            messageType: voteData.messageType
+            content,
+            milestoneId: Number(milestoneId),
+            messageType: 'vote'
           }, new FormData());
         } else {
           result = await postMessageToSubmission({
-            content: voteData.content,
-            submissionId,
-            messageType: voteData.messageType
+            content,
+            submissionId: Number(submissionId),
+            messageType: 'vote'
           }, new FormData());
         }
 
@@ -194,10 +187,10 @@ export function CuratorVoting({
             ) : (
               <div className="space-y-4">
                 <div>
-                  <Label className="text-sm font-medium mb-3 block">
+                  <Label htmlFor="vote-options" className="text-sm font-medium mb-3 block">
                     Select your review decision:
                   </Label>
-                  <div className="grid gap-2">
+                  <div id="vote-options" className="grid gap-2">
                     {voteOptions.map((option) => {
                       const Icon = option.icon;
                       return (

@@ -25,13 +25,6 @@ function StatusBadge({ status }: { status: string }) {
 }
 
 function SubmissionCard({ submission }: { submission: any }) {
-  let formData;
-  try {
-    formData = JSON.parse(submission.formData || '{}');
-  } catch {
-    formData = {};
-  }
-
   const labels = submission.labels ? JSON.parse(submission.labels) : [];
 
   return (
@@ -40,11 +33,18 @@ function SubmissionCard({ submission }: { submission: any }) {
         <div className="flex justify-between items-start">
           <div>
             <CardTitle className="text-lg">
-              {formData.title || 'Untitled Submission'}
+              {submission.title || 'Untitled Submission'}
             </CardTitle>
             <CardDescription>
-              by {submission.user?.name || 'Anonymous'} • {new Date(submission.createdAt).toLocaleDateString()}
+              by {submission.submitter?.name || 'Anonymous'} • {new Date(submission.createdAt).toLocaleDateString()}
             </CardDescription>
+            {submission.committee && (
+              <div className="mt-1">
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                  {submission.committee.name}
+                </span>
+              </div>
+            )}
           </div>
           <StatusBadge status={submission.status} />
         </div>
@@ -52,7 +52,7 @@ function SubmissionCard({ submission }: { submission: any }) {
       <CardContent>
         <div className="space-y-3">
           <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-            {formData.description || 'No description available'}
+            {submission.description || submission.executiveSummary || 'No description available'}
           </p>
           
           {labels.length > 0 && (
@@ -81,8 +81,15 @@ function SubmissionCard({ submission }: { submission: any }) {
               </div>
               <div className="flex items-center gap-1">
                 <Clock className="w-4 h-4" />
-                {formData.totalAmount ? `$${formData.totalAmount}` : 'Amount TBD'}
+                {submission.totalAmount ? `$${submission.totalAmount.toLocaleString()}` : 
+                 submission.grantProgram?.fundingAmount ? `$${submission.grantProgram.fundingAmount.toLocaleString()}` : 'Amount TBD'}
               </div>
+              {submission.grantProgram && (
+                <div className="flex items-center gap-1">
+                  <Users className="w-4 h-4" />
+                  {submission.grantProgram.name}
+                </div>
+              )}
             </div>
             
             <div className="flex gap-2">

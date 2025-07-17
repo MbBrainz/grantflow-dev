@@ -86,13 +86,14 @@ export function SubmissionDetailView({ submission, currentUser }: SubmissionDeta
     loadDiscussionAndReviews();
   }, [submission.id]);
 
-  const handlePostMessage = async (content: string, messageType = 'comment') => {
+  const handlePostMessage = async (content: string, type?: string) => {
     try {
+      const messageType = (type === 'comment' || type === 'status_change' || type === 'vote') ? type : 'comment';
       const formData = new FormData();
       const result = await postMessageToSubmission({
         content,
-        submissionId: submission.id,
-        messageType: messageType as any,
+        submissionId: Number(submission.id),
+        messageType,
       }, formData);
 
       if (result.error) {
