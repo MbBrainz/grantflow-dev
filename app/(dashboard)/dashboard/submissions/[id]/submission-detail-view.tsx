@@ -3,12 +3,20 @@
 import { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-// import { Badge } from '@/components/ui/badge';
+import { Badge } from '@/components/ui/badge';
 import { DiscussionThread } from '@/components/discussion/discussion-thread';
 import { CuratorVoting } from '@/components/discussion/curator-voting';
-import { ArrowLeft, Calendar, Github, DollarSign, Target, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Calendar, Github, DollarSign, Target, MessageSquare, Activity, CheckCircle, Clock, AlertTriangle, FileText, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { getSubmissionDiscussion, getSubmissionReviews, postMessageToSubmission } from '../discussion-actions';
+import { 
+  getSubmissionDiscussion, 
+  getSubmissionReviews, 
+  postMessageToSubmission,
+  getSubmissionCurrentState,
+  getSubmissionMilestonesOverview,
+  getSubmissionForCuratorReview,
+  postMessageToMilestone
+} from '../discussion-actions';
 import type { Submission, Milestone, User } from '@/lib/db/schema';
 
 interface SubmissionWithMilestones {
@@ -38,6 +46,8 @@ interface SubmissionDetailViewProps {
   currentUser: User | null;
 }
 
+type ViewMode = 'current' | 'milestones' | 'overview';
+
 function parseFormData(formDataString: string | null) {
   if (!formDataString) return null;
   try {
@@ -57,14 +67,460 @@ function getStatusColor(status: string): string {
   }
 }
 
+function getMilestoneStatusColor(status: string): string {
+  switch (status) {
+    case 'completed': return 'bg-green-100 text-green-800';
+    case 'in_progress': return 'bg-blue-100 text-blue-800';
+    case 'under_review': return 'bg-yellow-100 text-yellow-800';
+    case 'pending': return 'bg-gray-100 text-gray-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+}
+
+// Current State View Component
+function CurrentStateView({ submission, currentUser }: { submission: SubmissionWithMilestones, currentUser: User | null }) {
+  const [currentState, setCurrentState] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadCurrentState() {
+      try {
+        const formData = new FormData();
+        formData.append('submissionId', String(submission.id));
+        const result = await getSubmissionCurrentState({}, formData);
+        
+        if (!result.error && 'currentState' in result) {
+          setCurrentState(result.currentState);
+        }
+      } catch (error) {
+        console.error('[CurrentStateView]: Error loading current state', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadCurrentState();
+  }, [submission.id]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Pending Actions */}
+      <Card className="p-6 border-l-4 border-l-orange-500">
+        <div className="flex items-center gap-2 mb-4">
+          <AlertTriangle className="w-5 h-5 text-orange-600" />
+          <h3 className="text-lg font-semibold">Pending Actions</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 bg-blue-50 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <MessageSquare className="w-4 h-4 text-blue-600" />
+              <span className="font-medium">Submission Vote</span>
+            </div>
+            <p className="text-sm text-gray-600">
+              {currentState?.pendingActions?.submissionVote ? 'Vote required' : 'Vote cast ✓'}
+            </p>
+          </div>
+          
+          <div className="p-4 bg-yellow-50 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Target className="w-4 h-4 text-yellow-600" />
+              <span className="font-medium">Milestone Reviews</span>
+            </div>
+            <p className="text-sm text-gray-600">
+              {currentState?.pendingActions?.milestoneReviews || 0} pending
+            </p>
+          </div>
+          
+          <div className="p-4 bg-green-50 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <Activity className="w-4 h-4 text-green-600" />
+              <span className="font-medium">Active Milestones</span>
+            </div>
+            <p className="text-sm text-gray-600">
+              {currentState?.pendingActions?.activeMilestonesCount || 0} in progress
+            </p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Recent Activity */}
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Clock className="w-5 h-5 text-blue-600" />
+          <h3 className="text-lg font-semibold">Recent Activity</h3>
+        </div>
+        
+        <div className="space-y-3">
+          {currentState?.recentMessages?.length > 0 ? (
+            currentState.recentMessages.map((message: any) => (
+              <div key={message.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <span className="text-xs font-medium text-blue-600">
+                    {message.author?.name?.[0] || 'U'}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-medium text-sm">{message.author?.name || 'Unknown'}</span>
+                    <Badge variant="outline" className="text-xs">
+                      {message.discussion?.type === 'milestone' ? 'Milestone' : 'Submission'}
+                    </Badge>
+                    <span className="text-xs text-gray-500">
+                      {new Date(message.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-700 truncate">{message.content}</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-gray-500 text-center py-4">No recent activity</p>
+          )}
+        </div>
+      </Card>
+
+      {/* Active Milestones */}
+      {currentState?.activeMilestones?.length > 0 && (
+        <Card className="p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Target className="w-5 h-5 text-green-600" />
+            <h3 className="text-lg font-semibold">Active Milestones</h3>
+          </div>
+          
+          <div className="space-y-4">
+            {currentState.activeMilestones.map((milestone: any) => (
+              <div key={milestone.id} className="border rounded-lg p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <h4 className="font-medium">{milestone.title}</h4>
+                  <Badge className={getMilestoneStatusColor(milestone.status)}>
+                    {milestone.status.replace('_', ' ')}
+                  </Badge>
+                </div>
+                <p className="text-sm text-gray-600 mb-3">{milestone.description}</p>
+                
+                {milestone.discussions?.[0]?.messages?.length > 0 && (
+                  <div className="bg-gray-50 rounded p-3">
+                    <p className="text-xs font-medium text-gray-700 mb-1">Latest Discussion:</p>
+                    <p className="text-sm text-gray-600">
+                      {milestone.discussions[0].messages[milestone.discussions[0].messages.length - 1].content}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// Milestones Overview Component
+function MilestonesOverview({ submission, currentUser }: { submission: SubmissionWithMilestones, currentUser: User | null }) {
+  const [milestonesData, setMilestonesData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [expandedMilestone, setExpandedMilestone] = useState<number | null>(null);
+
+  useEffect(() => {
+    async function loadMilestonesOverview() {
+      try {
+        const formData = new FormData();
+        formData.append('submissionId', String(submission.id));
+        const result = await getSubmissionMilestonesOverview({}, formData);
+        
+        if (!result.error && 'milestonesOverview' in result) {
+          setMilestonesData(result.milestonesOverview);
+        }
+      } catch (error) {
+        console.error('[MilestonesOverview]: Error loading milestones', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadMilestonesOverview();
+  }, [submission.id]);
+
+  const handlePostMilestoneMessage = async (milestoneId: number, content: string) => {
+    try {
+      const formData = new FormData();
+      formData.append('content', content);
+      formData.append('milestoneId', String(milestoneId));
+      formData.append('messageType', 'comment');
+      
+      const result = await postMessageToMilestone({}, formData);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
+
+      // Reload milestones data
+      const reloadFormData = new FormData();
+      reloadFormData.append('submissionId', String(submission.id));
+      const reloadResult = await getSubmissionMilestonesOverview({}, reloadFormData);
+      
+      if (!reloadResult.error && 'milestonesOverview' in reloadResult) {
+        setMilestonesData(reloadResult.milestonesOverview);
+      }
+    } catch (error) {
+      console.error('[MilestonesOverview]: Error posting milestone message', error);
+      throw error;
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Summary Stats */}
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <TrendingUp className="w-5 h-5 text-blue-600" />
+          <h3 className="text-lg font-semibold">Milestones Summary</h3>
+        </div>
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center">
+            <div className="text-2xl font-bold text-blue-600">{milestonesData?.summary?.total || 0}</div>
+            <div className="text-sm text-gray-600">Total</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-green-600">{milestonesData?.summary?.completed || 0}</div>
+            <div className="text-sm text-gray-600">Completed</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-yellow-600">{milestonesData?.summary?.inProgress || 0}</div>
+            <div className="text-sm text-gray-600">In Progress</div>
+          </div>
+          <div className="text-center">
+            <div className="text-2xl font-bold text-gray-600">{milestonesData?.summary?.pending || 0}</div>
+            <div className="text-sm text-gray-600">Pending</div>
+          </div>
+        </div>
+        
+        <div className="mt-4 pt-4 border-t">
+          <div className="flex justify-between text-sm">
+            <span>Progress: ${milestonesData?.summary?.paidAmount?.toLocaleString() || 0} paid</span>
+            <span>Total: ${milestonesData?.summary?.totalAmount?.toLocaleString() || 0}</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div 
+              className="bg-green-600 h-2 rounded-full" 
+              style={{ 
+                width: `${milestonesData?.summary?.totalAmount > 0 ? 
+                  (milestonesData.summary.paidAmount / milestonesData.summary.totalAmount) * 100 : 0}%` 
+              }}
+            ></div>
+          </div>
+        </div>
+      </Card>
+
+      {/* Milestones List */}
+      <div className="space-y-4">
+        {milestonesData?.milestones?.map((milestone: any, index: number) => (
+          <Card key={milestone.id} className="overflow-hidden">
+            <div className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-medium">
+                  Milestone {index + 1}: {milestone.title}
+                </h4>
+                <div className="flex items-center gap-2">
+                  <Badge className={getMilestoneStatusColor(milestone.status)}>
+                    {milestone.status.replace('_', ' ')}
+                  </Badge>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setExpandedMilestone(
+                      expandedMilestone === milestone.id ? null : milestone.id
+                    )}
+                  >
+                    {expandedMilestone === milestone.id ? 'Collapse' : 'Expand'}
+                  </Button>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600 mb-3">
+                <div>Amount: ${milestone.amount?.toLocaleString() || 0}</div>
+                <div>Due: {milestone.dueDate ? new Date(milestone.dueDate).toLocaleDateString() : 'No date set'}</div>
+                <div>Messages: {milestone.discussions?.[0]?.messages?.length || 0}</div>
+              </div>
+              
+              <p className="text-sm text-gray-700">{milestone.description}</p>
+            </div>
+            
+            {expandedMilestone === milestone.id && (
+              <div className="border-t bg-gray-50 p-4">
+                <DiscussionThread
+                  discussion={milestone.discussions?.[0]}
+                  submissionId={submission.id}
+                  milestoneId={milestone.id}
+                  currentUser={currentUser}
+                  onPostMessage={(content) => handlePostMilestoneMessage(milestone.id, content)}
+                  title={`${milestone.title} Discussion`}
+                  isPublic={false}
+                />
+              </div>
+            )}
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Project Overview Component
+function ProjectOverview({ submission, currentUser }: { submission: SubmissionWithMilestones, currentUser: User | null }) {
+  const formData = parseFormData(submission.formData || null);
+  const labels = submission.labels ? JSON.parse(submission.labels) : [];
+
+  return (
+    <div className="space-y-6">
+      {/* Project Details */}
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <FileText className="w-5 h-5 text-blue-600" />
+          <h3 className="text-lg font-semibold">Project Details</h3>
+        </div>
+        
+        <div className="space-y-4">
+          <div>
+            <h4 className="font-medium mb-2">Executive Summary</h4>
+            <p className="text-gray-700">{submission.executiveSummary || formData?.executiveSummary}</p>
+          </div>
+          
+          <div>
+            <h4 className="font-medium mb-2">Description</h4>
+            <p className="text-gray-700">{submission.description || formData?.description}</p>
+          </div>
+          
+          <div>
+            <h4 className="font-medium mb-2">Post-Grant Plan</h4>
+            <p className="text-gray-700">{submission.postGrantPlan || formData?.postGrantPlan}</p>
+          </div>
+        </div>
+      </Card>
+
+      {/* Project Metadata */}
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Calendar className="w-5 h-5 text-blue-600" />
+          <h3 className="text-lg font-semibold">Project Information</h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <span className="font-medium">Total Amount:</span>
+            <span className="ml-2">${submission.totalAmount?.toLocaleString() || 'TBD'}</span>
+          </div>
+          <div>
+            <span className="font-medium">Applied:</span>
+            <span className="ml-2">{submission.appliedAt ? new Date(submission.appliedAt).toLocaleDateString() : 'Unknown'}</span>
+          </div>
+          <div>
+            <span className="font-medium">Status:</span>
+            <Badge className={`ml-2 ${getStatusColor(submission.status)}`}>
+              {submission.status.replace('_', ' ').toUpperCase()}
+            </Badge>
+          </div>
+          <div>
+            <span className="font-medium">Milestones:</span>
+            <span className="ml-2">{submission.milestones?.length || 0} total</span>
+          </div>
+        </div>
+
+        {labels.length > 0 && (
+          <div className="mt-4">
+            <span className="font-medium">Labels:</span>
+            <div className="flex flex-wrap gap-2 mt-2">
+              {labels.map((label: string, index: number) => (
+                <Badge key={index} variant="outline">{label}</Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {submission.githubRepoUrl && (
+          <div className="mt-4">
+            <span className="font-medium">GitHub Repository:</span>
+            <a 
+              href={submission.githubRepoUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="ml-2 text-blue-600 hover:underline flex items-center gap-1"
+            >
+              <Github className="w-4 h-4" />
+              {submission.githubRepoUrl}
+            </a>
+          </div>
+        )}
+      </Card>
+
+      {/* Timeline View */}
+      <Card className="p-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Clock className="w-5 h-5 text-blue-600" />
+          <h3 className="text-lg font-semibold">Timeline</h3>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <div className="w-3 h-3 bg-blue-600 rounded-full mt-2"></div>
+            <div>
+              <div className="font-medium">Application Submitted</div>
+              <div className="text-sm text-gray-600">
+                {submission.appliedAt ? new Date(submission.appliedAt).toLocaleDateString() : 'Unknown'}
+              </div>
+            </div>
+          </div>
+          
+          {submission.milestones?.map((milestone, index) => (
+            <div key={milestone.id} className="flex items-start gap-3">
+              <div className={`w-3 h-3 rounded-full mt-2 ${
+                milestone.status === 'completed' ? 'bg-green-600' :
+                milestone.status === 'in_progress' ? 'bg-blue-600' :
+                milestone.status === 'under_review' ? 'bg-yellow-600' : 'bg-gray-400'
+              }`}></div>
+              <div>
+                <div className="font-medium">{milestone.title}</div>
+                <div className="text-sm text-gray-600">
+                  Due: {milestone.dueDate ? new Date(milestone.dueDate).toLocaleDateString() : 'No date set'}
+                </div>
+                <Badge className={`mt-1 ${getMilestoneStatusColor(milestone.status)}`}>
+                  {milestone.status.replace('_', ' ')}
+                </Badge>
+              </div>
+            </div>
+          ))}
+        </div>
+      </Card>
+    </div>
+  );
+}
+
 export function SubmissionDetailView({ submission, currentUser }: SubmissionDetailViewProps) {
   const router = useRouter();
+  const [viewMode, setViewMode] = useState<ViewMode>('current');
   const [discussionData, setDiscussionData] = useState<any>(null);
   const [reviews, setReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   const formData = parseFormData(submission.formData || null);
-  const labels = submission.labels ? JSON.parse(submission.labels) : [];
 
   useEffect(() => {
     async function loadDiscussionAndReviews() {
@@ -90,11 +546,11 @@ export function SubmissionDetailView({ submission, currentUser }: SubmissionDeta
     try {
       const messageType = (type === 'comment' || type === 'status_change' || type === 'vote') ? type : 'comment';
       const formData = new FormData();
-      const result = await postMessageToSubmission({
-        content,
-        submissionId: Number(submission.id),
-        messageType,
-      }, formData);
+      formData.append('content', content);
+      formData.append('submissionId', String(submission.id));
+      formData.append('messageType', messageType);
+      
+      const result = await postMessageToSubmission({}, formData);
 
       if (result.error) {
         throw new Error(result.error);
@@ -124,136 +580,75 @@ export function SubmissionDetailView({ submission, currentUser }: SubmissionDeta
     }
   };
 
-  if (!formData) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" onClick={() => router.back()}>
-            <ArrowLeft className="w-4 h-4" />
-            Back
-          </Button>
-        </div>
-        <Card className="p-8 text-center">
-          <p className="text-gray-500">Unable to load submission details</p>
-        </Card>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-8">
-      {/* Header with Navigation */}
-      <div className="flex items-center justify-between">
-        <Button variant="ghost" onClick={() => router.back()}>
+    <div className="max-w-6xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-6">
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={() => router.back()}
+          className="flex items-center gap-2"
+        >
           <ArrowLeft className="w-4 h-4" />
-          Back to Submissions
+          Back
         </Button>
         
-        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(submission.status)}`}>
-          {submission.status?.toUpperCase() || 'PENDING'}
-        </span>
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">{submission.title || formData?.title}</h1>
+          <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
+            <span>Submission #{submission.id}</span>
+            <Badge className={getStatusColor(submission.status)}>
+              {submission.status.replace('_', ' ').toUpperCase()}
+            </Badge>
+            <span>Applied {submission.appliedAt ? new Date(submission.appliedAt).toLocaleDateString() : 'Unknown'}</span>
+          </div>
+        </div>
       </div>
 
-      {/* Submission Overview */}
+      {/* View Mode Tabs */}
       <Card className="p-6">
-        <div className="space-y-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              {formData.title}
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">
-              {formData.description}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {labels.map((label: string, index: number) => (
-              <span key={index} className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-secondary text-secondary-foreground">
-                {label}
-              </span>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-4 h-4 text-gray-500" />
-              <span className="text-sm">
-                Total: <strong>${formData.totalAmount || 'Not specified'}</strong>
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Target className="w-4 h-4 text-gray-500" />
-              <span className="text-sm">
-                Milestones: <strong>{submission.milestones.length}</strong>
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-gray-500" />
-              <span className="text-sm">
-                Created: <strong>{new Date(submission.createdAt).toLocaleDateString()}</strong>
-              </span>
-            </div>
-          </div>
-
-          {formData.githubRepoUrl && (
-            <div className="pt-4 border-t">
-              <a 
-                href={formData.githubRepoUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-              >
-                <Github className="w-4 h-4" />
-                View Repository
-              </a>
-            </div>
-          )}
+        <div className="flex items-center gap-1 mb-6">
+          <Button
+            variant={viewMode === 'current' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('current')}
+            className="flex items-center gap-2"
+          >
+            <Activity className="w-4 h-4" />
+            Current State
+          </Button>
+          <Button
+            variant={viewMode === 'milestones' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('milestones')}
+            className="flex items-center gap-2"
+          >
+            <Target className="w-4 h-4" />
+            Milestones
+          </Button>
+          <Button
+            variant={viewMode === 'overview' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('overview')}
+            className="flex items-center gap-2"
+          >
+            <FileText className="w-4 h-4" />
+            Project Overview
+          </Button>
         </div>
+
+        {/* Render selected view */}
+        {viewMode === 'current' && <CurrentStateView submission={submission} currentUser={currentUser} />}
+        {viewMode === 'milestones' && <MilestonesOverview submission={submission} currentUser={currentUser} />}
+        {viewMode === 'overview' && <ProjectOverview submission={submission} currentUser={currentUser} />}
       </Card>
 
-      {/* Executive Summary */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Executive Summary</h2>
-        <div className="prose dark:prose-invert max-w-none">
-          <p className="whitespace-pre-wrap">{formData.executiveSummary}</p>
-        </div>
-      </Card>
-
-      {/* Post-Grant Plan */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Post-Grant Plan</h2>
-        <div className="prose dark:prose-invert max-w-none">
-          <p className="whitespace-pre-wrap">{formData.postGrantPlan}</p>
-        </div>
-      </Card>
-
-      {/* Milestones */}
-      <Card className="p-6">
-        <h2 className="text-xl font-semibold mb-4">Milestones</h2>
-        <div className="space-y-4">
-          {submission.milestones.map((milestone, index) => (
-            <Card key={milestone.id} className="p-4 border-l-4 border-l-blue-500">
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-semibold">
-                  {index + 1}. {milestone.title}
-                </h3>
-                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${getStatusColor(milestone.status)}`}>
-                  {milestone.status?.toUpperCase() || 'PENDING'}
-                </span>
-              </div>
-              <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap">
-                {milestone.description}
-              </p>
-            </Card>
-          ))}
-        </div>
-      </Card>
-
-      {/* Discussion Thread */}
+      {/* Always show submission-level discussion and voting */}
       <Card className="p-6">
         <div className="flex items-center gap-2 mb-6">
           <MessageSquare className="w-5 h-5 text-blue-600" />
-          <h2 className="text-xl font-semibold">Discussion & Review</h2>
+          <h2 className="text-xl font-semibold">Submission Review & Discussion</h2>
         </div>
         
         {loading ? (
@@ -277,7 +672,7 @@ export function SubmissionDetailView({ submission, currentUser }: SubmissionDeta
               submissionId={submission.id}
               currentUser={discussionData?.currentUser}
               onPostMessage={handlePostMessage}
-              title={formData.title}
+              title={formData?.title || submission.title}
               isPublic={false}
             />
           </div>

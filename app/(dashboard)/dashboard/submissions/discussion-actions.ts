@@ -9,7 +9,6 @@ import {
   getDiscussionForMilestone,
   ensureDiscussionForSubmission,
   ensureDiscussionForMilestone,
-  createNotification,
   getReviewsForSubmission
 } from '@/lib/db/queries';
 import { validatedActionWithUser } from '@/lib/auth/middleware';
@@ -145,7 +144,7 @@ export async function getSubmissionReviews(submissionId: number) {
 export const postMessageToSubmission = validatedActionWithUser(
   z.object({
     content: z.string().min(1).max(2000),
-    submissionId: z.number(),
+    submissionId: z.coerce.number(),
     messageType: z.enum(['comment', 'status_change', 'vote']).default('comment'),
   }),
   async (data, formData, user) => {
@@ -207,15 +206,112 @@ export const postMessageToSubmission = validatedActionWithUser(
   }
 );
 
+// Enhanced server actions for curator review interface
+export const getSubmissionForCuratorReview = validatedActionWithUser(
+  z.object({
+    submissionId: z.coerce.number(),
+  }),
+  async (data, formData, user) => {
+    try {
+      console.log('[getSubmissionForCuratorReview]: Fetching comprehensive submission data', { 
+        submissionId: data.submissionId, 
+        userId: user.id 
+      });
+
+      const submissionData = await import('@/lib/db/queries').then(m => 
+        m.getSubmissionForCuratorReview(data.submissionId)
+      );
+
+      if (!submissionData) {
+        return { error: 'Submission not found' };
+      }
+
+      return { 
+        success: true, 
+        submission: submissionData,
+        currentUser: user
+      };
+
+    } catch (error) {
+      console.error('[getSubmissionForCuratorReview]: Error fetching submission data', error);
+      return { 
+        error: 'Failed to load submission data. Please try again.' 
+      };
+    }
+  }
+);
+
+export const getSubmissionCurrentState = validatedActionWithUser(
+  z.object({
+    submissionId: z.coerce.number(),
+  }),
+  async (data, formData, user) => {
+    try {
+      console.log('[getSubmissionCurrentState]: Fetching current state data', { 
+        submissionId: data.submissionId, 
+        userId: user.id 
+      });
+
+      const currentStateData = await import('@/lib/db/queries').then(m => 
+        m.getSubmissionCurrentState(data.submissionId)
+      );
+
+      return { 
+        success: true, 
+        currentState: currentStateData,
+        currentUser: user
+      };
+
+    } catch (error) {
+      console.error('[getSubmissionCurrentState]: Error fetching current state', error);
+      return { 
+        error: 'Failed to load current state data. Please try again.' 
+      };
+    }
+  }
+);
+
+export const getSubmissionMilestonesOverview = validatedActionWithUser(
+  z.object({
+    submissionId: z.coerce.number(),
+  }),
+  async (data, formData, user) => {
+    try {
+      console.log('[getSubmissionMilestonesOverview]: Fetching milestones overview', { 
+        submissionId: data.submissionId, 
+        userId: user.id 
+      });
+
+      const milestonesData = await import('@/lib/db/queries').then(m => 
+        m.getSubmissionMilestonesOverview(data.submissionId)
+      );
+
+      return { 
+        success: true, 
+        milestonesOverview: milestonesData,
+        currentUser: user
+      };
+
+    } catch (error) {
+      console.error('[getSubmissionMilestonesOverview]: Error fetching milestones overview', error);
+      return { 
+        error: 'Failed to load milestones overview. Please try again.' 
+      };
+    }
+  }
+);
+
+// Helper function to post a message to a milestone discussion
 export const postMessageToMilestone = validatedActionWithUser(
   z.object({
     content: z.string().min(1).max(2000),
-    milestoneId: z.number(),
+    milestoneId: z.coerce.number(),
     messageType: z.enum(['comment', 'status_change', 'vote']).default('comment'),
   }),
   async (data, formData, user) => {
     try {
-      // Ensure discussion exists
+      // Ensure discussion exists for milestone
+      const { ensureDiscussionForMilestone, createMessage } = await import('@/lib/db/queries');
       const discussion = await ensureDiscussionForMilestone(data.milestoneId);
       
       // Create the message
@@ -230,31 +326,21 @@ export const postMessageToMilestone = validatedActionWithUser(
         milestoneId: data.milestoneId 
       });
 
-      // Trigger real-time notifications for milestone discussions
+      // Get milestone to find submission ID for notifications
+      const { getMilestoneById } = await import('@/lib/db/queries');
+      const milestone = await getMilestoneById(data.milestoneId);
+
+      // Trigger real-time notifications for milestone messages
       try {
-        // For milestones, we'll use a generic submission ID (this should be improved)
-        // In a real implementation, you'd want to get the submission ID from the milestone
-        const submissionId = 1; // TODO: Get actual submission ID from milestone
-        
-        if (data.messageType === 'vote') {
-          await notifyVoteCast(
-            submissionId,
-            user.name || 'Anonymous Curator',
-            data.content,
-            user.id
-          );
-        } else if (data.messageType === 'status_change') {
-          await notifyStatusChange(
-            submissionId,
-            data.content,
-            user.id
-          );
-        } else {
+        // For milestones, we'll reuse the submission notification system
+        // but could be enhanced to be milestone-specific
+        if (milestone?.submissionId) {
+          const { notifyNewMessage } = await import('@/lib/notifications/server');
           await notifyNewMessage(
-            submissionId,
+            milestone.submissionId,
             discussion.id,
             user.name || 'Anonymous User',
-            data.content,
+            `Milestone update: ${data.content}`,
             user.id
           );
         }
@@ -264,13 +350,19 @@ export const postMessageToMilestone = validatedActionWithUser(
         // Don't fail the whole operation if notifications fail
       }
 
-      // Revalidate the relevant pages
+      // Revalidate the submissions page
       revalidatePath('/dashboard/submissions');
-      
+      if (milestone?.submissionId) {
+        revalidatePath(`/dashboard/submissions/${milestone.submissionId}`);
+      }
+
       return { success: true, messageId: message.id };
+
     } catch (error) {
-      console.error('[postMessageToMilestone]: Error posting message', error);
-      return { error: 'Failed to post message. Please try again.' };
+      console.error('[postMessageToMilestone]: Error creating milestone message', error);
+      return { 
+        error: 'Failed to post message. Please try again.' 
+      };
     }
   }
 ); 

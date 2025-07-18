@@ -86,23 +86,42 @@ export function CuratorVoting({
         // Create a vote message in the discussion
         const content = `**${selectedVote.replace('_', ' ').toUpperCase()}** ${feedback ? `\n\n${feedback}` : ''}`;
 
+        console.log('[CuratorVoting]: Submitting vote with data:', {
+          content,
+          submissionId,
+          milestoneId,
+          selectedVote,
+          feedback,
+          currentUser: currentUser?.id
+        });
+
         // Use the existing postMessageToSubmission or postMessageToMilestone action
         const { postMessageToSubmission, postMessageToMilestone } = await import('@/app/(dashboard)/dashboard/submissions/discussion-actions');
         
         let result;
+        const formData = new FormData();
+        formData.append('content', content);
+        formData.append('messageType', 'vote');
+
         if (milestoneId) {
-          result = await postMessageToMilestone({
+          formData.append('milestoneId', String(milestoneId));
+          console.log('[CuratorVoting]: Calling postMessageToMilestone with FormData:', {
             content,
-            milestoneId: Number(milestoneId),
+            milestoneId,
             messageType: 'vote'
-          }, new FormData());
+          });
+          result = await postMessageToMilestone({}, formData);
         } else {
-          result = await postMessageToSubmission({
+          formData.append('submissionId', String(submissionId));
+          console.log('[CuratorVoting]: Calling postMessageToSubmission with FormData:', {
             content,
-            submissionId: Number(submissionId),
+            submissionId,
             messageType: 'vote'
-          }, new FormData());
+          });
+          result = await postMessageToSubmission({}, formData);
         }
+
+        console.log('[CuratorVoting]: Action result:', result);
 
         if (result.error) {
           throw new Error(result.error);
@@ -187,9 +206,7 @@ export function CuratorVoting({
             ) : (
               <div className="space-y-4">
                 <div>
-                  <Label htmlFor="vote-options" className="text-sm font-medium mb-3 block">
-                    Select your review decision:
-                  </Label>
+                  <div className="text-sm font-medium mb-3 block">Select your review decision:</div>
                   <div id="vote-options" className="grid gap-2">
                     {voteOptions.map((option) => {
                       const Icon = option.icon;
@@ -219,9 +236,9 @@ export function CuratorVoting({
 
                 {selectedVote && (
                   <div>
-                    <Label htmlFor="feedback" className="text-sm font-medium">
+                    <label htmlFor="feedback" className="text-sm font-medium">
                       Comments {selectedVote === 'approve' ? '(optional)' : '(recommended)'}
-                    </Label>
+                    </label>
                     <textarea
                       id="feedback"
                       placeholder={

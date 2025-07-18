@@ -1098,3 +1098,257 @@ export async function getActivityLogs() {
   // In future, could be replaced with user action history from other tables
   return [];
 }
+
+// Enhanced submission data with all related information for curator review
+export async function getSubmissionForCuratorReview(submissionId: number) {
+  const submission = await db.query.submissions.findFirst({
+    where: eq(submissions.id, submissionId),
+    with: {
+      submitter: {
+        columns: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          githubId: true
+        }
+      },
+      committee: {
+        columns: {
+          id: true,
+          name: true,
+          description: true,
+          focusAreas: true
+        }
+      },
+      grantProgram: {
+        columns: {
+          id: true,
+          name: true,
+          description: true,
+          fundingAmount: true,
+          requirements: true
+        }
+      },
+      milestones: {
+        with: {
+          discussions: {
+            with: {
+              messages: {
+                with: {
+                  author: {
+                    columns: {
+                      id: true,
+                      name: true,
+                      role: true
+                    }
+                  }
+                },
+                orderBy: [messages.createdAt]
+              }
+            }
+          },
+          reviews: {
+            with: {
+              curator: {
+                columns: {
+                  id: true,
+                  name: true,
+                  role: true
+                }
+              }
+            }
+          },
+          payouts: true
+        },
+        orderBy: [milestones.createdAt]
+      },
+      discussions: {
+        with: {
+          messages: {
+            with: {
+              author: {
+                columns: {
+                  id: true,
+                  name: true,
+                  role: true
+                }
+              }
+            },
+            orderBy: [messages.createdAt]
+          }
+        }
+      },
+      reviews: {
+        with: {
+          curator: {
+            columns: {
+              id: true,
+              name: true,
+              role: true
+            }
+          }
+        },
+        orderBy: [reviews.createdAt]
+      },
+      notifications: {
+        orderBy: [notifications.createdAt]
+      }
+    }
+  });
+
+  return submission;
+}
+
+// Get current state data for a submission (recent activity, pending actions, etc.)
+export async function getSubmissionCurrentState(submissionId: number) {
+  const user = await getUser();
+  if (!user) return null;
+
+  // Get recent activity across all related entities
+  const recentMessages = await db.query.messages.findMany({
+    where: sql`${messages.discussionId} IN (
+      SELECT ${discussions.id} FROM ${discussions} WHERE ${discussions.submissionId} = ${submissionId}
+    )`,
+    with: {
+      author: {
+        columns: {
+          id: true,
+          name: true,
+          role: true
+        }
+      },
+      discussion: {
+        columns: {
+          id: true,
+          type: true,
+          submissionId: true,
+          milestoneId: true
+        }
+      }
+    },
+    orderBy: [desc(messages.createdAt)],
+    limit: 10
+  });
+
+  // Get pending reviews (submissions or milestones without curator's vote)
+  const pendingSubmissionReviews = await db.query.reviews.findMany({
+    where: and(
+      eq(reviews.submissionId, submissionId),
+      eq(reviews.curatorId, user.id)
+    )
+  });
+
+  const pendingMilestoneReviews = await db.query.reviews.findMany({
+    where: and(
+      sql`${reviews.milestoneId} IN (
+        SELECT ${milestones.id} FROM ${milestones} WHERE ${milestones.submissionId} = ${submissionId}
+      )`,
+      eq(reviews.curatorId, user.id)
+    )
+  });
+
+  // Get active milestones (in_progress or submitted status)
+  const activeMilestones = await db.query.milestones.findMany({
+    where: and(
+      eq(milestones.submissionId, submissionId),
+      or(
+        eq(milestones.status, 'in_progress'),
+        eq(milestones.status, 'submitted'),
+        eq(milestones.status, 'under_review')
+      )
+    ),
+    with: {
+      discussions: {
+        with: {
+          messages: {
+            with: {
+              author: {
+                columns: {
+                  id: true,
+                  name: true,
+                  role: true
+                }
+              }
+            },
+            orderBy: [desc(messages.createdAt)],
+            limit: 3
+          }
+        }
+      }
+    },
+    orderBy: [milestones.dueDate]
+  });
+
+  return {
+    recentMessages,
+    pendingSubmissionReviews,
+    pendingMilestoneReviews,
+    activeMilestones,
+    hasUserVotedOnSubmission: pendingSubmissionReviews.length > 0,
+    pendingActions: {
+      submissionVote: pendingSubmissionReviews.length === 0,
+      milestoneReviews: pendingMilestoneReviews.length,
+      activeMilestonesCount: activeMilestones.length
+    }
+  };
+}
+
+// Get milestone overview data for a submission
+export async function getSubmissionMilestonesOverview(submissionId: number) {
+  const submissionMilestones = await db.query.milestones.findMany({
+    where: eq(milestones.submissionId, submissionId),
+    with: {
+      discussions: {
+        with: {
+          messages: {
+            with: {
+              author: {
+                columns: {
+                  id: true,
+                  name: true,
+                  role: true
+                }
+              }
+            },
+            orderBy: [messages.createdAt]
+          }
+        }
+      },
+      reviews: {
+        with: {
+          curator: {
+            columns: {
+              id: true,
+              name: true,
+              role: true
+            }
+          }
+        },
+        orderBy: [reviews.createdAt]
+      },
+      payouts: {
+        orderBy: [payouts.createdAt]
+      }
+    },
+    orderBy: [milestones.createdAt]
+  });
+
+  // Calculate summary statistics
+  const summary = {
+    total: submissionMilestones.length,
+    completed: submissionMilestones.filter((m: any) => m.status === 'completed').length,
+    inProgress: submissionMilestones.filter((m: any) => m.status === 'in_progress').length,
+    pending: submissionMilestones.filter((m: any) => m.status === 'pending').length,
+    underReview: submissionMilestones.filter((m: any) => m.status === 'under_review').length,
+    totalAmount: submissionMilestones.reduce((sum: number, m: any) => sum + (m.amount || 0), 0),
+    paidAmount: submissionMilestones
+      .filter((m: any) => m.status === 'completed')
+      .reduce((sum: number, m: any) => sum + (m.amount || 0), 0)
+  };
+
+  return {
+    milestones: submissionMilestones,
+    summary
+  };
+}
