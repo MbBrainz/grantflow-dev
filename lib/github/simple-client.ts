@@ -178,11 +178,11 @@ export async function getRepositoryCommits(
 }
 
 /**
- * Get commits since a specific commit SHA
+ * Get commits since a specific commit SHA, or all commits if no SHA provided (first milestone)
  */
 export async function getCommitsSince(
   repoUrl: string,
-  sinceCommitSha: string,
+  sinceCommitSha?: string,
   options: {
     branch?: string;
     perPage?: number;
@@ -196,8 +196,51 @@ export async function getCommitsSince(
       console.error('[github-simple]: Invalid repository URL', { repoUrl });
       return null;
     }
+    // for the first milestone, we need to get all commits
+    sinceCommitSha = undefined
 
-    // First, get the commit date of the reference commit
+    const params = new URLSearchParams();
+    params.append('per_page', String(options.perPage || 50));
+
+    // If no sinceCommitSha provided, get all commits (first milestone case)
+    if (!sinceCommitSha) {
+      console.log('[github-simple]: No commit SHA provided, fetching all commits');
+      
+      if (options.branch) {
+        params.append('sha', options.branch);
+      }
+
+      const url = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/commits?${params.toString()}`;
+      const commits = await githubApiRequest<any[]>(url);
+
+      if (!commits) {
+        return null;
+      }
+
+      console.log('[github-simple]: Successfully fetched all commits', { 
+        count: commits.length,
+        repo: `${repoInfo.owner}/${repoInfo.repo}`
+      });
+
+      return commits.map(commit => ({
+        sha: commit.sha,
+        shortSha: commit.sha.substring(0, 7),
+        message: commit.commit.message,
+        author: {
+          name: commit.commit.author?.name || 'Unknown',
+          email: commit.commit.author?.email || '',
+          date: commit.commit.author?.date || '',
+        },
+        committer: {
+          name: commit.commit.committer?.name || 'Unknown',
+          email: commit.commit.committer?.email || '',
+          date: commit.commit.committer?.date || '',
+        },
+        url: commit.html_url,
+      }));
+    }
+
+    // If sinceCommitSha provided, get commits since that specific commit
     const refCommitUrl = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/commits/${sinceCommitSha}`;
     const refCommit = await githubApiRequest<any>(refCommitUrl);
 
@@ -211,9 +254,7 @@ export async function getCommitsSince(
     // Add 1 second to exclude the reference commit itself
     sinceDate.setSeconds(sinceDate.getSeconds() + 1);
 
-    const params = new URLSearchParams();
     params.append('since', sinceDate.toISOString());
-    params.append('per_page', String(options.perPage || 50));
 
     if (options.branch) {
       params.append('sha', options.branch);

@@ -88,25 +88,11 @@ export function MilestoneSubmissionForm({
       try {
         let fetchedCommits: Commit[] | null = null;
 
-        if (previousMilestoneCommitSha) {
-          // Fetch commits since the last milestone completion
-          console.log('[MilestoneSubmissionForm]: Fetching commits since last milestone', {
-            sinceCommit: previousMilestoneCommitSha
-          });
-          fetchedCommits = await getCommitsSince(submissionRepoUrl, previousMilestoneCommitSha);
-        } else {
-          // Fetch recent commits (last 30 days or 50 commits, whichever comes first)
-          const thirtyDaysAgo = new Date();
-          thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-          
-          console.log('[MilestoneSubmissionForm]: Fetching recent commits', {
-            since: thirtyDaysAgo.toISOString()
-          });
-          fetchedCommits = await getRepositoryCommits(submissionRepoUrl, {
-            since: thirtyDaysAgo,
-            perPage: 50
-          });
-        }
+        // Fetch commits since the last milestone completion, or all commits if first milestone
+        console.log('[MilestoneSubmissionForm]: Fetching commits', {
+          sinceCommit: previousMilestoneCommitSha || 'none (first milestone)'
+        });
+        fetchedCommits = await getCommitsSince(submissionRepoUrl, previousMilestoneCommitSha || undefined);
 
         if (fetchedCommits) {
           setCommits(fetchedCommits);
@@ -280,7 +266,7 @@ export function MilestoneSubmissionForm({
           <CardDescription>
             {previousMilestoneCommitSha 
               ? 'Commits since the last approved milestone are auto-selected'
-              : 'Recent commits from the repository are auto-selected'
+              : 'All commits from the repository are auto-selected (first milestone)'
             }
           </CardDescription>
         </CardHeader>

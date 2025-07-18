@@ -37,6 +37,9 @@ const commits = await getRepositoryCommits('https://github.com/owner/repo', {
 
 // Get commits since a specific SHA
 const newCommits = await getCommitsSince('https://github.com/owner/repo', 'abc123');
+
+// Get all commits (first milestone case)
+const allCommits = await getCommitsSince('https://github.com/owner/repo');
 ```
 
 ## 2. Full Octokit Client (Complex) 📄 `octokit.ts`

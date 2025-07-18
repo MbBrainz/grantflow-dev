@@ -260,7 +260,7 @@ This role-based approach solves the core UX problem: **each user sees exactly wh
   - Automatic status updates and notifications
 - **Committee Payouts:** Release funds based on committee's approval workflow and multi-sig setup
 
-### F. Enhanced Milestone Submission Flow
+### F. Enhanced Milestone Submission Flow ✅ ENHANCED
 When submitting milestone completion review requests:
 - **Exact Commit Tracking:** Specific commits and pull requests must be linked to each milestone
 - **AI-Assisted Code Analysis:** Pre-query GitHub to analyze changes since previous milestone
@@ -271,6 +271,7 @@ When submitting milestone completion review requests:
   - AI vs. human generated code detection
 - **Manual Review by Grantee:** Review and confirm system-detected changes before submission
 - **Committee Code Verification:** Curators can easily see exactly what was built for each milestone
+- **✅ First Milestone Support:** Enhanced `getCommitsSince()` function now handles first milestone case by fetching all commits when no previous commit SHA is provided, eliminating the need for fallback logic
 
 ### G. Platform Analytics & Transparency
 - **Cross-Committee Metrics:** Compare committee performance, approval rates, funding amounts
