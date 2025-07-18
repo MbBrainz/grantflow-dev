@@ -20,7 +20,8 @@ import {
   HelpCircle,
   AlertTriangle,
   Github,
-  ExternalLink
+  ExternalLink,
+  Lock
 } from 'lucide-react';
 import { MilestoneSubmissionForm } from '@/components/milestone-submission-form';
 import { submitMilestone } from '@/app/(dashboard)/dashboard/submissions/milestone-actions';
@@ -157,8 +158,33 @@ export function GranteeSubmissionView({
   };
 
   const canSubmitMilestone = (milestone: any) => {
-    return ['pending', 'in_progress'].includes(milestone.status) && 
-           currentUser?.id === submission.submitterId;
+    // Check basic requirements
+    if (!['pending', 'in_progress'].includes(milestone.status) || 
+        currentUser?.id !== submission.submitterId) {
+      return { canSubmit: false, reason: 'Not available for submission' };
+    }
+
+    // Check sequential milestone requirement
+    if (submission.milestones) {
+      const sortedMilestones = [...submission.milestones].sort((a: any, b: any) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      
+      const targetIndex = sortedMilestones.findIndex((m: any) => m.id === milestone.id);
+      
+      // Check all previous milestones are completed
+      for (let i = 0; i < targetIndex; i++) {
+        const previousMilestone = sortedMilestones[i];
+        if (previousMilestone.status !== 'completed') {
+          return { 
+            canSubmit: false, 
+            reason: `Complete "${previousMilestone.title}" first` 
+          };
+        }
+      }
+    }
+
+    return { canSubmit: true };
   };
 
   return (
@@ -406,7 +432,7 @@ export function GranteeSubmissionView({
                           <div className="flex items-center gap-3">
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-bold ${
                               milestone.status === 'completed' ? 'bg-green-500' :
-                              milestone.status === 'submitted' ? 'bg-yellow-500' :
+                              milestone.status === 'in-review' ? 'bg-yellow-500' :
                               milestone.status === 'under_review' ? 'bg-orange-500' :
                               milestone.status === 'in_progress' ? 'bg-blue-500' :
                               'bg-gray-400'
@@ -422,25 +448,45 @@ export function GranteeSubmissionView({
                             <div className="flex items-center gap-2">
                               <Badge className={
                                 milestone.status === 'completed' ? 'bg-green-100 text-green-800' :
-                                milestone.status === 'submitted' ? 'bg-yellow-100 text-yellow-800' :
+                                milestone.status === 'in-review' ? 'bg-yellow-100 text-yellow-800' :
                                 milestone.status === 'under_review' ? 'bg-orange-100 text-orange-800' :
                                 milestone.status === 'in_progress' ? 'bg-blue-100 text-blue-800' :
                                 'bg-gray-100 text-gray-800'
                               }>
                                 {milestone.status.replace('_', ' ')}
                               </Badge>
-                              {canSubmitMilestone(milestone) && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setSubmittingMilestone(milestone)}
-                                  disabled={!submission.githubRepoUrl}
-                                  className="flex items-center gap-1"
-                                >
-                                  <GitBranch className="w-3 h-3" />
-                                  Submit
-                                </Button>
-                              )}
+                              {(() => {
+                                const { canSubmit, reason } = canSubmitMilestone(milestone);
+                                return canSubmit ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => setSubmittingMilestone(milestone)}
+                                    disabled={!submission.githubRepoUrl}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <GitBranch className="w-3 h-3" />
+                                    Submit
+                                  </Button>
+                                ) : (
+                                  <div className="text-right">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled
+                                      className="flex items-center gap-1 opacity-60"
+                                    >
+                                      <Lock className="w-3 h-3" />
+                                      Blocked
+                                    </Button>
+                                    {reason && (
+                                      <p className="text-xs text-gray-500 mt-1 max-w-32">
+                                        {reason}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })()}
                             </div>
                             <p className="text-sm font-medium mt-1">
                               ${milestone.amount?.toLocaleString() || 0}

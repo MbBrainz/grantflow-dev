@@ -26,6 +26,7 @@ The GrantFlow platform has been successfully transformed from a SaaS template to
 - **✅ UX Bug Fixes & Improvements:** Fixed voting status bug where "Vote Required" showed even after voting. Simplified committee display in submission detail to show only relevant committee. Added committee badges and milestone progress indicators (like "3/5") to submission lists for better overview and context.
 - **✅ Curator Priority Actions Dashboard:** Added dedicated "My Actions Required" section to curator dashboard showing all submissions and milestones specifically awaiting the current curator's response/approval with direct clickable links. Features urgency indicators (critical 14+ days, urgent 7+ days) and clear action types (submission votes vs milestone reviews). Includes smart filtering to only show items where curator hasn't voted/reviewed yet.
 - **✅ Enhanced Milestone Status & Removed Private Discussions:** Replaced generic "review in progress" information with detailed milestone-specific status showing current active step (e.g., "building milestone 1", "milestone 2 under review"). Added comprehensive MilestoneStatusOverview component with progress tracking, status indicators, and action-required badges. Removed private curator discussions to streamline the review process - all communication now happens in public threads for transparency.
+- **✅ PostgreSQL Schema Error Fix:** Resolved critical `column milestones.reviewer_group_id does not exist` error that was preventing the Review Dashboard from loading. Fixed Drizzle ORM relation confusion by adding explicit relation names in schema (`milestoneGroup`) and refactoring complex subqueries in `getAllSubmissionsForReview()` and `getReviewerPendingActions()` functions. Review Dashboard now loads successfully with proper statistics and submission data.
 
 ## 1.1 Role-Based Action Sets & UI Flows 🆕 **PRIORITY**
 
@@ -321,7 +322,7 @@ When submitting milestone completion review requests:
 - **Drizzle ORM** with PostgreSQL
 - **Real-time Infrastructure:** WebSocket/Server-Sent Events for live chat
 - **GitHub OAuth** (existing auth system)
-- **Octokit.js** for GitHub API (read-only for repo verification)
+- **Simplified GitHub REST API** for repo verification (no authentication needed)
 - **Vercel AI SDK** for LLM features
 
 ### Database
@@ -330,7 +331,10 @@ When submitting milestone completion review requests:
 - **Push model** for migrations (no migration files)
 
 ### External Integrations
-- **GitHub API** for repo/PR/commit verification (read-only)
+- **📄 GitHub REST API** for repo/PR/commit verification (simplified, read-only)
+  - **No authentication required** for public repositories
+  - **Optional Personal Access Token** for better rate limits (5K/hour vs 60/hour)
+  - **Replaced complex GitHub App** with simple fetch() calls
 - **Multi-sig Wallet Integration** for committee-specific payouts
 - **Vercel AI SDK** for grant analysis and code review assistance
 - **Web3 Infrastructure** for committee wallet connections and payout automation
@@ -473,7 +477,7 @@ platformMetrics: {
 - [x] Define Drizzle ORM schema for all entities
 - [x] Set up GitHub OAuth (extend existing auth)
 - [ ] Add wallet connection (DONT DO THIS YET)
-- [x] Integrate Octokit.js for GitHub API access
+- [x] ✅ **SIMPLIFIED:** GitHub REST API integration (replaced complex Octokit)
 
 ### B. Auth & User Management ✅
 - [x] Extend existing auth to store GitHub profile info

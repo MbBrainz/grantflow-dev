@@ -6,6 +6,8 @@
     "start": "next start",
     "db:setup": "npx tsx lib/db/setup.ts",
     "db:seed": "npx tsx lib/db/seed.ts",
+    "db:clean": "npx tsx lib/db/clean.ts",
+    "db:reset": "pnpm db:clean && pnpm db:push && pnpm db:seed",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",

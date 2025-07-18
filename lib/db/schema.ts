@@ -250,7 +250,7 @@ export const groupsRelations = relations(groups, ({ many }) => ({
   submittedSubmissions: many(submissions, { relationName: 'submitterGroup' }),
   reviewingSubmissions: many(submissions, { relationName: 'reviewerGroup' }),
   discussions: many(discussions),
-  milestones: many(milestones),
+  milestones: many(milestones, { relationName: 'milestoneGroup' }),
   reviews: many(reviews),
   payouts: many(payouts),
   analytics: many(groupAnalytics),
@@ -337,6 +337,7 @@ export const milestonesRelations = relations(milestones, ({ one, many }) => ({
   group: one(groups, {
     fields: [milestones.groupId],
     references: [groups.id],
+    relationName: 'milestoneGroup',
   }),
   discussions: many(discussions),
   reviews: many(reviews),

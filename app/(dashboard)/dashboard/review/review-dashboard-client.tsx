@@ -1,14 +1,13 @@
-import { Suspense } from 'react';
+'use client';
+
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
-import { getAllSubmissionsForReview, getSubmissionStats, getUser, checkIsCurator, getCuratorPendingActions } from '@/lib/db/queries';
-import type { Submission } from '@/lib/db/schema';
-import { redirect } from 'next/navigation';
 import { Clock, FileText, Users, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { PendingActionsPanel } from '@/components/review/pending-actions-panel';
 import { CommitteeBadge } from '@/components/submissions/committee-badge';
 import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge';
-import { PendingActionsPanel } from '@/components/curator/pending-actions-panel';
 
 function StatusBadge({ status }: { status: string }) {
   const colors = {
@@ -119,42 +118,48 @@ function SubmissionCard({ submission }: { submission: any }) {
   );
 }
 
-async function CuratorDashboard() {
-  const user = await getUser();
-  
-  if (!user) {
-    redirect('/sign-in');
-  }
+interface ReviewDashboardClientProps {
+  initialSubmissions: any[];
+  stats: any;
+  pendingActions: any;
+}
 
-  const isCurator = await checkIsCurator(user.id);
-  
-  if (!isCurator) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Card className="max-w-md">
-          <CardHeader className="text-center">
-            <AlertCircle className="w-12 h-12 text-orange-500 mx-auto mb-4" />
-            <CardTitle>Access Restricted</CardTitle>
-            <CardDescription>
-              You need curator permissions to access this dashboard.
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+export function ReviewDashboardClient({ 
+  initialSubmissions, 
+  stats, 
+  pendingActions
+}: ReviewDashboardClientProps) {
+  const [selectedFilter, setSelectedFilter] = useState<string>('all');
+
+  const filteredSubmissions = useMemo(() => {
+    if (selectedFilter === 'all') return initialSubmissions;
+    
+    const statusMap = {
+      'pending': ['submitted'],
+      'under_review': ['under_review'],
+      'approved': ['approved'],
+      'rejected': ['rejected']
+    };
+    
+    const targetStatuses = statusMap[selectedFilter as keyof typeof statusMap] || [];
+    return initialSubmissions.filter(submission => 
+      targetStatuses.includes(submission.status)
     );
-  }
+  }, [initialSubmissions, selectedFilter]);
 
-  const [submissions, stats, pendingActions] = await Promise.all([
-    getAllSubmissionsForReview(),
-    getSubmissionStats(),
-    getCuratorPendingActions()
-  ]);
+  const filterButtons = [
+    { key: 'all', label: 'All', count: stats.total, variant: 'default' as const },
+    { key: 'pending', label: 'Pending', count: stats.submitted, variant: 'outline' as const },
+    { key: 'under_review', label: 'Under Review', count: stats.underReview, variant: 'outline' as const },
+    { key: 'approved', label: 'Approved', count: stats.approved, variant: 'outline' as const },
+    { key: 'rejected', label: 'Rejected', count: stats.rejected, variant: 'outline' as const }
+  ];
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold">Curator Review Dashboard</h1>
+          <h1 className="text-3xl font-bold">Review Dashboard</h1>
           <p className="text-muted-foreground">
             Review grant submissions and manage the approval process
           </p>
@@ -220,66 +225,41 @@ async function CuratorDashboard() {
         </Card>
       </div>
 
-      {/* Filter Tabs */}
+      {/* Interactive Filter Tabs */}
       <div className="flex gap-2">
-        <Button variant="default" size="sm">All ({stats.total})</Button>
-        <Button variant="outline" size="sm">Pending ({stats.submitted})</Button>
-        <Button variant="outline" size="sm">Under Review ({stats.underReview})</Button>
-        <Button variant="outline" size="sm">Approved ({stats.approved})</Button>
-        <Button variant="outline" size="sm">Rejected ({stats.rejected})</Button>
+        {filterButtons.map((filter) => (
+          <Button 
+            key={filter.key}
+            variant={selectedFilter === filter.key ? 'default' : 'outline'} 
+            size="sm"
+            onClick={() => setSelectedFilter(filter.key)}
+            className="transition-all duration-200"
+          >
+            {filter.label} ({filter.count})
+          </Button>
+        ))}
       </div>
 
       {/* Submissions List */}
       <div className="space-y-4">
-        {submissions.length === 0 ? (
+        {filteredSubmissions.length === 0 ? (
           <Card className="p-8 text-center">
             <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
             <p className="text-gray-500 dark:text-gray-400">
-              No submissions found. Check back later for new grant applications.
+              {selectedFilter === 'all' 
+                ? 'No submissions found. Check back later for new grant applications.'
+                : `No ${selectedFilter.replace('_', ' ')} submissions found.`
+              }
             </p>
           </Card>
         ) : (
           <div className="grid gap-4">
-            {submissions.map((submission) => (
+            {filteredSubmissions.map((submission) => (
               <SubmissionCard key={submission.id} submission={submission} />
             ))}
           </div>
         )}
       </div>
     </div>
-  );
-}
-
-export default function CuratorPage() {
-  return (
-    <Suspense fallback={
-      <div className="space-y-6">
-        <div className="h-8 bg-gray-200 rounded animate-pulse" />
-        <div className="grid gap-4 md:grid-cols-5">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="h-8 bg-gray-200 rounded animate-pulse" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-        <div className="space-y-4">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Card key={i}>
-              <CardContent className="p-6">
-                <div className="space-y-3">
-                  <div className="h-6 bg-gray-200 rounded animate-pulse" />
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4" />
-                  <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </div>
-    }>
-      <CuratorDashboard />
-    </Suspense>
   );
 } 

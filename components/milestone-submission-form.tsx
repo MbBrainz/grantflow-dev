@@ -20,29 +20,10 @@ import {
   FileText,
   Users
 } from 'lucide-react';
-import { getRepositoryCommits, getCommitsSince } from '@/lib/github/octokit';
+import { getRepositoryCommits, getCommitsSince, GitHubCommit } from '@/lib/github/simple-client';
 
-interface Commit {
-  sha: string;
-  shortSha: string;
-  message: string;
-  author: {
-    name: string;
-    email: string;
-    date: string;
-  };
-  committer: {
-    name: string;
-    email: string;
-    date: string;
-  };
-  url: string;
-  stats?: {
-    additions: number;
-    deletions: number;
-    total: number;
-  };
-}
+// Use GitHubCommit type from simple-client
+type Commit = GitHubCommit;
 
 interface Milestone {
   id: number;

@@ -343,7 +343,24 @@ async function seed() {
       role: 'member',
       permissions: JSON.stringify(['review_submissions', 'vote_on_submissions']),
       isActive: true
-    }
+    },
+
+    // sdk team
+    {
+      groupId: sdkTeam.id,
+      userId: reviewer1.id,
+      role: 'admin',
+      permissions: JSON.stringify(['manage_members', 'approve_submissions', 'configure_programs']),
+      isActive: true
+    },
+    {
+      groupId: sdkTeam.id,
+      userId: reviewer2.id,
+      role: 'member',
+      permissions: JSON.stringify(['manage_members', 'approve_submissions', 'configure_programs']),
+      isActive: true
+    },
+
   ]);
 
   // Team memberships (team members)
@@ -607,7 +624,7 @@ async function seed() {
     ]),
     postGrantPlan: 'Continue maintaining the SDK, add enterprise features, and grow the developer community.',
     labels: JSON.stringify(['SDK', 'Developer Tools', 'TypeScript', 'Documentation']),
-    githubRepoUrl: 'https://github.com/nextgen-sdk/sdk',
+    githubRepoUrl: 'https://github.com/MbBrainz/grantflow-dev',
     walletAddress: teamMember1.walletAddress,
     status: 'approved',
     totalAmount: 100000,

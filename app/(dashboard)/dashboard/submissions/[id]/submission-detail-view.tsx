@@ -23,6 +23,7 @@ import { CuratorSubmissionView } from '@/components/submissions/curator-submissi
 import { GranteeSubmissionView } from '@/components/submissions/grantee-submission-view';
 import { PublicSubmissionView } from '@/components/submissions/public-submission-view';
 import { MilestoneStatusOverview } from '@/components/submissions/milestone-status-overview';
+import { CommitteeBadge } from '@/components/submissions/committee-badge';
 
 // Flexible type that handles actual database query results
 type ExtendedSubmissionWithMilestones = {

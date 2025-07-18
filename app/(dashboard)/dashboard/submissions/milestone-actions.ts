@@ -198,6 +198,33 @@ export const submitMilestone = validatedActionWithUser(
         return { error: `Cannot submit milestone with status: ${milestone.status}` };
       }
 
+      // Check if previous milestones are completed (sequential milestone requirement)
+      const { getMilestonesBySubmission } = await import('@/lib/db/queries');
+      const allMilestones = await getMilestonesBySubmission(submission.id);
+      
+      // Sort milestones by creation order
+      const sortedMilestones = allMilestones.sort((a: any, b: any) => 
+        new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+      );
+      
+      const targetMilestoneIndex = sortedMilestones.findIndex((m: any) => m.id === data.milestoneId);
+      
+      // Check all previous milestones are completed
+      for (let i = 0; i < targetMilestoneIndex; i++) {
+        const previousMilestone = sortedMilestones[i];
+        if (previousMilestone.status !== 'completed') {
+          console.log('[submitMilestone]: Previous milestone not completed', {
+            milestoneId: data.milestoneId,
+            blockedBy: previousMilestone.id,
+            blockedByTitle: previousMilestone.title,
+            blockedByStatus: previousMilestone.status
+          });
+          return { 
+            error: `You must complete "${previousMilestone.title}" before submitting this milestone.` 
+          };
+        }
+      }
+
       // Update milestone with submission data
       const updateData = {
         deliverables: JSON.stringify({

@@ -1053,7 +1053,7 @@ export async function getAllSubmissionsForReview(statusFilter?: string) {
     whereConditions.push(eq(submissions.status, statusFilter));
   }
 
-  return await db.query.submissions.findMany({
+  const submissionsData = await db.query.submissions.findMany({
     where: and(...whereConditions),
     with: {
       submitter: {
@@ -1079,18 +1079,32 @@ export async function getAllSubmissionsForReview(statusFilter?: string) {
           name: true,
           fundingAmount: true
         }
-      },
-      milestones: {
-        columns: {
-          id: true,
-          title: true,
-          status: true,
-          amount: true
-        }
       }
     },
     orderBy: [desc(submissions.createdAt)]
   });
+
+  // Fetch milestones separately to avoid relation issues
+  const submissionsWithMilestones = await Promise.all(
+    submissionsData.map(async (submission) => {
+      const submissionMilestones = await db
+        .select({
+          id: milestones.id,
+          title: milestones.title,
+          status: milestones.status,
+          amount: milestones.amount
+        })
+        .from(milestones)
+        .where(eq(milestones.submissionId, submission.id));
+
+      return {
+        ...submission,
+        milestones: submissionMilestones
+      };
+    })
+  );
+
+  return submissionsWithMilestones;
 }
 
 export async function getSubmissionStats() {
@@ -1212,14 +1226,6 @@ export async function getReviewerPendingActions() {
           name: true,
           fundingAmount: true
         }
-      },
-      milestones: {
-        columns: {
-          id: true,
-          title: true,
-          status: true,
-          amount: true
-        }
       }
     }
   });
@@ -1246,12 +1252,17 @@ export async function getReviewerPendingActions() {
   }
 
   // 2. Find milestones needing this reviewer's review
-  const milestonesNeedingReview = await db.query.milestones.findMany({
+  // First get submission IDs for the reviewer groups
+  const reviewerSubmissionIds = await db
+    .select({ id: submissions.id })
+    .from(submissions)
+    .where(sql`${submissions.reviewerGroupId} IN (${sql.join(groupIds.map(id => sql`${id}`), sql`, `)})`);
+
+  const submissionIds = reviewerSubmissionIds.map(s => s.id);
+
+  const milestonesNeedingReview = submissionIds.length > 0 ? await db.query.milestones.findMany({
     where: and(
-      sql`${milestones.submissionId} IN (
-        SELECT ${submissions.id} FROM ${submissions} 
-        WHERE ${submissions.reviewerGroupId} IN (${sql.join(groupIds.map(id => sql`${id}`), sql`, `)})
-      )`,
+      sql`${milestones.submissionId} IN (${sql.join(submissionIds.map(id => sql`${id}`), sql`, `)})`,
       or(
         eq(milestones.status, 'submitted'),
         eq(milestones.status, 'under_review')
@@ -1263,7 +1274,16 @@ export async function getReviewerPendingActions() {
           id: true,
           title: true,
           status: true
-        },
+        }
+      }
+    }
+  }) : [];
+
+  // Fetch additional submission details separately to avoid relation issues
+  const milestonesWithDetails = await Promise.all(
+    milestonesNeedingReview.map(async (milestone) => {
+      const submissionDetails = await db.query.submissions.findFirst({
+        where: eq(submissions.id, milestone.submission.id),
         with: {
           submitter: {
             columns: {
@@ -1281,13 +1301,22 @@ export async function getReviewerPendingActions() {
             }
           }
         }
-      }
-    }
-  });
+      });
+
+      return {
+        ...milestone,
+        submission: {
+          ...milestone.submission,
+          submitter: submissionDetails?.submitter,
+          reviewerGroup: submissionDetails?.reviewerGroup
+        }
+      };
+    })
+  );
 
   // Filter out milestones where this reviewer has already reviewed
   const milestonesNeedingReviewFiltered = [];
-  for (const milestone of milestonesNeedingReview) {
+  for (const milestone of milestonesWithDetails) {
     const existingReview = await db.query.reviews.findFirst({
       where: and(
         eq(reviews.milestoneId, milestone.id),

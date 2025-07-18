@@ -3,4 +3,4 @@ alwaysApply: true
 ---
 
 Work structured and make sure to always check and update the @plan.md readme on the end of your tasks.
-No need for backwards compatibility. We are building mvp.
+DO NOT consider backwards compatibility. We are working on an mvp and can reset the db easily by doing pnpm db:reset
