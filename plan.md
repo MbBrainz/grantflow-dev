@@ -20,6 +20,163 @@ The GrantFlow platform has been successfully transformed from a SaaS template to
 - **✅ Milestone Multisig Completion:** Added ability for committee members to mark milestones complete with transaction verification
 - **✅ Homepage Redesign:** Transformed generic SaaS template into exciting grant platform landing page with two-sided marketplace messaging, gradient designs, and clear value propositions for both committees and grantee teams
 - **✅ Lottie Animation Integration:** Replaced static Terminal component with dynamic Lottie animation system using lottie-react, including proper loading states, error handling, and static asset management
+- **✅ Submission Detail UX Redesign:** Completely redesigned submission detail page with prominent "Active Step Hero" component that shows current stage (approval/milestone) with relevant chat and actionable interface - no more vague status cards
+- **✅ Role-Based Views Implementation:** Complete role-based routing system with specialized views for Curator (voting, workflow, analytics), Grantee (progress tracking, response interface), and Public (transparency, accountability) - each user sees exactly what they need
+
+## 1.1 Role-Based Action Sets & UI Flows 🆕 **PRIORITY**
+
+### Problem Statement
+Current platform shows same view to all users regardless of role, missing differentiated experiences for:
+- **Curators** (reviewers/voters) vs **Grantees** (applicants) vs **Public** (transparency seekers)
+- Different action capabilities and information needs per role
+- Missing public transparency layer for non-authenticated users
+
+### Action Set Definitions
+
+#### **Curator Actions** (Authenticated + Role: curator)
+**Primary Goals:** Review, vote, provide feedback, manage approval workflow
+- **VOTE** on submission approval/rejection with reasoning
+- **DISCUSS** in curator-only threads and public threads
+- **REQUEST CHANGES** with specific feedback requirements
+- **REVIEW MILESTONES** and approve/reject milestone submissions
+- **TRIGGER PAYOUTS** via multisig transaction initiation  
+- **MANAGE WORKFLOW** (set status, escalate, assign reviewers)
+- **VIEW ANALYTICS** (committee performance, review queue stats)
+- **EXPORT REPORTS** for committee governance
+
+#### **Grantee Actions** (Authenticated + Role: grantee + submission owner)
+**Primary Goals:** Track progress, respond to feedback, submit deliverables
+- **TRACK STATUS** of application through approval pipeline
+- **RESPOND TO FEEDBACK** from curators with clarifications
+- **SUBMIT MILESTONE UPDATES** with GitHub links and deliverables
+- **PARTICIPATE IN DISCUSSIONS** (read-only curator threads, respond in public)
+- **EDIT SUBMISSIONS** during draft or "changes requested" phase
+- **VIEW PAYMENT STATUS** and transaction history
+- **APPEAL DECISIONS** through structured feedback mechanism
+
+#### **Public View Actions** (Non-authenticated or other users)
+**Primary Goals:** Transparency, learning, potential future application
+- **VIEW SUBMISSION STATUS** and approval timeline
+- **READ PUBLIC DISCUSSIONS** and voting rationale (read-only)
+- **BROWSE COMMITTEE ACTIVITY** and success rates
+- **VIEW MILESTONE PROGRESS** and deliverables (public transparency)
+- **LEARN FROM EXAMPLES** of successful/rejected applications
+- **NO SENSITIVE INFO** (no private votes, internal deliberations, or personal data)
+
+### UI Flow Requirements
+
+#### **Submission Detail Page - Role-Based Views**
+
+**🎯 Curator View Layout:**
+```
+[ACTIVE REVIEW PANEL - Prominent]
+├─ Pending Actions (Vote Required, Review Due, etc.)
+├─ Curator Voting Interface (Approve/Reject + Comments)
+├─ Committee Discussion Thread (Curator-only)
+├─ Risk Assessment Tools (GitHub analysis, funding concerns)
+└─ Workflow Controls (Set Status, Assign Co-reviewers)
+
+[SECONDARY PANELS]
+├─ Public Discussion (Read + Moderate)  
+├─ Grantee Information (Contact, History, GitHub)
+├─ Technical Review (Linked repos, code analysis)
+└─ Committee Analytics (Similar submissions, success patterns)
+```
+
+**📝 Grantee View Layout:**
+```
+[CURRENT STATUS HERO - Prominent]
+├─ Application Stage (Clear progress indicator)
+├─ Required Actions (Response needed, milestone due, etc.)  
+├─ Next Steps (What grantee needs to do)
+└─ Estimated Timeline (When to expect updates)
+
+[COMMUNICATION PANEL]  
+├─ Curator Feedback (Read curator comments + responses)
+├─ Public Discussion Thread (Participate with community)
+├─ Milestone Submission Form (When applicable)
+└─ Support/Help Resources
+
+[SECONDARY INFO]
+├─ Funding Details (Amount, milestones, payment schedule)
+├─ Technical Requirements (Deliverables, GitHub expectations)
+└─ Application History (Edit trail, previous submissions)
+```
+
+**🌍 Public View Layout:**
+```
+[TRANSPARENCY OVERVIEW - Prominent]
+├─ Submission Summary (Title, amount, status, timeline)
+├─ Public Voting Results (Curator decisions + rationale)
+├─ Community Discussion (Public comments only)
+└─ Progress Timeline (Key milestones and achievements)
+
+[LEARNING RESOURCES]
+├─ Project Details (Executive summary, goals, impact)
+├─ Technical Deliverables (GitHub links, documentation)  
+├─ Committee Information (Focus area, approval criteria)
+└─ Similar Applications (Examples, success patterns)
+```
+
+### Technical Implementation Strategy
+
+#### **Role Detection & Access Control**
+```typescript
+// Enhanced user context with submission relationship
+interface UserContext {
+  user: User | null;
+  isAuthenticated: boolean;
+  role: 'curator' | 'grantee' | 'admin' | null;
+  
+  // Submission-specific permissions
+  isSubmissionOwner: boolean;
+  isCommitteeCurator: boolean;
+  canVote: boolean;
+  canEditSubmission: boolean;
+  canViewPrivateDiscussions: boolean;
+}
+```
+
+#### **Component Architecture**
+```
+SubmissionDetailView (Router)
+├─ CuratorSubmissionView (role: curator)
+├─ GranteeSubmissionView (role: grantee + owner)  
+├─ PublicSubmissionView (unauthenticated or other)
+└─ SharedComponents (reused across views)
+    ├─ ProjectOverview
+    ├─ TimelineDisplay  
+    ├─ PublicDiscussion
+    └─ TechnicalDetails
+```
+
+### Implementation Priority
+
+#### **Phase 1: Role Detection & Routing** ⚡ IMMEDIATE
+1. **Fix database query error** blocking current active step functionality
+2. **Add role-based routing** in SubmissionDetailView component
+3. **Create UserContext hook** with submission-specific permissions
+4. **Implement basic view switching** (curator vs grantee vs public)
+
+#### **Phase 2: Curator-Focused Interface** 
+1. **Enhanced voting interface** with approval workflow
+2. **Curator-only discussion threads** with moderation tools
+3. **Review queue optimization** with filtering and assignment
+4. **Committee analytics dashboard** for decision support
+
+#### **Phase 3: Grantee Experience Optimization**
+1. **Progress tracking hero** with clear next steps  
+2. **Simplified response interface** for curator feedback
+3. **Milestone submission optimization** with GitHub integration
+4. **Application editing workflow** during revision phases
+
+#### **Phase 4: Public Transparency**
+1. **Read-only public views** with sensitive data filtering
+2. **Committee performance metrics** for accountability
+3. **Community learning resources** from past applications
+4. **Public API endpoints** for external transparency tools
+
+This role-based approach solves the core UX problem: **each user sees exactly what they need to accomplish their goals, nothing more, nothing less.**
 
 ## 2. Core Features & Flows (Two-Sided Platform)
 

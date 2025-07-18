@@ -1,4 +1,4 @@
-import { eq, desc, and, or, ilike, sql } from 'drizzle-orm';
+import { eq, desc, and, or, ilike, sql, inArray } from 'drizzle-orm';
 import { db } from './drizzle';
 import { 
   users, 
@@ -1206,10 +1206,16 @@ export async function getSubmissionCurrentState(submissionId: number) {
   if (!user) return null;
 
   // Get recent activity across all related entities
-  const recentMessages = await db.query.messages.findMany({
-    where: sql`${messages.discussionId} IN (
-      SELECT ${discussions.id} FROM ${discussions} WHERE ${discussions.submissionId} = ${submissionId}
-    )`,
+  // First get discussion IDs for this submission
+  const submissionDiscussions = await db
+    .select({ id: discussions.id })
+    .from(discussions)
+    .where(eq(discussions.submissionId, submissionId));
+  
+  const discussionIds = submissionDiscussions.map(d => d.id);
+  
+  const recentMessages = discussionIds.length > 0 ? await db.query.messages.findMany({
+    where: inArray(messages.discussionId, discussionIds),
     with: {
       author: {
         columns: {
@@ -1229,7 +1235,7 @@ export async function getSubmissionCurrentState(submissionId: number) {
     },
     orderBy: [desc(messages.createdAt)],
     limit: 10
-  });
+  }) : [];
 
   // Get pending reviews (submissions or milestones without curator's vote)
   const pendingSubmissionReviews = await db.query.reviews.findMany({

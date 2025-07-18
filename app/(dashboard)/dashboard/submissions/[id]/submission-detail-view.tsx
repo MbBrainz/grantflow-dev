@@ -18,6 +18,10 @@ import {
   postMessageToMilestone
 } from '../discussion-actions';
 import type { Submission, Milestone, User } from '@/lib/db/schema';
+import { useSubmissionContext } from '@/lib/hooks/use-submission-context';
+import { CuratorSubmissionView } from '@/components/submissions/curator-submission-view';
+import { GranteeSubmissionView } from '@/components/submissions/grantee-submission-view';
+import { PublicSubmissionView } from '@/components/submissions/public-submission-view';
 
 interface SubmissionWithMilestones {
   id: number;
@@ -515,23 +519,32 @@ function ProjectOverview({ submission, currentUser }: { submission: SubmissionWi
 
 export function SubmissionDetailView({ submission, currentUser }: SubmissionDetailViewProps) {
   const router = useRouter();
-  const [viewMode, setViewMode] = useState<ViewMode>('current');
   const [discussionData, setDiscussionData] = useState<any>(null);
   const [reviews, setReviews] = useState<any[]>([]);
+  const [currentState, setCurrentState] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+
+  // Get user context and permissions for this submission
+  const submissionContext = useSubmissionContext(submission, currentUser);
 
   const formData = parseFormData(submission.formData || null);
 
   useEffect(() => {
-    async function loadDiscussionAndReviews() {
+    async function loadAllData() {
       try {
-        const [discussionData, reviewsData] = await Promise.all([
+        const [discussionData, reviewsData, currentStateData] = await Promise.all([
           getSubmissionDiscussion(submission.id),
-          getSubmissionReviews(submission.id)
+          getSubmissionReviews(submission.id),
+          (async () => {
+            const formData = new FormData();
+            formData.append('submissionId', String(submission.id));
+            return await getSubmissionCurrentState({}, formData);
+          })()
         ]);
         
         setDiscussionData(discussionData);
         setReviews(reviewsData.reviews);
+        setCurrentState(currentStateData);
       } catch (error) {
         console.error('[SubmissionDetailView]: Error loading data', error);
       } finally {
@@ -539,7 +552,7 @@ export function SubmissionDetailView({ submission, currentUser }: SubmissionDeta
       }
     }
 
-    loadDiscussionAndReviews();
+    loadAllData();
   }, [submission.id]);
 
   const handlePostMessage = async (content: string, type?: string) => {
@@ -567,18 +580,35 @@ export function SubmissionDetailView({ submission, currentUser }: SubmissionDeta
 
   const handleVoteSubmitted = async () => {
     try {
-      // Reload both discussion and reviews data
-      const [discussionData, reviewsData] = await Promise.all([
+      // Reload all data after vote
+      const [discussionData, reviewsData, currentStateData] = await Promise.all([
         getSubmissionDiscussion(submission.id),
-        getSubmissionReviews(submission.id)
+        getSubmissionReviews(submission.id),
+        (async () => {
+          const formData = new FormData();
+          formData.append('submissionId', String(submission.id));
+          return await getSubmissionCurrentState({}, formData);
+        })()
       ]);
       
       setDiscussionData(discussionData);
       setReviews(reviewsData.reviews);
+      setCurrentState(currentStateData);
     } catch (error) {
       console.error('[SubmissionDetailView]: Error reloading data after vote', error);
     }
   };
+
+  // Show loading state
+  if (loading || submissionContext.isLoading) {
+    return (
+      <div className="max-w-6xl mx-auto">
+        <div className="flex justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
@@ -602,82 +632,47 @@ export function SubmissionDetailView({ submission, currentUser }: SubmissionDeta
               {submission.status.replace('_', ' ').toUpperCase()}
             </Badge>
             <span>Applied {submission.appliedAt ? new Date(submission.appliedAt).toLocaleDateString() : 'Unknown'}</span>
+            {/* Role indicator */}
+            <Badge variant="outline" className="text-xs">
+              Viewing as: {submissionContext.viewType}
+            </Badge>
           </div>
         </div>
       </div>
 
-      {/* View Mode Tabs */}
-      <Card className="p-6">
-        <div className="flex items-center gap-1 mb-6">
-          <Button
-            variant={viewMode === 'current' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('current')}
-            className="flex items-center gap-2"
-          >
-            <Activity className="w-4 h-4" />
-            Current State
-          </Button>
-          <Button
-            variant={viewMode === 'milestones' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('milestones')}
-            className="flex items-center gap-2"
-          >
-            <Target className="w-4 h-4" />
-            Milestones
-          </Button>
-          <Button
-            variant={viewMode === 'overview' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('overview')}
-            className="flex items-center gap-2"
-          >
-            <FileText className="w-4 h-4" />
-            Project Overview
-          </Button>
-        </div>
+      {/* Role-Based View Routing */}
+      {submissionContext.viewType === 'curator' && (
+        <CuratorSubmissionView
+          submission={submission}
+          currentUser={currentUser}
+          currentState={currentState}
+          discussionData={discussionData}
+          reviews={reviews}
+          onPostMessage={handlePostMessage}
+          onVoteSubmitted={handleVoteSubmitted}
+        />
+      )}
 
-        {/* Render selected view */}
-        {viewMode === 'current' && <CurrentStateView submission={submission} currentUser={currentUser} />}
-        {viewMode === 'milestones' && <MilestonesOverview submission={submission} currentUser={currentUser} />}
-        {viewMode === 'overview' && <ProjectOverview submission={submission} currentUser={currentUser} />}
-      </Card>
+      {submissionContext.viewType === 'grantee' && (
+        <GranteeSubmissionView
+          submission={submission}
+          currentUser={currentUser}
+          currentState={currentState}
+          discussionData={discussionData}
+          reviews={reviews}
+          onPostMessage={handlePostMessage}
+          onVoteSubmitted={handleVoteSubmitted}
+        />
+      )}
 
-      {/* Always show submission-level discussion and voting */}
-      <Card className="p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <MessageSquare className="w-5 h-5 text-blue-600" />
-          <h2 className="text-xl font-semibold">Submission Review & Discussion</h2>
-        </div>
-        
-        {loading ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Curator Voting Section */}
-            <CuratorVoting
-              submissionId={submission.id}
-              currentUser={discussionData?.currentUser}
-              existingVotes={reviews}
-              onVoteSubmitted={handleVoteSubmitted}
-              isOpen={true}
-            />
-
-            {/* Discussion Thread */}
-            <DiscussionThread
-              discussion={discussionData?.discussion}
-              submissionId={submission.id}
-              currentUser={discussionData?.currentUser}
-              onPostMessage={handlePostMessage}
-              title={formData?.title || submission.title}
-              isPublic={false}
-            />
-          </div>
-        )}
-      </Card>
+      {submissionContext.viewType === 'public' && (
+        <PublicSubmissionView
+          submission={submission}
+          currentState={currentState}
+          discussionData={discussionData}
+          reviews={reviews}
+        />
+      )}
     </div>
   );
 } 
