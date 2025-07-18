@@ -15,42 +15,44 @@ import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 100 }),
-  email: varchar('email', { length: 255 }).unique(), // not always required for wallet-only
-  passwordHash: text('password_hash'), // optional for wallet-only
+  email: varchar('email', { length: 255 }).unique(),
+  passwordHash: text('password_hash'),
   githubId: varchar('github_id', { length: 64 }),
   walletAddress: varchar('wallet_address', { length: 64 }),
-  role: varchar('role', { length: 20 }).notNull().default('grantee'), // 'grantee' | 'curator' | 'admin'
+  primaryGroupId: integer('primary_group_id'), // Will reference groups.id
+  primaryRole: varchar('primary_role', { length: 20 }).notNull().default('team'), // 'committee' | 'team'
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   deletedAt: timestamp('deleted_at'),
 });
 
-// Grant committee/organization tables
-export const committees = pgTable('committees', {
+// Unified groups table for both committees and teams
+export const groups = pgTable('groups', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 100 }).notNull(),
   description: text('description'),
   logoUrl: varchar('logo_url', { length: 255 }),
+  type: varchar('type', { length: 20 }).notNull(), // 'committee' | 'team'
   focusAreas: text('focus_areas'), // JSON array of focus areas
   websiteUrl: varchar('website_url', { length: 255 }),
   githubOrg: varchar('github_org', { length: 100 }),
   walletAddress: varchar('wallet_address', { length: 64 }),
   isActive: boolean('is_active').notNull().default(true),
-  votingThreshold: integer('voting_threshold').notNull().default(2), // minimum votes needed
-  approvalWorkflow: text('approval_workflow'), // JSON configuration
+  settings: text('settings'), // JSON configuration (voting thresholds, approval workflows, etc.)
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-export const committeeCurators = pgTable('committee_curators', {
+// Unified memberships for all groups (committees and teams)
+export const groupMemberships = pgTable('group_memberships', {
   id: serial('id').primaryKey(),
-  committeeId: integer('committee_id')
+  groupId: integer('group_id')
     .notNull()
-    .references(() => committees.id),
+    .references(() => groups.id),
   userId: integer('user_id')
     .notNull()
     .references(() => users.id),
-  role: varchar('role', { length: 20 }).notNull().default('curator'), // 'admin' | 'curator' | 'reviewer'
+  role: varchar('role', { length: 20 }).notNull().default('member'), // 'admin' | 'member'
   permissions: text('permissions'), // JSON array of permissions
   joinedAt: timestamp('joined_at').notNull().defaultNow(),
   isActive: boolean('is_active').notNull().default(true),
@@ -58,9 +60,9 @@ export const committeeCurators = pgTable('committee_curators', {
 
 export const grantPrograms = pgTable('grant_programs', {
   id: serial('id').primaryKey(),
-  committeeId: integer('committee_id')
+  groupId: integer('group_id')
     .notNull()
-    .references(() => committees.id),
+    .references(() => groups.id),
   name: varchar('name', { length: 100 }).notNull(),
   description: text('description'),
   fundingAmount: bigint('funding_amount', { mode: 'number' }),
@@ -77,17 +79,20 @@ export const submissions = pgTable('submissions', {
   grantProgramId: integer('grant_program_id')
     .notNull()
     .references(() => grantPrograms.id),
-  committeeId: integer('committee_id')
+  submitterGroupId: integer('submitter_group_id')
     .notNull()
-    .references(() => committees.id),
-  submitterId: integer('submitter_id').notNull().references(() => users.id), // renamed from userId for clarity
+    .references(() => groups.id), // team that submitted
+  reviewerGroupId: integer('reviewer_group_id')
+    .notNull()
+    .references(() => groups.id), // committee reviewing
+  submitterId: integer('submitter_id').notNull().references(() => users.id), // individual who submitted
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
   executiveSummary: text('executive_summary'),
   milestones: text('milestones'), // JSON milestone data
   postGrantPlan: text('post_grant_plan'),
   labels: text('labels'), // JSON array of project labels
-  githubRepoUrl: varchar('github_repo_url', { length: 255 }), // Reference only, no PR creation
+  githubRepoUrl: varchar('github_repo_url', { length: 255 }),
   walletAddress: varchar('wallet_address', { length: 64 }), // Grantee wallet
   status: varchar('status', { length: 32 }).notNull().default('pending'),
   totalAmount: bigint('total_amount', { mode: 'number' }),
@@ -100,10 +105,10 @@ export const discussions = pgTable('discussions', {
   id: serial('id').primaryKey(),
   submissionId: integer('submission_id').references(() => submissions.id),
   milestoneId: integer('milestone_id').references(() => milestones.id),
-  committeeId: integer('committee_id')
+  groupId: integer('group_id')
     .notNull()
-    .references(() => committees.id),
-  type: varchar('type', { length: 20 }).notNull().default('submission'), // 'submission' | 'milestone' | 'committee_internal'
+    .references(() => groups.id),
+  type: varchar('type', { length: 20 }).notNull().default('submission'), // 'submission' | 'milestone' | 'group_internal'
   isPublic: boolean('is_public').notNull().default(true), // Public transparency
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -114,8 +119,8 @@ export const messages = pgTable('messages', {
   discussionId: integer('discussion_id').notNull().references(() => discussions.id),
   authorId: integer('author_id').notNull().references(() => users.id),
   content: text('content').notNull(),
-  messageType: varchar('message_type', { length: 30 }).notNull().default('comment'), // 'comment' | 'status_change' | 'vote' | 'committee_decision'
-  metadata: text('metadata'), // JSON for structured data like votes, committee decisions
+  messageType: varchar('message_type', { length: 30 }).notNull().default('comment'), // 'comment' | 'status_change' | 'vote' | 'group_decision'
+  metadata: text('metadata'), // JSON for structured data like votes, group decisions
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
@@ -123,9 +128,9 @@ export const messages = pgTable('messages', {
 export const milestones = pgTable('milestones', {
   id: serial('id').primaryKey(),
   submissionId: integer('submission_id').notNull().references(() => submissions.id),
-  committeeId: integer('committee_id')
+  groupId: integer('group_id')
     .notNull()
-    .references(() => committees.id),
+    .references(() => groups.id),
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
   requirements: text('requirements'), // What needs to be delivered
@@ -133,9 +138,9 @@ export const milestones = pgTable('milestones', {
   dueDate: timestamp('due_date'),
   status: varchar('status', { length: 32 }).notNull().default('pending'),
   deliverables: text('deliverables'), // JSON array of deliverable items
-  githubRepoUrl: varchar('github_repo_url', { length: 255 }), // Repo for this milestone
-  githubPrUrl: varchar('github_pr_url', { length: 255 }), // PR link if applicable
-  githubCommitHash: varchar('github_commit_hash', { length: 64 }), // Specific commit for verification
+  githubRepoUrl: varchar('github_repo_url', { length: 255 }),
+  githubPrUrl: varchar('github_pr_url', { length: 255 }),
+  githubCommitHash: varchar('github_commit_hash', { length: 64 }),
   codeAnalysis: text('code_analysis'), // AI analysis of code changes
   submittedAt: timestamp('submitted_at'),
   reviewedAt: timestamp('reviewed_at'),
@@ -143,20 +148,20 @@ export const milestones = pgTable('milestones', {
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
-// Committee curator reviews
+// Group reviews (committee members reviewing submissions/milestones)
 export const reviews = pgTable('reviews', {
   id: serial('id').primaryKey(),
   submissionId: integer('submission_id').references(() => submissions.id),
   milestoneId: integer('milestone_id').references(() => milestones.id),
-  committeeId: integer('committee_id')
+  groupId: integer('group_id')
     .notNull()
-    .references(() => committees.id),
-  curatorId: integer('curator_id').notNull().references(() => users.id),
+    .references(() => groups.id),
+  reviewerId: integer('reviewer_id').notNull().references(() => users.id),
   discussionId: integer('discussion_id').references(() => discussions.id),
   vote: varchar('vote', { length: 16 }), // approve, reject, abstain
   feedback: text('feedback'),
   reviewType: varchar('review_type', { length: 20 }).notNull().default('standard'), // 'standard' | 'final' | 'milestone'
-  weight: integer('weight').notNull().default(1), // voting weight for this curator
+  weight: integer('weight').notNull().default(1), // voting weight for this reviewer
   isBinding: boolean('is_binding').notNull().default(false), // whether this review is binding
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -166,17 +171,17 @@ export const payouts = pgTable('payouts', {
   id: serial('id').primaryKey(),
   submissionId: integer('submission_id').references(() => submissions.id),
   milestoneId: integer('milestone_id').references(() => milestones.id),
-  committeeId: integer('committee_id')
+  groupId: integer('group_id')
     .notNull()
-    .references(() => committees.id),
+    .references(() => groups.id),
   amount: bigint('amount', { mode: 'number' }).notNull(),
-  transactionHash: varchar('transaction_hash', { length: 128 }), // Increased length for longer hashes
-  blockExplorerUrl: varchar('block_explorer_url', { length: 500 }), // URL to block explorer
+  transactionHash: varchar('transaction_hash', { length: 128 }),
+  blockExplorerUrl: varchar('block_explorer_url', { length: 500 }),
   status: varchar('status', { length: 32 }).notNull().default('pending'),
-  triggeredBy: integer('triggered_by').references(() => users.id), // curator who triggered
+  triggeredBy: integer('triggered_by').references(() => users.id), // group member who triggered
   approvedBy: integer('approved_by').references(() => users.id), // final approver
-  walletFrom: varchar('wallet_from', { length: 64 }), // committee wallet
-  walletTo: varchar('wallet_to', { length: 64 }), // grantee wallet
+  walletFrom: varchar('wallet_from', { length: 64 }), // group wallet
+  walletTo: varchar('wallet_to', { length: 64 }), // recipient wallet
   createdAt: timestamp('created_at').notNull().defaultNow(),
   processedAt: timestamp('processed_at'),
 });
@@ -184,7 +189,7 @@ export const payouts = pgTable('payouts', {
 export const notifications = pgTable('notifications', {
   id: serial('id').primaryKey(),
   userId: integer('user_id').notNull().references(() => users.id),
-  committeeId: integer('committee_id').references(() => committees.id), // committee-specific notifications
+  groupId: integer('group_id').references(() => groups.id), // group-specific notifications
   type: varchar('type', { length: 32 }).notNull(),
   submissionId: integer('submission_id').references(() => submissions.id),
   discussionId: integer('discussion_id').references(() => discussions.id),
@@ -197,17 +202,17 @@ export const notifications = pgTable('notifications', {
 });
 
 // Analytics tables
-export const committeeAnalytics = pgTable('committee_analytics', {
+export const groupAnalytics = pgTable('group_analytics', {
   id: serial('id').primaryKey(),
-  committeeId: integer('committee_id')
+  groupId: integer('group_id')
     .notNull()
-    .references(() => committees.id),
+    .references(() => groups.id),
   period: varchar('period', { length: 20 }).notNull(), // 'monthly' | 'quarterly' | 'yearly'
   totalSubmissions: integer('total_submissions').notNull().default(0),
   approvedSubmissions: integer('approved_submissions').notNull().default(0),
   totalFunding: bigint('total_funding', { mode: 'number' }).notNull().default(0),
   averageApprovalTime: integer('average_approval_time'), // in hours
-  curatorActivity: text('curator_activity'), // JSON curator activity data
+  memberActivity: text('member_activity'), // JSON member activity data
   publicRating: integer('public_rating').default(0), // 1-5 rating
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
@@ -216,51 +221,57 @@ export const committeeAnalytics = pgTable('committee_analytics', {
 export const platformMetrics = pgTable('platform_metrics', {
   id: serial('id').primaryKey(),
   period: varchar('period', { length: 20 }).notNull(), // 'monthly' | 'quarterly' | 'yearly'
-  totalCommittees: integer('total_committees').notNull().default(0),
+  totalGroups: integer('total_groups').notNull().default(0),
   totalSubmissions: integer('total_submissions').notNull().default(0),
   totalFunding: bigint('total_funding', { mode: 'number' }).notNull().default(0),
   averageSuccessRate: integer('average_success_rate').default(0), // percentage
   popularTags: text('popular_tags'), // JSON array of popular project tags
-  trendingCommittees: text('trending_committees'), // JSON array of committee IDs
+  trendingGroups: text('trending_groups'), // JSON array of group IDs
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 });
 
 // Relations
-export const usersRelations = relations(users, ({ many }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
+  primaryGroup: one(groups, {
+    fields: [users.primaryGroupId],
+    references: [groups.id],
+  }),
+  groupMemberships: many(groupMemberships),
   submissions: many(submissions),
-  committeeCurators: many(committeeCurators),
   discussionMessages: many(messages),
   reviews: many(reviews),
   notifications: many(notifications),
 }));
 
-export const committeesRelations = relations(committees, ({ many }) => ({
+export const groupsRelations = relations(groups, ({ many }) => ({
   grantPrograms: many(grantPrograms),
-  curators: many(committeeCurators),
-  submissions: many(submissions),
+  members: many(groupMemberships),
+  submittedSubmissions: many(submissions, { relationName: 'submitterGroup' }),
+  reviewingSubmissions: many(submissions, { relationName: 'reviewerGroup' }),
   discussions: many(discussions),
   milestones: many(milestones),
   reviews: many(reviews),
   payouts: many(payouts),
-  analytics: many(committeeAnalytics),
+  analytics: many(groupAnalytics),
+  primaryUsers: many(users),
 }));
 
-export const committeeCuratorsRelations = relations(committeeCurators, ({ one }) => ({
-  committee: one(committees, {
-    fields: [committeeCurators.committeeId],
-    references: [committees.id],
+export const groupMembershipsRelations = relations(groupMemberships, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupMemberships.groupId],
+    references: [groups.id],
   }),
   user: one(users, {
-    fields: [committeeCurators.userId],
+    fields: [groupMemberships.userId],
     references: [users.id],
   }),
 }));
 
 export const grantProgramsRelations = relations(grantPrograms, ({ one, many }) => ({
-  committee: one(committees, {
-    fields: [grantPrograms.committeeId],
-    references: [committees.id],
+  group: one(groups, {
+    fields: [grantPrograms.groupId],
+    references: [groups.id],
   }),
   submissions: many(submissions),
 }));
@@ -270,9 +281,15 @@ export const submissionsRelations = relations(submissions, ({ one, many }) => ({
     fields: [submissions.grantProgramId],
     references: [grantPrograms.id],
   }),
-  committee: one(committees, {
-    fields: [submissions.committeeId],
-    references: [committees.id],
+  submitterGroup: one(groups, {
+    fields: [submissions.submitterGroupId],
+    references: [groups.id],
+    relationName: 'submitterGroup',
+  }),
+  reviewerGroup: one(groups, {
+    fields: [submissions.reviewerGroupId],
+    references: [groups.id],
+    relationName: 'reviewerGroup',
   }),
   submitter: one(users, {
     fields: [submissions.submitterId],
@@ -294,9 +311,9 @@ export const discussionsRelations = relations(discussions, ({ one, many }) => ({
     fields: [discussions.milestoneId],
     references: [milestones.id],
   }),
-  committee: one(committees, {
-    fields: [discussions.committeeId],
-    references: [committees.id],
+  group: one(groups, {
+    fields: [discussions.groupId],
+    references: [groups.id],
   }),
   messages: many(messages),
 }));
@@ -317,9 +334,9 @@ export const milestonesRelations = relations(milestones, ({ one, many }) => ({
     fields: [milestones.submissionId],
     references: [submissions.id],
   }),
-  committee: one(committees, {
-    fields: [milestones.committeeId],
-    references: [committees.id],
+  group: one(groups, {
+    fields: [milestones.groupId],
+    references: [groups.id],
   }),
   discussions: many(discussions),
   reviews: many(reviews),
@@ -335,12 +352,12 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
     fields: [reviews.milestoneId],
     references: [milestones.id],
   }),
-  committee: one(committees, {
-    fields: [reviews.committeeId],
-    references: [committees.id],
+  group: one(groups, {
+    fields: [reviews.groupId],
+    references: [groups.id],
   }),
-  curator: one(users, {
-    fields: [reviews.curatorId],
+  reviewer: one(users, {
+    fields: [reviews.reviewerId],
     references: [users.id],
   }),
   discussion: one(discussions, {
@@ -358,9 +375,9 @@ export const payoutsRelations = relations(payouts, ({ one }) => ({
     fields: [payouts.milestoneId],
     references: [milestones.id],
   }),
-  committee: one(committees, {
-    fields: [payouts.committeeId],
-    references: [committees.id],
+  group: one(groups, {
+    fields: [payouts.groupId],
+    references: [groups.id],
   }),
   triggeredByUser: one(users, {
     fields: [payouts.triggeredBy],
@@ -377,9 +394,9 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
     fields: [notifications.userId],
     references: [users.id],
   }),
-  committee: one(committees, {
-    fields: [notifications.committeeId],
-    references: [committees.id],
+  group: one(groups, {
+    fields: [notifications.groupId],
+    references: [groups.id],
   }),
   submission: one(submissions, {
     fields: [notifications.submissionId],
@@ -395,20 +412,20 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   }),
 }));
 
-export const committeeAnalyticsRelations = relations(committeeAnalytics, ({ one }) => ({
-  committee: one(committees, {
-    fields: [committeeAnalytics.committeeId],
-    references: [committees.id],
+export const groupAnalyticsRelations = relations(groupAnalytics, ({ one }) => ({
+  group: one(groups, {
+    fields: [groupAnalytics.groupId],
+    references: [groups.id],
   }),
 }));
 
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users);
 export const selectUserSchema = createSelectSchema(users);
-export const insertCommitteeSchema = createInsertSchema(committees);
-export const selectCommitteeSchema = createSelectSchema(committees);
-export const insertCommitteeCuratorSchema = createInsertSchema(committeeCurators);
-export const selectCommitteeCuratorSchema = createSelectSchema(committeeCurators);
+export const insertGroupSchema = createInsertSchema(groups);
+export const selectGroupSchema = createSelectSchema(groups);
+export const insertGroupMembershipSchema = createInsertSchema(groupMemberships);
+export const selectGroupMembershipSchema = createSelectSchema(groupMemberships);
 export const insertGrantProgramSchema = createInsertSchema(grantPrograms);
 export const selectGrantProgramSchema = createSelectSchema(grantPrograms);
 export const insertSubmissionSchema = createInsertSchema(submissions);
@@ -429,10 +446,10 @@ export const selectNotificationSchema = createSelectSchema(notifications);
 // TypeScript types
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
-export type Committee = typeof committees.$inferSelect;
-export type NewCommittee = typeof committees.$inferInsert;
-export type CommitteeCurator = typeof committeeCurators.$inferSelect;
-export type NewCommitteeCurator = typeof committeeCurators.$inferInsert;
+export type Group = typeof groups.$inferSelect;
+export type NewGroup = typeof groups.$inferInsert;
+export type GroupMembership = typeof groupMemberships.$inferSelect;
+export type NewGroupMembership = typeof groupMemberships.$inferInsert;
 export type GrantProgram = typeof grantPrograms.$inferSelect;
 export type NewGrantProgram = typeof grantPrograms.$inferInsert;
 export type Submission = typeof submissions.$inferSelect;
@@ -449,8 +466,8 @@ export type Payout = typeof payouts.$inferSelect;
 export type NewPayout = typeof payouts.$inferInsert;
 export type Notification = typeof notifications.$inferSelect;
 export type NewNotification = typeof notifications.$inferInsert;
-export type CommitteeAnalytics = typeof committeeAnalytics.$inferSelect;
-export type NewCommitteeAnalytics = typeof committeeAnalytics.$inferInsert;
+export type GroupAnalytics = typeof groupAnalytics.$inferSelect;
+export type NewGroupAnalytics = typeof groupAnalytics.$inferInsert;
 export type PlatformMetrics = typeof platformMetrics.$inferSelect;
 export type NewPlatformMetrics = typeof platformMetrics.$inferInsert;
 
@@ -458,7 +475,8 @@ export type NewPlatformMetrics = typeof platformMetrics.$inferInsert;
 export type SubmissionWithMilestones = Submission & {
   milestones: Milestone[];
   submitter: User;
-  committee: Committee;
+  submitterGroup: Group;
+  reviewerGroup: Group;
   grantProgram: GrantProgram;
 };
 
@@ -476,7 +494,7 @@ export enum ActivityType {
   ADD_MILESTONE = 'ADD_MILESTONE',
   UPDATE_MILESTONE = 'UPDATE_MILESTONE',
   SUBMIT_REVIEW = 'SUBMIT_REVIEW',
-  CREATE_COMMITTEE = 'CREATE_COMMITTEE',
-  JOIN_COMMITTEE = 'JOIN_COMMITTEE',
-  LEAVE_COMMITTEE = 'LEAVE_COMMITTEE',
+  CREATE_GROUP = 'CREATE_GROUP',
+  JOIN_GROUP = 'JOIN_GROUP',
+  LEAVE_GROUP = 'LEAVE_GROUP',
 }

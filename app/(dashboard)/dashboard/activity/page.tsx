@@ -34,9 +34,9 @@ const iconMap: Record<ActivityType, LucideIcon> = {
   [ActivityType.ADD_MILESTONE]: FileText,
   [ActivityType.UPDATE_MILESTONE]: Edit,
   [ActivityType.SUBMIT_REVIEW]: Edit,
-  [ActivityType.CREATE_COMMITTEE]: Users,
-  [ActivityType.JOIN_COMMITTEE]: UserPlus,
-  [ActivityType.LEAVE_COMMITTEE]: LogOut,
+  [ActivityType.CREATE_GROUP]: Users,
+  [ActivityType.JOIN_GROUP]: UserPlus,
+  [ActivityType.LEAVE_GROUP]: LogOut,
 };
 
 function getRelativeTime(date: Date) {

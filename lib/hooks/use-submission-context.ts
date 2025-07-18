@@ -11,6 +11,7 @@ interface SubmissionUserContext {
   // Submission-specific permissions
   isSubmissionOwner: boolean;
   isCommitteeCurator: boolean;
+  committeeRole: 'admin' | 'curator' | 'reviewer' | null;
   canVote: boolean;
   canEditSubmission: boolean;
   canViewPrivateDiscussions: boolean;
@@ -33,7 +34,7 @@ interface SubmissionWithMilestones {
 }
 
 export function useSubmissionContext(
-  submission: SubmissionWithMilestones | null,
+  submission: any | null, // Accept any submission-like object
   currentUser: User | null
 ): SubmissionUserContext {
   const [context, setContext] = useState<SubmissionUserContext>({
@@ -42,6 +43,7 @@ export function useSubmissionContext(
     role: null,
     isSubmissionOwner: false,
     isCommitteeCurator: false,
+    committeeRole: null,
     canVote: false,
     canEditSubmission: false,
     canViewPrivateDiscussions: false,
@@ -59,21 +61,31 @@ export function useSubmissionContext(
       }
 
       const isAuthenticated = !!currentUser;
-      const role = currentUser?.role as 'curator' | 'grantee' | 'admin' | null;
+      const role = currentUser?.primaryRole as 'committee' | 'team' | null;
       
       // Basic ownership and committee checks
       const isSubmissionOwner = currentUser?.id === submission.submitterId;
       
       // Check if user is curator for this submission's committee
       let isCommitteeCurator = false;
-      if (currentUser && role === 'curator') {
+      let committeeRole: 'admin' | 'curator' | 'reviewer' | null = null;
+      
+      if (currentUser && role === 'committee' && (submission as any).reviewerGroupId) {
         try {
-          // This would ideally be a server action or API call
-          // For now, we'll assume curators have access to review submissions
-          // TODO: Implement proper committee membership check
-          isCommitteeCurator = role === 'curator';
+          // Check if user is member of the reviewing committee group
+          const response = await fetch(`/api/user/committee-membership?userId=${currentUser.id}&groupId=${(submission as any).reviewerGroupId}`);
+          if (response.ok) {
+            const membership = await response.json();
+            isCommitteeCurator = membership.isMember;
+            committeeRole = membership.role;
+          } else {
+            // Fallback: assume committee role has general access
+            isCommitteeCurator = role === 'committee';
+          }
         } catch (error) {
           console.error('[useSubmissionContext]: Error checking curator status', error);
+          // Fallback: assume committee role has general access  
+          isCommitteeCurator = role === 'committee';
         }
       }
 
@@ -83,9 +95,9 @@ export function useSubmissionContext(
         submission.status === 'draft' || 
         submission.status === 'changes_requested'
       );
-      const canViewPrivateDiscussions = isCommitteeCurator || currentUser?.role === 'admin';
-      const canManageWorkflow = isCommitteeCurator || currentUser?.role === 'admin';
-      const canTriggerPayouts = isCommitteeCurator || currentUser?.role === 'admin';
+      const canViewPrivateDiscussions = isCommitteeCurator || currentUser?.primaryRole === 'committee';
+      const canManageWorkflow = isCommitteeCurator || currentUser?.primaryRole === 'committee';
+      const canTriggerPayouts = isCommitteeCurator || currentUser?.primaryRole === 'committee';
 
       // Determine primary view type
       let viewType: 'curator' | 'grantee' | 'public' = 'public';
@@ -98,9 +110,10 @@ export function useSubmissionContext(
       setContext({
         user: currentUser,
         isAuthenticated,
-        role,
+        role: role === 'committee' ? 'curator' as const : role === 'team' ? 'grantee' as const : null,
         isSubmissionOwner,
         isCommitteeCurator,
+        committeeRole,
         canVote,
         canEditSubmission,
         canViewPrivateDiscussions,

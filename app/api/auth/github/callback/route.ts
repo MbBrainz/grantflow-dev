@@ -149,7 +149,7 @@ export async function GET(request: NextRequest) {
             name: githubUser.name || githubUser.login,
             email: email,
             githubId: String(githubUser.id),
-            role: 'grantee', // Default role for new GitHub users
+            primaryRole: 'team', // Default role for new GitHub users
             passwordHash: null, // GitHub OAuth users don't have passwords
           })
           .returning();

@@ -17,36 +17,29 @@ import {
   getSubmissionForCuratorReview,
   postMessageToMilestone
 } from '../discussion-actions';
-import type { Submission, Milestone, User } from '@/lib/db/schema';
+import type { Submission, Milestone, User, SubmissionWithMilestones } from '@/lib/db/schema';
 import { useSubmissionContext } from '@/lib/hooks/use-submission-context';
 import { CuratorSubmissionView } from '@/components/submissions/curator-submission-view';
 import { GranteeSubmissionView } from '@/components/submissions/grantee-submission-view';
 import { PublicSubmissionView } from '@/components/submissions/public-submission-view';
+import { MilestoneStatusOverview } from '@/components/submissions/milestone-status-overview';
 
-interface SubmissionWithMilestones {
+// Flexible type that handles actual database query results
+type ExtendedSubmissionWithMilestones = {
   id: number;
   grantProgramId: number;
-  committeeId: number;
+  reviewerGroupId?: number;
   submitterId: number;
   title: string;
-  description: string | null;
-  executiveSummary: string | null;
-  milestones: Milestone[]; // Related milestone records
-  postGrantPlan: string | null;
-  labels: string | null;
-  githubRepoUrl: string | null;
-  walletAddress: string | null;
-  status: string;
-  totalAmount: number | null;
-  appliedAt: Date;
-  createdAt: Date;
-  updatedAt: Date;
-  // Legacy field support for backward compatibility
+  description?: string | null;
+  milestones: any[]; // Can be either milestone objects or JSON string
   formData?: string | null;
-}
+  committeeId?: number; // For backwards compatibility
+  [key: string]: any; // Allow any additional properties
+};
 
 interface SubmissionDetailViewProps {
-  submission: SubmissionWithMilestones;
+  submission: ExtendedSubmissionWithMilestones;
   currentUser: User | null;
 }
 
@@ -81,150 +74,10 @@ function getMilestoneStatusColor(status: string): string {
   }
 }
 
-// Current State View Component
+// Current State View Component - Replaced with MilestoneStatusOverview
 function CurrentStateView({ submission, currentUser }: { submission: SubmissionWithMilestones, currentUser: User | null }) {
-  const [currentState, setCurrentState] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    async function loadCurrentState() {
-      try {
-        const formData = new FormData();
-        formData.append('submissionId', String(submission.id));
-        const result = await getSubmissionCurrentState({}, formData);
-        
-        if (!result.error && 'currentState' in result) {
-          setCurrentState(result.currentState);
-        }
-      } catch (error) {
-        console.error('[CurrentStateView]: Error loading current state', error);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadCurrentState();
-  }, [submission.id]);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      {/* Pending Actions */}
-      <Card className="p-6 border-l-4 border-l-orange-500">
-        <div className="flex items-center gap-2 mb-4">
-          <AlertTriangle className="w-5 h-5 text-orange-600" />
-          <h3 className="text-lg font-semibold">Pending Actions</h3>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="p-4 bg-blue-50 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <MessageSquare className="w-4 h-4 text-blue-600" />
-              <span className="font-medium">Submission Vote</span>
-            </div>
-            <p className="text-sm text-gray-600">
-              {currentState?.pendingActions?.submissionVote ? 'Vote required' : 'Vote cast ✓'}
-            </p>
-          </div>
-          
-          <div className="p-4 bg-yellow-50 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Target className="w-4 h-4 text-yellow-600" />
-              <span className="font-medium">Milestone Reviews</span>
-            </div>
-            <p className="text-sm text-gray-600">
-              {currentState?.pendingActions?.milestoneReviews || 0} pending
-            </p>
-          </div>
-          
-          <div className="p-4 bg-green-50 rounded-lg">
-            <div className="flex items-center gap-2 mb-2">
-              <Activity className="w-4 h-4 text-green-600" />
-              <span className="font-medium">Active Milestones</span>
-            </div>
-            <p className="text-sm text-gray-600">
-              {currentState?.pendingActions?.activeMilestonesCount || 0} in progress
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Recent Activity */}
-      <Card className="p-6">
-        <div className="flex items-center gap-2 mb-4">
-          <Clock className="w-5 h-5 text-blue-600" />
-          <h3 className="text-lg font-semibold">Recent Activity</h3>
-        </div>
-        
-        <div className="space-y-3">
-          {currentState?.recentMessages?.length > 0 ? (
-            currentState.recentMessages.map((message: any) => (
-              <div key={message.id} className="flex items-start gap-3 p-3 bg-gray-50 rounded-lg">
-                <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-xs font-medium text-blue-600">
-                    {message.author?.name?.[0] || 'U'}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium text-sm">{message.author?.name || 'Unknown'}</span>
-                    <Badge variant="outline" className="text-xs">
-                      {message.discussion?.type === 'milestone' ? 'Milestone' : 'Submission'}
-                    </Badge>
-                    <span className="text-xs text-gray-500">
-                      {new Date(message.createdAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700 truncate">{message.content}</p>
-                </div>
-              </div>
-            ))
-          ) : (
-            <p className="text-gray-500 text-center py-4">No recent activity</p>
-          )}
-        </div>
-      </Card>
-
-      {/* Active Milestones */}
-      {currentState?.activeMilestones?.length > 0 && (
-        <Card className="p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <Target className="w-5 h-5 text-green-600" />
-            <h3 className="text-lg font-semibold">Active Milestones</h3>
-          </div>
-          
-          <div className="space-y-4">
-            {currentState.activeMilestones.map((milestone: any) => (
-              <div key={milestone.id} className="border rounded-lg p-4">
-                <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium">{milestone.title}</h4>
-                  <Badge className={getMilestoneStatusColor(milestone.status)}>
-                    {milestone.status.replace('_', ' ')}
-                  </Badge>
-                </div>
-                <p className="text-sm text-gray-600 mb-3">{milestone.description}</p>
-                
-                {milestone.discussions?.[0]?.messages?.length > 0 && (
-                  <div className="bg-gray-50 rounded p-3">
-                    <p className="text-xs font-medium text-gray-700 mb-1">Latest Discussion:</p>
-                    <p className="text-sm text-gray-600">
-                      {milestone.discussions[0].messages[milestone.discussions[0].messages.length - 1].content}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
-    </div>
+    <MilestoneStatusOverview submission={submission} />
   );
 }
 
@@ -377,7 +230,7 @@ function MilestonesOverview({ submission, currentUser }: { submission: Submissio
                   currentUser={currentUser}
                   onPostMessage={(content) => handlePostMilestoneMessage(milestone.id, content)}
                   title={`${milestone.title} Discussion`}
-                  isPublic={false}
+                  isPublic={true}
                 />
               </div>
             )}
@@ -389,7 +242,7 @@ function MilestonesOverview({ submission, currentUser }: { submission: Submissio
 }
 
 // Project Overview Component
-function ProjectOverview({ submission, currentUser }: { submission: SubmissionWithMilestones, currentUser: User | null }) {
+function ProjectOverview({ submission, currentUser }: { submission: ExtendedSubmissionWithMilestones, currentUser: User | null }) {
   const formData = parseFormData(submission.formData || null);
   const labels = submission.labels ? JSON.parse(submission.labels) : [];
 
@@ -525,7 +378,7 @@ export function SubmissionDetailView({ submission, currentUser }: SubmissionDeta
   const [loading, setLoading] = useState(true);
 
   // Get user context and permissions for this submission
-  const submissionContext = useSubmissionContext(submission, currentUser);
+  const submissionContext = useSubmissionContext(submission as any, currentUser);
 
   const formData = parseFormData(submission.formData || null);
 
@@ -648,6 +501,7 @@ export function SubmissionDetailView({ submission, currentUser }: SubmissionDeta
           currentState={currentState}
           discussionData={discussionData}
           reviews={reviews}
+          submissionContext={submissionContext}
           onPostMessage={handlePostMessage}
           onVoteSubmitted={handleVoteSubmitted}
         />

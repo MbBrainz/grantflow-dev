@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { DiscussionThread } from '@/components/discussion/discussion-thread';
 import { CuratorVoting } from '@/components/discussion/curator-voting';
 import { Vote, AlertTriangle, Clock, Users, CheckCircle, XCircle, MessageSquare, GitBranch, DollarSign, Target } from 'lucide-react';
+import { CommitteeInfoCard } from '@/components/committee/committee-info-card';
 
 interface CuratorSubmissionViewProps {
   submission: any;
@@ -14,6 +15,7 @@ interface CuratorSubmissionViewProps {
   currentState: any;
   discussionData: any;
   reviews: any[];
+  submissionContext?: any;
   onPostMessage: (content: string, type?: string) => Promise<void>;
   onVoteSubmitted: () => Promise<void>;
 }
@@ -24,19 +26,30 @@ export function CuratorSubmissionView({
   currentState,
   discussionData,
   reviews,
+  submissionContext,
   onPostMessage,
   onVoteSubmitted
 }: CuratorSubmissionViewProps) {
   const [activeTab, setActiveTab] = useState<'review' | 'technical' | 'analytics'>('review');
 
-  // Calculate voting status
-  const approveVotes = reviews?.filter(r => r.decision === 'approve').length || 0;
-  const rejectVotes = reviews?.filter(r => r.decision === 'reject').length || 0;
+  // Calculate voting status - fix field names to match actual data structure
+  const approveVotes = reviews?.filter(r => r.vote === 'approve').length || 0;
+  const rejectVotes = reviews?.filter(r => r.vote === 'reject' || r.vote === 'request_changes').length || 0;
   const userHasVoted = reviews?.some(r => r.curatorId === currentUser?.id);
-  const needsMyVote = !userHasVoted && currentUser?.role === 'curator';
+  const needsMyVote = !userHasVoted && submissionContext?.isCommitteeCurator;
 
   return (
     <div className="space-y-6">
+      {/* Committee Context - Just show this submission's committee */}
+      {submission.committee && (
+        <CommitteeInfoCard
+          committee={submission.committee}
+          userRole={submissionContext?.committeeRole}
+          isUserMember={submissionContext?.isCommitteeCurator}
+          className="border-l-4 border-l-blue-500"
+        />
+      )}
+
       {/* Curator Action Hero */}
       <Card className="p-6 border-l-4 border-l-blue-500 bg-blue-50/50">
         <div className="flex items-start gap-4 mb-6">
@@ -154,18 +167,7 @@ export function CuratorSubmissionView({
         {/* Review Tab */}
         {activeTab === 'review' && (
           <div className="space-y-6">
-            {/* Curator Discussion */}
-            <div className="bg-blue-50 rounded-lg p-6 border border-blue-200">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-600" />
-                Curator Discussion (Private)
-              </h3>
-              <div className="bg-white rounded p-4">
-                <p className="text-sm text-gray-600 text-center py-4">
-                  Private curator discussion would go here
-                </p>
-              </div>
-            </div>
+
 
             {/* Public Discussion */}
             <div>

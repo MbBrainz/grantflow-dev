@@ -1,9 +1,9 @@
-import { eq, desc, and, or, ilike, sql, inArray } from 'drizzle-orm';
+import { eq, desc, and, or, ilike, sql, inArray, isNull } from 'drizzle-orm';
 import { db } from './drizzle';
 import { 
   users, 
-  committees,
-  committeeCurators,
+  groups,
+  groupMemberships,
   grantPrograms,
   submissions, 
   discussions, 
@@ -12,9 +12,9 @@ import {
   reviews,
   notifications,
   type User,
+  type Group,
   type Submission,
   type SubmissionWithMilestones,
-  type Committee,
   type GrantProgram,
   type Discussion,
   type Milestone,
@@ -47,31 +47,36 @@ export async function getUserById(userId: number): Promise<User | null> {
   return result.length > 0 ? result[0] : null;
 }
 
-// Committee-related queries
-export async function getCommittees(): Promise<Committee[]> {
+// Group-related queries (replaces committee queries)
+export async function getGroups(type?: 'committee' | 'team'): Promise<Group[]> {
+  let whereConditions = [eq(groups.isActive, true)];
+  if (type) {
+    whereConditions.push(eq(groups.type, type));
+  }
+
   return await db
     .select()
-    .from(committees)
-    .where(eq(committees.isActive, true))
-    .orderBy(desc(committees.createdAt));
+    .from(groups)
+    .where(and(...whereConditions))
+    .orderBy(desc(groups.createdAt));
 }
 
-export async function getCommitteeById(committeeId: number): Promise<Committee | null> {
+export async function getGroupById(groupId: number): Promise<Group | null> {
   const result = await db
     .select()
-    .from(committees)
-    .where(eq(committees.id, committeeId))
+    .from(groups)
+    .where(eq(groups.id, groupId))
     .limit(1);
 
   return result.length > 0 ? result[0] : null;
 }
 
-export async function getGrantProgramsByCommittee(committeeId: number): Promise<GrantProgram[]> {
+export async function getGrantProgramsByGroup(groupId: number): Promise<GrantProgram[]> {
   return await db
     .select()
     .from(grantPrograms)
     .where(and(
-      eq(grantPrograms.committeeId, committeeId),
+      eq(grantPrograms.groupId, groupId),
       eq(grantPrograms.isActive, true)
     ))
     .orderBy(desc(grantPrograms.createdAt));
@@ -87,16 +92,46 @@ export async function getGrantProgramById(programId: number): Promise<GrantProgr
   return result.length > 0 ? result[0] : null;
 }
 
-// Check if user is a curator for a committee
-export async function isUserCurator(userId: number, committeeId?: number): Promise<boolean> {
+// Check if user is a member of a group with specific role
+export async function isUserGroupMember(userId: number, groupId?: number, role?: 'admin' | 'member'): Promise<boolean> {
+  let whereConditions = [
+    eq(groupMemberships.userId, userId),
+    eq(groupMemberships.isActive, true)
+  ];
+
+  if (groupId) {
+    whereConditions.push(eq(groupMemberships.groupId, groupId));
+  }
+  if (role) {
+    whereConditions.push(eq(groupMemberships.role, role));
+  }
+
   const result = await db
     .select()
-    .from(committeeCurators)
-    .where(and(
-      eq(committeeCurators.userId, userId),
-      eq(committeeCurators.isActive, true),
-      committeeId ? eq(committeeCurators.committeeId, committeeId) : undefined
-    ))
+    .from(groupMemberships)
+    .where(and(...whereConditions))
+    .limit(1);
+
+  return result.length > 0;
+}
+
+// Check if user is a reviewer (member of committee-type group)
+export async function isUserReviewer(userId: number, groupId?: number): Promise<boolean> {
+  let whereConditions = [
+    eq(groupMemberships.userId, userId),
+    eq(groupMemberships.isActive, true),
+    eq(groups.type, 'committee')
+  ];
+
+  if (groupId) {
+    whereConditions.push(eq(groupMemberships.groupId, groupId));
+  }
+
+  const result = await db
+    .select()
+    .from(groupMemberships)
+    .innerJoin(groups, eq(groupMemberships.groupId, groups.id))
+    .where(and(...whereConditions))
     .limit(1);
 
   return result.length > 0;
@@ -118,11 +153,12 @@ export async function getSubmissionsByUser(userId: number): Promise<Submission[]
     .orderBy(desc(submissions.createdAt));
 }
 
-export async function getSubmissionsByCommittee(committeeId: number): Promise<Submission[]> {
+export async function getSubmissionsByGroup(groupId: number, isSubmitter: boolean = true): Promise<Submission[]> {
+  const field = isSubmitter ? submissions.submitterGroupId : submissions.reviewerGroupId;
   return await db
     .select()
     .from(submissions)
-    .where(eq(submissions.committeeId, committeeId))
+    .where(eq(field, groupId))
     .orderBy(desc(submissions.createdAt));
 }
 
@@ -131,7 +167,8 @@ export async function getSubmissionById(submissionId: number): Promise<Submissio
     where: eq(submissions.id, submissionId),
     with: {
       submitter: true,
-      committee: true,
+      submitterGroup: true,
+      reviewerGroup: true,
       grantProgram: true,
       milestones: true,
     },
@@ -169,11 +206,11 @@ export async function getMessagesByDiscussion(discussionId: number) {
           id: true,
           name: true,
           email: true,
-          role: true,
+          primaryRole: true,
         },
       },
     },
-    orderBy: [discussions.createdAt],
+    orderBy: [messages.createdAt],
   });
 }
 
@@ -230,7 +267,7 @@ export async function getMilestoneWithPayouts(milestoneId: number) {
 export async function createPayout(data: {
   submissionId?: number;
   milestoneId: number;
-  committeeId: number;
+  groupId: number;
   amount: number;
   transactionHash: string;
   blockExplorerUrl: string;
@@ -243,7 +280,7 @@ export async function createPayout(data: {
     .values({
       submissionId: data.submissionId,
       milestoneId: data.milestoneId,
-      committeeId: data.committeeId,
+      groupId: data.groupId,
       amount: data.amount,
       transactionHash: data.transactionHash,
       blockExplorerUrl: data.blockExplorerUrl,
@@ -261,18 +298,18 @@ export async function createPayout(data: {
 
 export async function completeMilestoneWithPayout(data: {
   milestoneId: number;
-  committeeId: number;
-  curatorId: number;
+  groupId: number;
+  reviewerId: number;
   transactionHash: string;
   blockExplorerUrl: string;
   amount: number;
   walletFrom?: string;
   walletTo?: string;
 }) {
-  // Verify the curator has permission for this committee
-  const isAuthorized = await isUserCurator(data.curatorId, data.committeeId);
+  // Verify the reviewer has permission for this group
+  const isAuthorized = await isUserReviewer(data.reviewerId, data.groupId);
   if (!isAuthorized) {
-    throw new Error('User is not authorized to complete milestones for this committee');
+    throw new Error('User is not authorized to complete milestones for this group');
   }
 
   // Get the milestone to find the submission
@@ -300,13 +337,13 @@ export async function completeMilestoneWithPayout(data: {
       .values({
         submissionId: milestone.submissionId,
         milestoneId: data.milestoneId,
-        committeeId: data.committeeId,
+        groupId: data.groupId,
         amount: data.amount,
         transactionHash: data.transactionHash,
         blockExplorerUrl: data.blockExplorerUrl,
         status: 'completed',
-        triggeredBy: data.curatorId,
-        approvedBy: data.curatorId,
+        triggeredBy: data.reviewerId,
+        approvedBy: data.reviewerId,
         walletFrom: data.walletFrom,
         walletTo: data.walletTo,
         processedAt: new Date()
@@ -327,9 +364,9 @@ export async function getSubmissionPayouts(submissionId: number) {
     .orderBy(desc(payouts.createdAt));
 }
 
-export async function getCommitteePayouts(committeeId: number) {
+export async function getGroupPayouts(groupId: number) {
   return await db.query.payouts.findMany({
-    where: eq(payouts.committeeId, committeeId),
+    where: eq(payouts.groupId, groupId),
     with: {
       milestone: {
         columns: {
@@ -372,12 +409,12 @@ export async function markNotificationAsRead(notificationId: number, userId: num
     ));
 }
 
-// Committee curator queries
-export async function getCuratorsByCommittee(committeeId: number) {
-  return await db.query.committeeCurators.findMany({
+// Group membership queries (replaces curator queries)
+export async function getMembersByGroup(groupId: number) {
+  return await db.query.groupMemberships.findMany({
     where: and(
-      eq(committeeCurators.committeeId, committeeId),
-      eq(committeeCurators.isActive, true)
+      eq(groupMemberships.groupId, groupId),
+      eq(groupMemberships.isActive, true)
     ),
     with: {
       user: {
@@ -385,94 +422,102 @@ export async function getCuratorsByCommittee(committeeId: number) {
           id: true,
           name: true,
           email: true,
-          role: true,
+          primaryRole: true,
         },
       },
     },
   });
 }
 
-export async function getUserCommittees(userId: number) {
-  return await db.query.committeeCurators.findMany({
+export async function getUserGroups(userId: number) {
+  return await db.query.groupMemberships.findMany({
     where: and(
-      eq(committeeCurators.userId, userId),
-      eq(committeeCurators.isActive, true)
+      eq(groupMemberships.userId, userId),
+      eq(groupMemberships.isActive, true)
     ),
     with: {
-      committee: true,
+      group: true,
     },
   });
 }
 
-// Enhanced committee marketplace queries
-export async function getCommitteesWithStats() {
-  const committeesWithStats = await db
+// Enhanced group marketplace queries
+export async function getGroupsWithStats() {
+  const groupsWithStats = await db
     .select({
-      id: committees.id,
-      name: committees.name,
-      description: committees.description,
-      logoUrl: committees.logoUrl,
-      focusAreas: committees.focusAreas,
-      websiteUrl: committees.websiteUrl,
-      githubOrg: committees.githubOrg,
-      walletAddress: committees.walletAddress,
-      isActive: committees.isActive,
-      votingThreshold: committees.votingThreshold,
-      approvalWorkflow: committees.approvalWorkflow,
-      createdAt: committees.createdAt,
-      updatedAt: committees.updatedAt,
+      id: groups.id,
+      name: groups.name,
+      description: groups.description,
+      logoUrl: groups.logoUrl,
+      type: groups.type,
+      focusAreas: groups.focusAreas,
+      websiteUrl: groups.websiteUrl,
+      githubOrg: groups.githubOrg,
+      walletAddress: groups.walletAddress,
+      isActive: groups.isActive,
+      settings: groups.settings,
+      createdAt: groups.createdAt,
+      updatedAt: groups.updatedAt,
     })
-    .from(committees)
-    .where(eq(committees.isActive, true))
-    .orderBy(desc(committees.createdAt));
+    .from(groups)
+    .where(eq(groups.isActive, true))
+    .orderBy(desc(groups.createdAt));
 
-  // For each committee, get additional stats
-  const committeesWithFullStats = await Promise.all(
-    committeesWithStats.map(async (committee) => {
+  // For each group, get additional stats
+  const groupsWithFullStats = await Promise.all(
+    groupsWithStats.map(async (group) => {
       const [
         totalSubmissions,
         approvedSubmissions,
         grantProgramsCount,
         totalFunding,
-        curators
+        members
       ] = await Promise.all([
-        // Total submissions
+        // Total submissions (for committees - reviewing, for teams - submitting)
         db.select({ count: sql<number>`count(*)` })
           .from(submissions)
-          .where(eq(submissions.committeeId, committee.id)),
+          .where(group.type === 'committee' 
+            ? eq(submissions.reviewerGroupId, group.id)
+            : eq(submissions.submitterGroupId, group.id)),
         
         // Approved submissions
         db.select({ count: sql<number>`count(*)` })
           .from(submissions)
           .where(and(
-            eq(submissions.committeeId, committee.id),
+            group.type === 'committee' 
+              ? eq(submissions.reviewerGroupId, group.id)
+              : eq(submissions.submitterGroupId, group.id),
             eq(submissions.status, 'approved')
           )),
         
-        // Grant programs
-        db.select({ count: sql<number>`count(*)` })
-          .from(grantPrograms)
-          .where(and(
-            eq(grantPrograms.committeeId, committee.id),
-            eq(grantPrograms.isActive, true)
-          )),
+        // Grant programs (only for committees)
+        group.type === 'committee' 
+          ? db.select({ count: sql<number>`count(*)` })
+              .from(grantPrograms)
+              .where(and(
+                eq(grantPrograms.groupId, group.id),
+                eq(grantPrograms.isActive, true)
+              ))
+          : Promise.resolve([{ count: 0 }]),
         
-        // Total funding available
-        db.select({ 
-          totalFunding: sql<number>`coalesce(sum(${grantPrograms.fundingAmount}), 0)` 
-        })
-          .from(grantPrograms)
-          .where(and(
-            eq(grantPrograms.committeeId, committee.id),
-            eq(grantPrograms.isActive, true)
-          )),
+        // Total funding available (only for committees)
+        group.type === 'committee'
+          ? db.select({ 
+              totalFunding: sql<number>`coalesce(sum(${grantPrograms.fundingAmount}), 0)` 
+            })
+              .from(grantPrograms)
+              .where(and(
+                eq(grantPrograms.groupId, group.id),
+                eq(grantPrograms.isActive, true)
+              ))
+          : Promise.resolve([{ totalFunding: 0 }]),
         
-        // Active curators count
+        // Active members count
         db.select({ count: sql<number>`count(*)` })
-          .from(committeeCurators)
+          .from(groupMemberships)
           .where(and(
-            eq(committeeCurators.committeeId, committee.id),
-            eq(committeeCurators.isActive, true)
+            eq(groupMemberships.groupId, group.id),
+            eq(groupMemberships.isActive, true)
           ))
       ]);
 
@@ -483,39 +528,39 @@ export async function getCommitteesWithStats() {
         : 0;
 
       return {
-        ...committee,
+        ...group,
         stats: {
           totalSubmissions: totalSubmissionsCount,
           approvedSubmissions: approvedSubmissionsCount,
           approvalRate,
           grantPrograms: grantProgramsCount[0]?.count || 0,
           totalFunding: totalFunding[0]?.totalFunding || 0,
-          activeCurators: curators[0]?.count || 0
+          activeMembers: members[0]?.count || 0
         }
       };
     })
   );
 
-  return committeesWithFullStats;
+  return groupsWithFullStats;
 }
 
-export async function getCommitteeWithDetails(committeeId: number) {
-  const committee = await db.query.committees.findFirst({
-    where: eq(committees.id, committeeId),
+export async function getGroupWithDetails(groupId: number) {
+  const group = await db.query.groups.findFirst({
+    where: eq(groups.id, groupId),
     with: {
       grantPrograms: {
         where: eq(grantPrograms.isActive, true),
         orderBy: [desc(grantPrograms.createdAt)]
       },
-      curators: {
-        where: eq(committeeCurators.isActive, true),
+      members: {
+        where: eq(groupMemberships.isActive, true),
         with: {
           user: {
             columns: {
               id: true,
               name: true,
               email: true,
-              role: true,
+              primaryRole: true,
             }
           }
         }
@@ -523,24 +568,26 @@ export async function getCommitteeWithDetails(committeeId: number) {
     }
   });
 
-  if (!committee) return null;
+  if (!group) return null;
 
-  // Get submission stats
+  // Get submission stats based on group type
+  const submissionField = group.type === 'committee' ? submissions.reviewerGroupId : submissions.submitterGroupId;
+  
   const [totalSubmissions, approvedSubmissions, recentSubmissions] = await Promise.all([
     db.select({ count: sql<number>`count(*)` })
       .from(submissions)
-      .where(eq(submissions.committeeId, committeeId)),
+      .where(eq(submissionField, groupId)),
     
     db.select({ count: sql<number>`count(*)` })
       .from(submissions)
       .where(and(
-        eq(submissions.committeeId, committeeId),
+        eq(submissionField, groupId),
         eq(submissions.status, 'approved')
       )),
     
     db.select()
       .from(submissions)
-      .where(eq(submissions.committeeId, committeeId))
+      .where(eq(submissionField, groupId))
       .orderBy(desc(submissions.createdAt))
       .limit(5)
   ]);
@@ -552,34 +599,40 @@ export async function getCommitteeWithDetails(committeeId: number) {
     : 0;
 
   return {
-    ...committee,
+    ...group,
     stats: {
       totalSubmissions: totalSubmissionsCount,
       approvedSubmissions: approvedSubmissionsCount,
       approvalRate,
-      totalFunding: committee.grantPrograms.reduce((sum, prog) => sum + (prog.fundingAmount || 0), 0)
+      totalFunding: group.grantPrograms.reduce((sum, prog) => sum + (prog.fundingAmount || 0), 0)
     },
     recentSubmissions
   };
 }
 
-export async function searchCommittees(searchParams: {
+export async function searchGroups(searchParams: {
   query?: string;
+  type?: 'committee' | 'team';
   focusAreas?: string[];
   minFunding?: number;
   maxFunding?: number;
   approvalRateMin?: number;
 }) {
-  const { query, focusAreas, minFunding, maxFunding, approvalRateMin } = searchParams;
+  const { query, type, focusAreas, minFunding, maxFunding, approvalRateMin } = searchParams;
   
-  let whereConditions = [eq(committees.isActive, true)];
+  let whereConditions = [eq(groups.isActive, true)];
+  
+  // Type filter
+  if (type) {
+    whereConditions.push(eq(groups.type, type));
+  }
   
   // Text search on name and description
   if (query) {
     whereConditions.push(
       or(
-        ilike(committees.name, `%${query}%`),
-        ilike(committees.description, `%${query}%`)
+        ilike(groups.name, `%${query}%`),
+        ilike(groups.description, `%${query}%`)
       )!
     );
   }
@@ -588,37 +641,41 @@ export async function searchCommittees(searchParams: {
   if (focusAreas && focusAreas.length > 0) {
     focusAreas.forEach(area => {
       whereConditions.push(
-        sql`${committees.focusAreas}::text ILIKE ${`%"${area}"%`}`
+        sql`${groups.focusAreas}::text ILIKE ${`%"${area}"%`}`
       );
     });
   }
 
   let results = await db
     .select()
-    .from(committees)
+    .from(groups)
     .where(and(...whereConditions))
-    .orderBy(desc(committees.createdAt));
+    .orderBy(desc(groups.createdAt));
 
   // Post-process for funding and approval rate filters (requires stats calculation)
   if (minFunding || maxFunding || approvalRateMin) {
     const resultsWithStats = await Promise.all(
-      results.map(async (committee) => {
+      results.map(async (group) => {
         const [totalFunding, submissionStats] = await Promise.all([
-          db.select({ 
-            totalFunding: sql<number>`coalesce(sum(${grantPrograms.fundingAmount}), 0)` 
-          })
-            .from(grantPrograms)
-            .where(and(
-              eq(grantPrograms.committeeId, committee.id),
-              eq(grantPrograms.isActive, true)
-            )),
+          group.type === 'committee' 
+            ? db.select({ 
+                totalFunding: sql<number>`coalesce(sum(${grantPrograms.fundingAmount}), 0)` 
+              })
+                .from(grantPrograms)
+                .where(and(
+                  eq(grantPrograms.groupId, group.id),
+                  eq(grantPrograms.isActive, true)
+                ))
+            : Promise.resolve([{ totalFunding: 0 }]),
           
           db.select({ 
             total: sql<number>`count(*)`,
             approved: sql<number>`count(*) filter (where status = 'approved')`
           })
             .from(submissions)
-            .where(eq(submissions.committeeId, committee.id))
+            .where(group.type === 'committee' 
+              ? eq(submissions.reviewerGroupId, group.id)
+              : eq(submissions.submitterGroupId, group.id))
         ]);
 
         const funding = totalFunding[0]?.totalFunding || 0;
@@ -627,7 +684,7 @@ export async function searchCommittees(searchParams: {
         const approvalRate = total > 0 ? Math.round((approved / total) * 100) : 0;
 
         return {
-          ...committee,
+          ...group,
           calculatedFunding: funding,
           calculatedApprovalRate: approvalRate
         };
@@ -635,10 +692,10 @@ export async function searchCommittees(searchParams: {
     );
 
     // Apply funding and approval rate filters
-    results = resultsWithStats.filter(committee => {
-      if (minFunding && committee.calculatedFunding < minFunding) return false;
-      if (maxFunding && committee.calculatedFunding > maxFunding) return false;
-      if (approvalRateMin && committee.calculatedApprovalRate < approvalRateMin) return false;
+    results = resultsWithStats.filter(group => {
+      if (minFunding && group.calculatedFunding < minFunding) return false;
+      if (maxFunding && group.calculatedFunding > maxFunding) return false;
+      if (approvalRateMin && group.calculatedApprovalRate < approvalRateMin) return false;
       return true;
     });
   }
@@ -646,38 +703,38 @@ export async function searchCommittees(searchParams: {
   return results;
 }
 
-// Committee creation and management queries
-export async function createCommittee(data: {
+// Group creation and management queries
+export async function createGroup(data: {
   name: string;
+  type: 'committee' | 'team';
   description?: string;
   logoUrl?: string;
   focusAreas?: string[];
   websiteUrl?: string;
   githubOrg?: string;
   walletAddress?: string;
-  votingThreshold?: number;
-  approvalWorkflow?: any;
+  settings?: any;
 }) {
-  const [committee] = await db
-    .insert(committees)
+  const [group] = await db
+    .insert(groups)
     .values({
       name: data.name,
+      type: data.type,
       description: data.description,
       logoUrl: data.logoUrl,
       focusAreas: data.focusAreas ? JSON.stringify(data.focusAreas) : null,
       websiteUrl: data.websiteUrl,
       githubOrg: data.githubOrg,
       walletAddress: data.walletAddress,
-      votingThreshold: data.votingThreshold || 2,
-      approvalWorkflow: data.approvalWorkflow ? JSON.stringify(data.approvalWorkflow) : null,
+      settings: data.settings ? JSON.stringify(data.settings) : null,
       isActive: true
     })
     .returning();
 
-  return committee;
+  return group;
 }
 
-export async function updateCommittee(committeeId: number, data: Partial<{
+export async function updateGroup(groupId: number, data: Partial<{
   name: string;
   description: string;
   logoUrl: string;
@@ -685,8 +742,7 @@ export async function updateCommittee(committeeId: number, data: Partial<{
   websiteUrl: string;
   githubOrg: string;
   walletAddress: string;
-  votingThreshold: number;
-  approvalWorkflow: any;
+  settings: any;
 }>) {
   const updateData: any = {};
   
@@ -697,55 +753,54 @@ export async function updateCommittee(committeeId: number, data: Partial<{
   if (data.websiteUrl !== undefined) updateData.websiteUrl = data.websiteUrl;
   if (data.githubOrg !== undefined) updateData.githubOrg = data.githubOrg;
   if (data.walletAddress !== undefined) updateData.walletAddress = data.walletAddress;
-  if (data.votingThreshold !== undefined) updateData.votingThreshold = data.votingThreshold;
-  if (data.approvalWorkflow !== undefined) updateData.approvalWorkflow = JSON.stringify(data.approvalWorkflow);
+  if (data.settings !== undefined) updateData.settings = JSON.stringify(data.settings);
   
   updateData.updatedAt = new Date();
 
   const [updated] = await db
-    .update(committees)
+    .update(groups)
     .set(updateData)
-    .where(eq(committees.id, committeeId))
+    .where(eq(groups.id, groupId))
     .returning();
 
   return updated;
 }
 
-export async function addCuratorToCommittee(data: {
-  committeeId: number;
+export async function addMemberToGroup(data: {
+  groupId: number;
   userId: number;
-  role?: 'admin' | 'curator' | 'reviewer';
+  role?: 'admin' | 'member';
   permissions?: string[];
 }) {
-  const [curator] = await db
-    .insert(committeeCurators)
+  const [membership] = await db
+    .insert(groupMemberships)
     .values({
-      committeeId: data.committeeId,
+      groupId: data.groupId,
       userId: data.userId,
-      role: data.role || 'curator',
+      role: data.role || 'member',
       permissions: data.permissions ? JSON.stringify(data.permissions) : null,
       isActive: true
     })
     .returning();
 
-  return curator;
+  return membership;
 }
 
-export async function removeCuratorFromCommittee(committeeId: number, userId: number) {
+export async function removeMemberFromGroup(groupId: number, userId: number) {
   return await db
-    .update(committeeCurators)
+    .update(groupMemberships)
     .set({ 
       isActive: false,
       joinedAt: new Date() // Update timestamp when removing
     })
     .where(and(
-      eq(committeeCurators.committeeId, committeeId),
-      eq(committeeCurators.userId, userId)
+      eq(groupMemberships.groupId, groupId),
+      eq(groupMemberships.userId, userId)
     ));
 }
 
 export async function createGrantProgram(data: {
-  committeeId: number;
+  groupId: number;
   name: string;
   description?: string;
   fundingAmount?: number;
@@ -756,7 +811,7 @@ export async function createGrantProgram(data: {
   const [program] = await db
     .insert(grantPrograms)
     .values({
-      committeeId: data.committeeId,
+      groupId: data.groupId,
       name: data.name,
       description: data.description,
       fundingAmount: data.fundingAmount,
@@ -811,7 +866,7 @@ export async function getDiscussionForSubmission(submissionId: number) {
             columns: {
               id: true,
               name: true,
-              role: true
+              primaryRole: true
             }
           }
         },
@@ -831,7 +886,7 @@ export async function getDiscussionForMilestone(milestoneId: number) {
             columns: {
               id: true,
               name: true,
-              role: true
+              primaryRole: true
             }
           }
         },
@@ -873,9 +928,9 @@ export async function ensureDiscussionForSubmission(submissionId: number) {
   });
 
   if (!existingDiscussion) {
-    // Get the committee ID from the submission
+    // Get the group ID from the submission
     const submission = await db
-      .select({ committeeId: submissions.committeeId })
+      .select({ reviewerGroupId: submissions.reviewerGroupId })
       .from(submissions)
       .where(eq(submissions.id, submissionId))
       .limit(1);
@@ -886,7 +941,7 @@ export async function ensureDiscussionForSubmission(submissionId: number) {
 
     const result = await db.insert(discussions).values({
       submissionId,
-      committeeId: submission[0].committeeId,
+      groupId: submission[0].reviewerGroupId,
       type: 'submission'
     }).returning();
 
@@ -902,9 +957,9 @@ export async function ensureDiscussionForMilestone(milestoneId: number) {
   });
 
   if (!existingDiscussion) {
-    // Get the committee ID from the milestone
+    // Get the group ID from the milestone
     const milestone = await db
-      .select({ committeeId: milestones.committeeId })
+      .select({ groupId: milestones.groupId })
       .from(milestones)
       .where(eq(milestones.id, milestoneId))
       .limit(1);
@@ -915,7 +970,7 @@ export async function ensureDiscussionForMilestone(milestoneId: number) {
 
     const result = await db.insert(discussions).values({
       milestoneId,
-      committeeId: milestone[0].committeeId,
+      groupId: milestone[0].groupId,
       type: 'milestone'
     }).returning();
 
@@ -932,7 +987,7 @@ export async function createNotification(data: {
   submissionId?: number;
   discussionId?: number;
   milestoneId?: number;
-  committeeId?: number;
+  groupId?: number;
 }) {
   const result = await db.insert(notifications).values(data).returning();
   return result[0];
@@ -942,11 +997,11 @@ export async function getReviewsForSubmission(submissionId: number) {
   return await db.query.reviews.findMany({
     where: eq(reviews.submissionId, submissionId),
     with: {
-      curator: {
+      reviewer: {
         columns: {
           id: true,
           name: true,
-          role: true
+          primaryRole: true
         }
       },
       discussion: {
@@ -960,15 +1015,9 @@ export async function getReviewsForSubmission(submissionId: number) {
   });
 }
 
-// Legacy functions for compatibility (to be updated/removed in marketplace implementation)
-export async function checkIsCurator(userId: number) {
-  const user = await db
-    .select({ role: users.role })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1);
-
-  return user.length > 0 && (user[0].role === 'curator' || user[0].role === 'admin');
+// Legacy functions for compatibility (updated for group model)
+export async function checkIsReviewer(userId: number) {
+  return await isUserReviewer(userId);
 }
 
 export async function getAllSubmissionsForReview(statusFilter?: string) {
@@ -977,25 +1026,27 @@ export async function getAllSubmissionsForReview(statusFilter?: string) {
     return [];
   }
 
-  // Get committees where user is a curator
-  const userCommittees = await db
-    .select({ committeeId: committeeCurators.committeeId })
-    .from(committeeCurators)
+  // Get groups where user is a member of committee-type groups
+  const userGroups = await db
+    .select({ groupId: groupMemberships.groupId })
+    .from(groupMemberships)
+    .innerJoin(groups, eq(groupMemberships.groupId, groups.id))
     .where(and(
-      eq(committeeCurators.userId, user.id),
-      eq(committeeCurators.isActive, true)
+      eq(groupMemberships.userId, user.id),
+      eq(groupMemberships.isActive, true),
+      eq(groups.type, 'committee')
     ));
 
-  // If user is not a curator of any committee, return empty
-  if (userCommittees.length === 0) {
+  // If user is not a member of any committee, return empty
+  if (userGroups.length === 0) {
     return [];
   }
 
-  const committeeIds = userCommittees.map(c => c.committeeId);
+  const groupIds = userGroups.map(g => g.groupId);
 
   // Build where conditions
   let whereConditions = [
-    sql`${submissions.committeeId} IN (${sql.join(committeeIds.map(id => sql`${id}`), sql`, `)})`,
+    sql`${submissions.reviewerGroupId} IN (${sql.join(groupIds.map(id => sql`${id}`), sql`, `)})`,
   ];
 
   if (statusFilter) {
@@ -1012,10 +1063,14 @@ export async function getAllSubmissionsForReview(statusFilter?: string) {
           email: true
         }
       },
-      committee: {
+      reviewerGroup: {
         columns: {
           id: true,
-          name: true
+          name: true,
+          description: true,
+          logoUrl: true,
+          focusAreas: true,
+          isActive: true
         }
       },
       grantProgram: {
@@ -1029,7 +1084,8 @@ export async function getAllSubmissionsForReview(statusFilter?: string) {
         columns: {
           id: true,
           title: true,
-          status: true
+          status: true,
+          amount: true
         }
       }
     },
@@ -1049,17 +1105,19 @@ export async function getSubmissionStats() {
     };
   }
 
-  // Get committees where user is a curator
-  const userCommittees = await db
-    .select({ committeeId: committeeCurators.committeeId })
-    .from(committeeCurators)
+  // Get groups where user is a member of committee-type groups
+  const userGroups = await db
+    .select({ groupId: groupMemberships.groupId })
+    .from(groupMemberships)
+    .innerJoin(groups, eq(groupMemberships.groupId, groups.id))
     .where(and(
-      eq(committeeCurators.userId, user.id),
-      eq(committeeCurators.isActive, true)
+      eq(groupMemberships.userId, user.id),
+      eq(groupMemberships.isActive, true),
+      eq(groups.type, 'committee')
     ));
 
-  // If user is not a curator of any committee, return zeros
-  if (userCommittees.length === 0) {
+  // If user is not a member of any committee, return zeros
+  if (userGroups.length === 0) {
     return {
       total: 0,
       submitted: 0,
@@ -1069,14 +1127,14 @@ export async function getSubmissionStats() {
     };
   }
 
-  const committeeIds = userCommittees.map(c => c.committeeId);
-  const committeeFilter = sql`${submissions.committeeId} IN (${sql.join(committeeIds.map(id => sql`${id}`), sql`, `)})`;
+  const groupIds = userGroups.map(g => g.groupId);
+  const groupFilter = sql`${submissions.reviewerGroupId} IN (${sql.join(groupIds.map(id => sql`${id}`), sql`, `)})`;
 
-  const totalResult = await db.select().from(submissions).where(committeeFilter);
-  const submittedResult = await db.select().from(submissions).where(and(committeeFilter, eq(submissions.status, 'pending')));
-  const underReviewResult = await db.select().from(submissions).where(and(committeeFilter, eq(submissions.status, 'under_review')));
-  const approvedResult = await db.select().from(submissions).where(and(committeeFilter, eq(submissions.status, 'approved')));
-  const rejectedResult = await db.select().from(submissions).where(and(committeeFilter, eq(submissions.status, 'rejected')));
+  const totalResult = await db.select().from(submissions).where(groupFilter);
+  const submittedResult = await db.select().from(submissions).where(and(groupFilter, eq(submissions.status, 'pending')));
+  const underReviewResult = await db.select().from(submissions).where(and(groupFilter, eq(submissions.status, 'under_review')));
+  const approvedResult = await db.select().from(submissions).where(and(groupFilter, eq(submissions.status, 'approved')));
+  const rejectedResult = await db.select().from(submissions).where(and(groupFilter, eq(submissions.status, 'rejected')));
 
   return {
     total: totalResult.length || 0,
@@ -1087,20 +1145,176 @@ export async function getSubmissionStats() {
   };
 }
 
-// Backwards compatibility - return null since teams are removed
+// Backwards compatibility - return null since teams are replaced by group model
 export async function getTeamForUser() {
   return null;
 }
 
 // Activity logs - simplified since we removed the table
 export async function getActivityLogs() {
-  // Return empty array since we removed activity logs table
-  // In future, could be replaced with user action history from other tables
   return [];
 }
 
-// Enhanced submission data with all related information for curator review
-export async function getSubmissionForCuratorReview(submissionId: number) {
+// Get all pending actions that require current reviewer's response/approval
+export async function getReviewerPendingActions() {
+  const user = await getUser();
+  if (!user) {
+    return { submissionsNeedingVote: [], milestonesNeedingReview: [] };
+  }
+
+  // Get groups where user is a member of committee-type groups
+  const userGroups = await db
+    .select({ groupId: groupMemberships.groupId })
+    .from(groupMemberships)
+    .innerJoin(groups, eq(groupMemberships.groupId, groups.id))
+    .where(and(
+      eq(groupMemberships.userId, user.id),
+      eq(groupMemberships.isActive, true),
+      eq(groups.type, 'committee')
+    ));
+
+  // If user is not a member of any committee, return empty
+  if (userGroups.length === 0) {
+    return { submissionsNeedingVote: [], milestonesNeedingReview: [] };
+  }
+
+  const groupIds = userGroups.map(g => g.groupId);
+
+  // 1. Find submissions needing this reviewer's vote
+  const submissionsInGroups = await db.query.submissions.findMany({
+    where: and(
+      sql`${submissions.reviewerGroupId} IN (${sql.join(groupIds.map(id => sql`${id}`), sql`, `)})`,
+      or(
+        eq(submissions.status, 'submitted'),
+        eq(submissions.status, 'under_review')
+      )
+    ),
+    with: {
+      submitter: {
+        columns: {
+          id: true,
+          name: true,
+          email: true
+        }
+      },
+      reviewerGroup: {
+        columns: {
+          id: true,
+          name: true,
+          description: true,
+          logoUrl: true,
+          focusAreas: true
+        }
+      },
+      grantProgram: {
+        columns: {
+          id: true,
+          name: true,
+          fundingAmount: true
+        }
+      },
+      milestones: {
+        columns: {
+          id: true,
+          title: true,
+          status: true,
+          amount: true
+        }
+      }
+    }
+  });
+
+  // Filter out submissions where this reviewer has already voted
+  const submissionsNeedingVote = [];
+  for (const submission of submissionsInGroups) {
+    const existingVote = await db.query.reviews.findFirst({
+      where: and(
+        eq(reviews.submissionId, submission.id),
+        eq(reviews.reviewerId, user.id),
+        isNull(reviews.milestoneId) // submission vote, not milestone vote
+      )
+    });
+    
+    if (!existingVote) {
+      submissionsNeedingVote.push({
+        ...submission,
+        actionType: 'submission_vote',
+        actionDescription: 'Vote needed on submission',
+        daysOld: Math.floor((Date.now() - new Date(submission.appliedAt || submission.createdAt).getTime()) / (1000 * 60 * 60 * 24))
+      });
+    }
+  }
+
+  // 2. Find milestones needing this reviewer's review
+  const milestonesNeedingReview = await db.query.milestones.findMany({
+    where: and(
+      sql`${milestones.submissionId} IN (
+        SELECT ${submissions.id} FROM ${submissions} 
+        WHERE ${submissions.reviewerGroupId} IN (${sql.join(groupIds.map(id => sql`${id}`), sql`, `)})
+      )`,
+      or(
+        eq(milestones.status, 'submitted'),
+        eq(milestones.status, 'under_review')
+      )
+    ),
+    with: {
+      submission: {
+        columns: {
+          id: true,
+          title: true,
+          status: true
+        },
+        with: {
+          submitter: {
+            columns: {
+              id: true,
+              name: true,
+              email: true
+            }
+          },
+          reviewerGroup: {
+            columns: {
+              id: true,
+              name: true,
+              description: true,
+              logoUrl: true
+            }
+          }
+        }
+      }
+    }
+  });
+
+  // Filter out milestones where this reviewer has already reviewed
+  const milestonesNeedingReviewFiltered = [];
+  for (const milestone of milestonesNeedingReview) {
+    const existingReview = await db.query.reviews.findFirst({
+      where: and(
+        eq(reviews.milestoneId, milestone.id),
+        eq(reviews.reviewerId, user.id)
+      )
+    });
+    
+    if (!existingReview) {
+      milestonesNeedingReviewFiltered.push({
+        ...milestone,
+        actionType: 'milestone_review',
+        actionDescription: 'Milestone review needed',
+        daysOld: milestone.submittedAt 
+          ? Math.floor((Date.now() - new Date(milestone.submittedAt).getTime()) / (1000 * 60 * 60 * 24))
+          : 0
+      });
+    }
+  }
+
+  return {
+    submissionsNeedingVote,
+    milestonesNeedingReview: milestonesNeedingReviewFiltered
+  };
+}
+
+// Enhanced submission data with all related information for reviewer review
+export async function getSubmissionForReviewerReview(submissionId: number) {
   const submission = await db.query.submissions.findFirst({
     where: eq(submissions.id, submissionId),
     with: {
@@ -1109,11 +1323,11 @@ export async function getSubmissionForCuratorReview(submissionId: number) {
           id: true,
           name: true,
           email: true,
-          role: true,
+          primaryRole: true,
           githubId: true
         }
       },
-      committee: {
+      reviewerGroup: {
         columns: {
           id: true,
           name: true,
@@ -1140,7 +1354,7 @@ export async function getSubmissionForCuratorReview(submissionId: number) {
                     columns: {
                       id: true,
                       name: true,
-                      role: true
+                      primaryRole: true
                     }
                   }
                 },
@@ -1150,11 +1364,11 @@ export async function getSubmissionForCuratorReview(submissionId: number) {
           },
           reviews: {
             with: {
-              curator: {
+              reviewer: {
                 columns: {
                   id: true,
                   name: true,
-                  role: true
+                  primaryRole: true
                 }
               }
             }
@@ -1171,7 +1385,7 @@ export async function getSubmissionForCuratorReview(submissionId: number) {
                 columns: {
                   id: true,
                   name: true,
-                  role: true
+                  primaryRole: true
                 }
               }
             },
@@ -1181,11 +1395,11 @@ export async function getSubmissionForCuratorReview(submissionId: number) {
       },
       reviews: {
         with: {
-          curator: {
+          reviewer: {
             columns: {
               id: true,
               name: true,
-              role: true
+              primaryRole: true
             }
           }
         },
@@ -1221,7 +1435,7 @@ export async function getSubmissionCurrentState(submissionId: number) {
         columns: {
           id: true,
           name: true,
-          role: true
+          primaryRole: true
         }
       },
       discussion: {
@@ -1237,11 +1451,11 @@ export async function getSubmissionCurrentState(submissionId: number) {
     limit: 10
   }) : [];
 
-  // Get pending reviews (submissions or milestones without curator's vote)
+  // Get pending reviews (submissions or milestones without reviewer's vote)
   const pendingSubmissionReviews = await db.query.reviews.findMany({
     where: and(
       eq(reviews.submissionId, submissionId),
-      eq(reviews.curatorId, user.id)
+      eq(reviews.reviewerId, user.id)
     )
   });
 
@@ -1250,7 +1464,7 @@ export async function getSubmissionCurrentState(submissionId: number) {
       sql`${reviews.milestoneId} IN (
         SELECT ${milestones.id} FROM ${milestones} WHERE ${milestones.submissionId} = ${submissionId}
       )`,
-      eq(reviews.curatorId, user.id)
+      eq(reviews.reviewerId, user.id)
     )
   });
 
@@ -1273,7 +1487,7 @@ export async function getSubmissionCurrentState(submissionId: number) {
                 columns: {
                   id: true,
                   name: true,
-                  role: true
+                  primaryRole: true
                 }
               }
             },
@@ -1313,7 +1527,7 @@ export async function getSubmissionMilestonesOverview(submissionId: number) {
                 columns: {
                   id: true,
                   name: true,
-                  role: true
+                  primaryRole: true
                 }
               }
             },
@@ -1323,11 +1537,11 @@ export async function getSubmissionMilestonesOverview(submissionId: number) {
       },
       reviews: {
         with: {
-          curator: {
+          reviewer: {
             columns: {
               id: true,
               name: true,
-              role: true
+              primaryRole: true
             }
           }
         },
@@ -1358,3 +1572,27 @@ export async function getSubmissionMilestonesOverview(submissionId: number) {
     summary
   };
 }
+
+// Missing functions for curator workflow
+export async function checkIsCurator(userId: number): Promise<boolean> {
+  return await isUserReviewer(userId);
+}
+
+export async function isUserCurator(userId: number): Promise<boolean> {
+  return await isUserReviewer(userId);
+}
+
+export async function getCuratorPendingActions() {
+  return await getReviewerPendingActions();
+}
+
+export async function getSubmissionForCuratorReview(submissionId: number) {
+  return await getSubmissionForReviewerReview(submissionId);
+}
+
+export async function getUserCommittees(userId: number) {
+  const userMemberships = await getUserGroups(userId);
+  return userMemberships.filter(membership => membership.group.type === 'committee').map(membership => membership.group);
+}
+
+

@@ -67,7 +67,7 @@ export function CuratorVoting({
   const [showVotingInterface, setShowVotingInterface] = useState(false);
 
   // Check if current user is a curator
-  const isCurator = currentUser && (currentUser.role === 'curator' || currentUser.role === 'admin');
+  const isCurator = currentUser && (currentUser.primaryRole === 'committee');
   
   // Check if current user has already voted
   const userVote = existingVotes.find(vote => vote.curatorId === currentUser?.id);

@@ -113,7 +113,7 @@ export const signUp = validatedAction(signUpSchema, async (data, formData) => {
       email,
       passwordHash,
       name,
-      role: 'grantee' // Default role for new users
+      primaryRole: 'team' // Default role for new users
     })
     .returning();
 

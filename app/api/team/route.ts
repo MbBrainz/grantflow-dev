@@ -13,9 +13,9 @@ export async function GET() {
     return Response.json({
       user,
       committees: committees.map(c => ({
-        id: c.committee.id,
-        name: c.committee.name,
-        role: c.role,
+        id: c.id,
+        name: c.name,
+        type: c.type,
         isActive: c.isActive
       }))
     });

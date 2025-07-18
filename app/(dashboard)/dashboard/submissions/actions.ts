@@ -118,10 +118,11 @@ export const createSubmission = async (prevState: any, formData: FormData) => {
         totalAmount: totalAmount,
       };
 
-      // Create submission record with proper committee/grant program selection
+      // Create submission record with proper committee/grant program selection  
       const newSubmission: NewSubmission = {
         grantProgramId: data.grantProgramId,
-        committeeId: data.committeeId,
+        submitterGroupId: user.primaryGroupId || 1, // Use user's primary group
+        reviewerGroupId: data.committeeId || 1, // Committee becomes reviewerGroupId
         submitterId: user.id, // Updated field name from userId
         title: data.title,
         description: data.description,
@@ -153,7 +154,7 @@ export const createSubmission = async (prevState: any, formData: FormData) => {
         
         const newMilestone: NewMilestone = {
           submissionId: createdSubmission.id,
-          committeeId: 1, // Temporary: Use same committee as submission
+          groupId: user.primaryGroupId || 1, // Use user's primary group
           title: milestone.title,
           description: combinedDescription, // Include requirements in description
           requirements: milestone.requirements,
@@ -207,11 +208,30 @@ export async function getUserSubmissions() {
   }
 
   try {
-    const userSubmissions = await db
-      .select()
-      .from(submissions)
-      .where(eq(submissions.submitterId, user.id))
-      .orderBy(submissions.createdAt);
+    const userSubmissions = await db.query.submissions.findMany({
+      where: eq(submissions.submitterId, user.id),
+      with: {
+        reviewerGroup: {
+          columns: {
+            id: true,
+            name: true,
+            description: true,
+            logoUrl: true,
+            focusAreas: true,
+            isActive: true
+          }
+        },
+        milestones: {
+          columns: {
+            id: true,
+            title: true,
+            status: true,
+            amount: true
+          }
+        }
+      },
+      orderBy: [submissions.createdAt]
+    });
 
     return userSubmissions;
   } catch (error) {

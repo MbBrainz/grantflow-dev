@@ -362,4 +362,288 @@ export async function getPRStatus(prUrl: string): Promise<{
     console.error('[octokit]: Error getting PR status', error);
     return null;
   }
+}
+
+/**
+ * Parse GitHub repository URL to extract owner and repo
+ */
+export function parseRepoUrl(repoUrl: string): { owner: string; repo: string } | null {
+  const match = repoUrl.match(/https:\/\/github\.com\/([^\/]+)\/([^\/]+)(?:\.git)?(?:\/.*)?$/);
+  if (!match) return null;
+  
+  return {
+    owner: match[1],
+    repo: match[2].replace(/\.git$/, ''), // Remove .git suffix if present
+  };
+}
+
+/**
+ * Get commits from a repository with optional date range
+ */
+export async function getRepositoryCommits(
+  repoUrl: string,
+  options: {
+    since?: Date;
+    until?: Date;
+    author?: string;
+    branch?: string;
+    perPage?: number;
+  } = {}
+): Promise<Array<{
+  sha: string;
+  shortSha: string;
+  message: string;
+  author: {
+    name: string;
+    email: string;
+    date: string;
+  };
+  committer: {
+    name: string;
+    email: string;
+    date: string;
+  };
+  url: string;
+  stats?: {
+    additions: number;
+    deletions: number;
+    total: number;
+  };
+}> | null> {
+  try {
+    console.log('[octokit]: Fetching commits from repository', { repoUrl, options });
+
+    const repoInfo = parseRepoUrl(repoUrl);
+    if (!repoInfo) {
+      console.error('[octokit]: Invalid repository URL', { repoUrl });
+      return null;
+    }
+
+    const octokit = await createOctokit();
+    
+    const params: any = {
+      owner: repoInfo.owner,
+      repo: repoInfo.repo,
+      per_page: options.perPage || 50,
+    };
+
+    if (options.since) {
+      params.since = options.since.toISOString();
+    }
+    if (options.until) {
+      params.until = options.until.toISOString();
+    }
+    if (options.author) {
+      params.author = options.author;
+    }
+    if (options.branch) {
+      params.sha = options.branch;
+    }
+
+    const { data: commits } = await octokit.rest.repos.listCommits(params);
+
+    console.log('[octokit]: Successfully fetched commits', { 
+      count: commits.length,
+      repo: `${repoInfo.owner}/${repoInfo.repo}`
+    });
+
+    return commits.map(commit => ({
+      sha: commit.sha,
+      shortSha: commit.sha.substring(0, 7),
+      message: commit.commit.message,
+      author: {
+        name: commit.commit.author?.name || 'Unknown',
+        email: commit.commit.author?.email || '',
+        date: commit.commit.author?.date || '',
+      },
+      committer: {
+        name: commit.commit.committer?.name || 'Unknown',
+        email: commit.commit.committer?.email || '',
+        date: commit.commit.committer?.date || '',
+      },
+      url: commit.html_url,
+      stats: commit.stats ? {
+        additions: commit.stats.additions || 0,
+        deletions: commit.stats.deletions || 0,
+        total: commit.stats.total || 0,
+      } : undefined,
+    }));
+
+  } catch (error) {
+    console.error('[octokit]: Error fetching repository commits', { repoUrl, error });
+    return null;
+  }
+}
+
+/**
+ * Get commits since a specific commit SHA
+ */
+export async function getCommitsSince(
+  repoUrl: string,
+  sinceCommitSha: string,
+  options: {
+    branch?: string;
+    perPage?: number;
+  } = {}
+): Promise<Array<{
+  sha: string;
+  shortSha: string;
+  message: string;
+  author: {
+    name: string;
+    email: string;
+    date: string;
+  };
+  committer: {
+    name: string;
+    email: string;
+    date: string;
+  };
+  url: string;
+}> | null> {
+  try {
+    console.log('[octokit]: Fetching commits since SHA', { repoUrl, sinceCommitSha, options });
+
+    const repoInfo = parseRepoUrl(repoUrl);
+    if (!repoInfo) {
+      console.error('[octokit]: Invalid repository URL', { repoUrl });
+      return null;
+    }
+
+    const octokit = await createOctokit();
+
+    // First, get the commit date of the reference commit
+    const { data: refCommit } = await octokit.rest.repos.getCommit({
+      owner: repoInfo.owner,
+      repo: repoInfo.repo,
+      ref: sinceCommitSha,
+    });
+
+    const sinceDate = new Date(refCommit.commit.committer?.date || refCommit.commit.author?.date || '');
+    
+    // Add 1 second to exclude the reference commit itself
+    sinceDate.setSeconds(sinceDate.getSeconds() + 1);
+
+    const params: any = {
+      owner: repoInfo.owner,
+      repo: repoInfo.repo,
+      since: sinceDate.toISOString(),
+      per_page: options.perPage || 50,
+    };
+
+    if (options.branch) {
+      params.sha = options.branch;
+    }
+
+    const { data: commits } = await octokit.rest.repos.listCommits(params);
+
+    console.log('[octokit]: Successfully fetched commits since SHA', { 
+      count: commits.length,
+      sinceCommitSha,
+      repo: `${repoInfo.owner}/${repoInfo.repo}`
+    });
+
+    return commits.map(commit => ({
+      sha: commit.sha,
+      shortSha: commit.sha.substring(0, 7),
+      message: commit.commit.message,
+      author: {
+        name: commit.commit.author?.name || 'Unknown',
+        email: commit.commit.author?.email || '',
+        date: commit.commit.author?.date || '',
+      },
+      committer: {
+        name: commit.commit.committer?.name || 'Unknown',
+        email: commit.commit.committer?.email || '',
+        date: commit.commit.committer?.date || '',
+      },
+      url: commit.html_url,
+    }));
+
+  } catch (error) {
+    console.error('[octokit]: Error fetching commits since SHA', { repoUrl, sinceCommitSha, error });
+    return null;
+  }
+}
+
+/**
+ * Get commit details including file changes
+ */
+export async function getCommitDetails(
+  repoUrl: string,
+  commitSha: string
+): Promise<{
+  sha: string;
+  shortSha: string;
+  message: string;
+  author: {
+    name: string;
+    email: string;
+    date: string;
+  };
+  stats: {
+    additions: number;
+    deletions: number;
+    total: number;
+  };
+  files: Array<{
+    filename: string;
+    status: string;
+    additions: number;
+    deletions: number;
+    changes: number;
+  }>;
+  url: string;
+} | null> {
+  try {
+    console.log('[octokit]: Fetching commit details', { repoUrl, commitSha });
+
+    const repoInfo = parseRepoUrl(repoUrl);
+    if (!repoInfo) {
+      console.error('[octokit]: Invalid repository URL', { repoUrl });
+      return null;
+    }
+
+    const octokit = await createOctokit();
+    
+    const { data: commit } = await octokit.rest.repos.getCommit({
+      owner: repoInfo.owner,
+      repo: repoInfo.repo,
+      ref: commitSha,
+    });
+
+    console.log('[octokit]: Successfully fetched commit details', { 
+      commitSha,
+      filesChanged: commit.files?.length || 0,
+      repo: `${repoInfo.owner}/${repoInfo.repo}`
+    });
+
+    return {
+      sha: commit.sha,
+      shortSha: commit.sha.substring(0, 7),
+      message: commit.commit.message,
+      author: {
+        name: commit.commit.author?.name || 'Unknown',
+        email: commit.commit.author?.email || '',
+        date: commit.commit.author?.date || '',
+      },
+      stats: {
+        additions: commit.stats?.additions || 0,
+        deletions: commit.stats?.deletions || 0,
+        total: commit.stats?.total || 0,
+      },
+      files: commit.files?.map(file => ({
+        filename: file.filename,
+        status: file.status,
+        additions: file.additions || 0,
+        deletions: file.deletions || 0,
+        changes: file.changes || 0,
+      })) || [],
+      url: commit.html_url,
+    };
+
+  } catch (error) {
+    console.error('[octokit]: Error fetching commit details', { repoUrl, commitSha, error });
+    return null;
+  }
 } 

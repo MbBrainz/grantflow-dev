@@ -2,9 +2,13 @@ import { Suspense } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
-import { getAllSubmissionsForReview, getSubmissionStats, getUser, checkIsCurator } from '@/lib/db/queries';
+import { getAllSubmissionsForReview, getSubmissionStats, getUser, checkIsCurator, getCuratorPendingActions } from '@/lib/db/queries';
+import type { Submission } from '@/lib/db/schema';
 import { redirect } from 'next/navigation';
 import { Clock, FileText, Users, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import { CommitteeBadge } from '@/components/submissions/committee-badge';
+import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge';
+import { PendingActionsPanel } from '@/components/curator/pending-actions-panel';
 
 function StatusBadge({ status }: { status: string }) {
   const colors = {
@@ -31,20 +35,29 @@ function SubmissionCard({ submission }: { submission: any }) {
     <Card className="hover:shadow-md transition-shadow">
       <CardHeader>
         <div className="flex justify-between items-start">
-          <div>
+          <div className="space-y-2">
             <CardTitle className="text-lg">
               {submission.title || 'Untitled Submission'}
             </CardTitle>
             <CardDescription>
               by {submission.submitter?.name || 'Anonymous'} • {new Date(submission.createdAt).toLocaleDateString()}
             </CardDescription>
+            
+            {/* Committee Badge */}
             {submission.committee && (
-              <div className="mt-1">
-                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
-                  {submission.committee.name}
-                </span>
-              </div>
+              <CommitteeBadge 
+                committee={submission.committee} 
+                variant="compact"
+                className="mt-1"
+              />
             )}
+            
+            {/* Milestone Progress for Approved Submissions */}
+            <MilestoneProgressBadge 
+              milestones={submission.milestones || []}
+              submissionStatus={submission.status}
+              variant="compact"
+            />
           </div>
           <StatusBadge status={submission.status} />
         </div>
@@ -131,9 +144,10 @@ async function CuratorDashboard() {
     );
   }
 
-  const [submissions, stats] = await Promise.all([
+  const [submissions, stats, pendingActions] = await Promise.all([
     getAllSubmissionsForReview(),
-    getSubmissionStats()
+    getSubmissionStats(),
+    getCuratorPendingActions()
   ]);
 
   return (
@@ -146,6 +160,12 @@ async function CuratorDashboard() {
           </p>
         </div>
       </div>
+
+      {/* Pending Actions - Priority Section */}
+      <PendingActionsPanel 
+        submissionsNeedingVote={pendingActions.submissionsNeedingVote as any}
+        milestonesNeedingReview={pendingActions.milestonesNeedingReview as any}
+      />
 
       {/* Quick Stats */}
       <div className="grid gap-4 md:grid-cols-5">

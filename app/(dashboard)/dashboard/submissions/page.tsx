@@ -3,6 +3,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import Link from 'next/link';
 import { getUserSubmissions } from './actions';
+import { CommitteeBadge } from '@/components/submissions/committee-badge';
+import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge';
 
 function StatusBadge({ status }: { status: string }) {
   const colors = {
@@ -44,6 +46,21 @@ function SubmissionCard({ submission }: { submission: any }) {
             <CardDescription className="line-clamp-2">
               {formData?.description || 'No description available'}
             </CardDescription>
+            
+            {/* Committee Badge */}
+            {submission.committee && (
+              <CommitteeBadge 
+                committee={submission.committee} 
+                variant="compact"
+              />
+            )}
+            
+            {/* Milestone Progress for Approved Submissions */}
+            <MilestoneProgressBadge 
+              milestones={submission.milestones || []}
+              submissionStatus={submission.status}
+              variant="compact"
+            />
           </div>
           <StatusBadge status={submission.status} />
         </div>
