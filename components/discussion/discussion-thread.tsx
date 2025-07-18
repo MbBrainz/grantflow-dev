@@ -29,6 +29,11 @@ interface DiscussionThreadProps {
   onPostMessage: (content: string, type?: string) => Promise<void>;
   title: string;
   isPublic?: boolean;
+  submissionContext?: {
+    isCommitteeReviewer?: boolean;
+    isSubmissionOwner?: boolean;
+    canViewPrivateDiscussions?: boolean;
+  };
 }
 
 function formatTimeAgo(date: Date): string {
@@ -43,7 +48,7 @@ function formatTimeAgo(date: Date): string {
 
 function getRoleBadgeColor(role: string): string {
   switch (role) {
-    case 'curator': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
+          case 'reviewer': return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200';
     case 'admin': return 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200';
     default: return 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-200';
   }
@@ -56,7 +61,8 @@ export function DiscussionThread({
   currentUser,
   onPostMessage,
   title,
-  isPublic = false
+  isPublic = false,
+  submissionContext
 }: DiscussionThreadProps) {
   const [newMessage, setNewMessage] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -99,7 +105,12 @@ export function DiscussionThread({
     });
   };
 
-  const canPostMessage = currentUser && !isPublic;
+  // Determine if user can post messages based on context
+  const canPostMessage = currentUser && (
+    isPublic || // Public discussions allow authenticated users to post
+    submissionContext?.isCommitteeReviewer || // Committee reviewers can always post
+    submissionContext?.isSubmissionOwner // Submission owners can always post
+  );
   const messages = discussion?.messages || [];
 
   return (
@@ -223,7 +234,10 @@ export function DiscussionThread({
       ) : (
         <Card className="p-4 bg-gray-50 dark:bg-gray-800">
           <p className="text-center text-gray-600 dark:text-gray-400">
-            {currentUser ? 'You need curator permissions to post messages' : 'Please sign in to participate in the discussion'}
+            {currentUser ? 
+              (isPublic ? 'You need reviewer permissions to post messages' : 'This discussion is not open for public comments') : 
+              'Please sign in to participate in the discussion'
+            }
           </p>
         </Card>
       )}

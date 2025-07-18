@@ -27,6 +27,17 @@ The GrantFlow platform has been successfully transformed from a SaaS template to
 - **✅ Curator Priority Actions Dashboard:** Added dedicated "My Actions Required" section to curator dashboard showing all submissions and milestones specifically awaiting the current curator's response/approval with direct clickable links. Features urgency indicators (critical 14+ days, urgent 7+ days) and clear action types (submission votes vs milestone reviews). Includes smart filtering to only show items where curator hasn't voted/reviewed yet.
 - **✅ Enhanced Milestone Status & Removed Private Discussions:** Replaced generic "review in progress" information with detailed milestone-specific status showing current active step (e.g., "building milestone 1", "milestone 2 under review"). Added comprehensive MilestoneStatusOverview component with progress tracking, status indicators, and action-required badges. Removed private curator discussions to streamline the review process - all communication now happens in public threads for transparency.
 - **✅ PostgreSQL Schema Error Fix:** Resolved critical `column milestones.reviewer_group_id does not exist` error that was preventing the Review Dashboard from loading. Fixed Drizzle ORM relation confusion by adding explicit relation names in schema (`milestoneGroup`) and refactoring complex subqueries in `getAllSubmissionsForReview()` and `getReviewerPendingActions()` functions. Review Dashboard now loads successfully with proper statistics and submission data.
+- **✅ Discussion Permission Bug Fix:** Fixed critical permission logic bug in `DiscussionThread` component where `isPublic={true}` was incorrectly preventing authenticated users from posting messages. Updated permission logic to allow posting when discussion is public OR user has reviewer/submission owner permissions. Enhanced component to accept `submissionContext` for more sophisticated permission checking.
+
+## Terminology Migration Completed
+- **✅ Complete Curator → Reviewer Migration:** Completely renamed all "curator" references to "reviewer" throughout the entire codebase with NO backwards compatibility. This includes:
+  - Database function names (`checkIsCurator` → `checkIsReviewer`, etc.)
+  - Component names (`CuratorSubmissionView` → `ReviewerSubmissionView`)
+  - User-facing text ("Curator Dashboard" → "Reviewer Dashboard")
+  - Route paths (`/dashboard/curator` → `/dashboard/review`)
+  - Type definitions and interfaces
+  - Comments and documentation
+  - All legacy wrapper functions have been completely removed
 
 ## 1.1 Role-Based Action Sets & UI Flows 🆕 **PRIORITY**
 

@@ -5,7 +5,7 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DiscussionThread } from '@/components/discussion/discussion-thread';
-import { CuratorVoting } from '@/components/discussion/curator-voting';
+import { ReviewerVoting } from '@/components/discussion/reviewer-voting';
 import { ArrowLeft, Calendar, Github, DollarSign, Target, MessageSquare, Activity, CheckCircle, Clock, AlertTriangle, FileText, TrendingUp } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { 
@@ -14,12 +14,12 @@ import {
   postMessageToSubmission,
   getSubmissionCurrentState,
   getSubmissionMilestonesOverview,
-  getSubmissionForCuratorReview,
+  getSubmissionForReviewerReviewAction,
   postMessageToMilestone
 } from '../discussion-actions';
 import type { Submission, Milestone, User, SubmissionWithMilestones } from '@/lib/db/schema';
 import { useSubmissionContext } from '@/lib/hooks/use-submission-context';
-import { CuratorSubmissionView } from '@/components/submissions/curator-submission-view';
+import { ReviewerSubmissionView } from '@/components/submissions/reviewer-submission-view';
 import { GranteeSubmissionView } from '@/components/submissions/grantee-submission-view';
 import { PublicSubmissionView } from '@/components/submissions/public-submission-view';
 import { MilestoneStatusOverview } from '@/components/submissions/milestone-status-overview';
@@ -495,8 +495,8 @@ export function SubmissionDetailView({ submission, currentUser }: SubmissionDeta
       </div>
 
       {/* Role-Based View Routing */}
-      {submissionContext.viewType === 'curator' && (
-        <CuratorSubmissionView
+              {submissionContext.viewType === 'reviewer' && (
+          <ReviewerSubmissionView
           submission={submission}
           currentUser={currentUser}
           currentState={currentState}
@@ -517,6 +517,7 @@ export function SubmissionDetailView({ submission, currentUser }: SubmissionDeta
           reviews={reviews}
           onPostMessage={handlePostMessage}
           onVoteSubmitted={handleVoteSubmitted}
+          submissionContext={submissionContext}
         />
       )}
 

@@ -9,18 +9,18 @@ import { User } from '@/lib/db/schema';
 
 interface Vote {
   id: number;
-  curatorId: number;
+  reviewerId: number;
   vote: string;
   feedback: string | null;
   createdAt: string;
-  curator: {
+  reviewer: {
     id: number;
     name: string | null;
     role: string;
   };
 }
 
-interface CuratorVotingProps {
+interface ReviewerVotingProps {
   submissionId: number;
   milestoneId?: number;
   currentUser: User | null;
@@ -53,24 +53,24 @@ const voteOptions = [
   }
 ];
 
-export function CuratorVoting({
+export function ReviewerVoting({
   submissionId,
   milestoneId,
   currentUser,
   existingVotes,
   onVoteSubmitted,
   isOpen = true
-}: CuratorVotingProps) {
+}: ReviewerVotingProps) {
   const [selectedVote, setSelectedVote] = useState<string>('');
   const [feedback, setFeedback] = useState('');
   const [isPending, startTransition] = useTransition();
   const [showVotingInterface, setShowVotingInterface] = useState(false);
 
-  // Check if current user is a curator
-  const isCurator = currentUser && (currentUser.primaryRole === 'committee');
+  // Check if current user is a reviewer
+  const isReviewer = currentUser && (currentUser.primaryRole === 'committee');
   
   // Check if current user has already voted
-  const userVote = existingVotes.find(vote => vote.curatorId === currentUser?.id);
+  const userVote = existingVotes.find(vote => vote.reviewerId === currentUser?.id);
   
   // Calculate vote summary
   const voteSummary = existingVotes.reduce((acc, vote) => {
@@ -86,7 +86,7 @@ export function CuratorVoting({
         // Create a vote message in the discussion
         const content = `**${selectedVote.replace('_', ' ').toUpperCase()}** ${feedback ? `\n\n${feedback}` : ''}`;
 
-        console.log('[CuratorVoting]: Submitting vote with data:', {
+        console.log('[ReviewerVoting]: Submitting vote with data:', {
           content,
           submissionId,
           milestoneId,
@@ -105,7 +105,7 @@ export function CuratorVoting({
 
         if (milestoneId) {
           formData.append('milestoneId', String(milestoneId));
-          console.log('[CuratorVoting]: Calling postMessageToMilestone with FormData:', {
+          console.log('[ReviewerVoting]: Calling postMessageToMilestone with FormData:', {
             content,
             milestoneId,
             messageType: 'vote'
@@ -113,7 +113,7 @@ export function CuratorVoting({
           result = await postMessageToMilestone({}, formData);
         } else {
           formData.append('submissionId', String(submissionId));
-          console.log('[CuratorVoting]: Calling postMessageToSubmission with FormData:', {
+          console.log('[ReviewerVoting]: Calling postMessageToSubmission with FormData:', {
             content,
             submissionId,
             messageType: 'vote'
@@ -121,7 +121,7 @@ export function CuratorVoting({
           result = await postMessageToSubmission({}, formData);
         }
 
-        console.log('[CuratorVoting]: Action result:', result);
+        console.log('[ReviewerVoting]: Action result:', result);
 
         if (result.error) {
           throw new Error(result.error);
@@ -134,7 +134,7 @@ export function CuratorVoting({
         onVoteSubmitted();
 
       } catch (error) {
-        console.error('[CuratorVoting]: Error submitting vote', error);
+        console.error('[ReviewerVoting]: Error submitting vote', error);
       }
     });
   };
@@ -148,7 +148,7 @@ export function CuratorVoting({
         {existingVotes.length > 0 && (
           <div className="space-y-3">
             <h4 className="font-medium text-gray-900 dark:text-gray-100">
-              Curator Reviews ({existingVotes.length})
+              Reviewer Votes ({existingVotes.length})
             </h4>
             
             <div className="flex gap-4 text-sm">
@@ -171,7 +171,7 @@ export function CuratorVoting({
               {existingVotes.map((vote) => (
                 <div key={vote.id} className="p-3 bg-white dark:bg-gray-800 rounded-lg border">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="font-medium">{vote.curator.name}</span>
+                    <span className="font-medium">{vote.reviewer.name}</span>
                     <span className={`px-2 py-0.5 text-xs rounded-full capitalize ${
                       vote.vote === 'approve' ? 'bg-green-100 text-green-800' :
                       vote.vote === 'reject' ? 'bg-red-100 text-red-800' :
@@ -193,7 +193,7 @@ export function CuratorVoting({
         )}
 
         {/* Voting Interface */}
-        {isCurator && !userVote && (
+        {isReviewer && !userVote && (
           <div className="space-y-4">
             {!showVotingInterface ? (
               <Button 
@@ -280,7 +280,7 @@ export function CuratorVoting({
         )}
 
         {/* User already voted */}
-        {isCurator && userVote && (
+        {isReviewer && userVote && (
           <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
             <p className="text-sm text-blue-800">
               ✓ You have already submitted your review: <span className="font-medium capitalize">{userVote.vote.replace('_', ' ')}</span>
@@ -288,11 +288,11 @@ export function CuratorVoting({
           </div>
         )}
 
-        {/* Non-curator message */}
-        {!isCurator && currentUser && (
+        {/* Non-reviewer message */}
+        {!isReviewer && currentUser && (
           <div className="p-3 bg-gray-50 border border-gray-200 rounded-lg">
             <p className="text-sm text-gray-600">
-              Only curators can vote on submissions. You can participate in the discussion above.
+              Only reviewers can vote on submissions. You can participate in the discussion above.
             </p>
           </div>
         )}

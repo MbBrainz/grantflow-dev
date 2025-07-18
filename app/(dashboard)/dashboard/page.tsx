@@ -77,7 +77,7 @@ function DashboardStats() {
   const [stats, setStats] = useState({
     submissions: { total: 0, pending: 0, approved: 0, inReview: 0 },
     milestones: { total: 0, completed: 0, inProgress: 0, pending: 0 },
-    committees: { active: 0, isCurator: false },
+    committees: { active: 0, isReviewer: false },
     recentActivity: [] as Array<{ type: string; project: string; time: string; }>
   });
   const [loading, setLoading] = useState(true);
@@ -91,7 +91,7 @@ function DashboardStats() {
         const mockStats = {
           submissions: { total: 2, pending: 1, approved: 1, inReview: 0 },
           milestones: { total: 8, completed: 2, inProgress: 3, pending: 3 },
-          committees: { active: 3, isCurator: user?.role === 'curator' || user?.role === 'admin' },
+          committees: { active: 3, isReviewer: user?.role === 'committee' || user?.role === 'admin' },
           recentActivity: [
             { type: 'milestone_completed', project: 'Next-Gen SDK', time: '2 hours ago' },
             { type: 'vote_cast', project: 'Blockchain Course', time: '1 day ago' },
@@ -129,21 +129,21 @@ function DashboardStats() {
     );
   }
 
-  const isCurator = user.role === 'curator' || user.role === 'admin';
+  const isReviewer = user.role === 'committee' || user.role === 'admin';
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
-            {isCurator ? 'Review Queue' : 'Your Submissions'}
+            {isReviewer ? 'Review Queue' : 'Your Submissions'}
           </CardTitle>
           <FileText className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.submissions.total}</div>
           <p className="text-xs text-muted-foreground">
-            {isCurator ? `${stats.submissions.pending} pending review` : `${stats.submissions.approved} approved`}
+            {isReviewer ? `${stats.submissions.pending} pending review` : `${stats.submissions.approved} approved`}
           </p>
         </CardContent>
       </Card>
@@ -173,7 +173,7 @@ function DashboardStats() {
         <CardContent>
           <div className="text-2xl font-bold">{stats.committees.active}</div>
           <p className="text-xs text-muted-foreground">
-            {isCurator ? 'Curator access' : 'Available to apply'}
+            {isReviewer ? 'Reviewer access' : 'Available to apply'}
           </p>
         </CardContent>
       </Card>
@@ -279,7 +279,7 @@ function RecentActivity() {
 
 function QuickActions() {
   const { data: user } = useSWR('/api/user', fetcher);
-  const isCurator = user?.role === 'curator' || user?.role === 'admin';
+  const isReviewer = user?.role === 'committee' || user?.role === 'admin';
 
   return (
     <Card>
@@ -288,7 +288,7 @@ function QuickActions() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {!isCurator && (
+          {!isReviewer && (
             <Link href="/dashboard/submissions/new">
               <Button className="w-full h-16 flex flex-col items-center justify-center space-y-2">
                 <PlusCircle className="h-6 w-6" />
@@ -300,15 +300,15 @@ function QuickActions() {
           <Link href="/dashboard/submissions">
             <Button variant="outline" className="w-full h-16 flex flex-col items-center justify-center space-y-2">
               <FileText className="h-6 w-6" />
-              <span>{isCurator ? 'Review Submissions' : 'View Submissions'}</span>
+              <span>{isReviewer ? 'Review Submissions' : 'View Submissions'}</span>
             </Button>
           </Link>
 
-          {isCurator && (
-            <Link href="/dashboard/curator">
+          {isReviewer && (
+            <Link href="/dashboard/review">
               <Button className="w-full h-16 flex flex-col items-center justify-center space-y-2">
                 <Gavel className="h-6 w-6" />
-                <span>Curator Dashboard</span>
+                <span>Reviewer Dashboard</span>
               </Button>
             </Link>
           )}

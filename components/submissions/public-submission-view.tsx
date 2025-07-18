@@ -230,7 +230,7 @@ export function PublicSubmissionView({
                     }`} />
                     <div className="flex-1">
                       <p className="text-sm font-medium">
-                        Curator {index + 1} • {review.decision}
+                        Reviewer {index + 1} • {review.decision}
                       </p>
                       <p className="text-xs text-gray-600">
                         {new Date(review.createdAt).toLocaleDateString()}

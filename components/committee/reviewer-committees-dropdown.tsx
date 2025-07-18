@@ -27,25 +27,25 @@ interface Committee {
 
 interface CommitteeMembership {
   committee: Committee;
-  role: 'admin' | 'curator' | 'reviewer';
+  role: 'admin' | 'reviewer';
   permissions?: string[];
   joinedAt: string;
   isActive: boolean;
 }
 
-interface CuratorCommitteesDropdownProps {
+interface ReviewerCommitteesDropdownProps {
   currentUser: any;
   currentCommitteeId?: number;
   onCommitteeSelect?: (committee: Committee) => void;
   className?: string;
 }
 
-export function CuratorCommitteesDropdown({ 
+export function ReviewerCommitteesDropdown({ 
   currentUser, 
   currentCommitteeId,
   onCommitteeSelect,
   className = ""
-}: CuratorCommitteesDropdownProps) {
+}: ReviewerCommitteesDropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [memberships, setMemberships] = useState<CommitteeMembership[]>([]);
   const [loading, setLoading] = useState(true);
@@ -77,7 +77,7 @@ export function CuratorCommitteesDropdown({
       setMemberships(data.memberships || []);
       
     } catch (error) {
-      console.error('[CuratorCommitteesDropdown]: Error loading committees', error);
+              console.error('[ReviewerCommitteesDropdown]: Error loading committees', error);
       setError('Failed to load committee memberships');
       // Fallback to empty array for now
       setMemberships([]);
@@ -89,8 +89,7 @@ export function CuratorCommitteesDropdown({
   const getRoleIcon = (role: string) => {
     switch (role) {
       case 'admin': return <Crown className="w-3 h-3 text-purple-600" />;
-      case 'curator': return <Shield className="w-3 h-3 text-blue-600" />;
-      case 'reviewer': return <Eye className="w-3 h-3 text-green-600" />;
+      case 'reviewer': return <Shield className="w-3 h-3 text-blue-600" />;
       default: return null;
     }
   };
@@ -98,7 +97,7 @@ export function CuratorCommitteesDropdown({
   const getRoleBadge = (role: string) => (
     <Badge className={`text-xs ${
       role === 'admin' ? 'bg-purple-100 text-purple-800' :
-      role === 'curator' ? 'bg-blue-100 text-blue-800' :
+      role === 'reviewer' ? 'bg-blue-100 text-blue-800' :
       'bg-green-100 text-green-800'
     } flex items-center gap-1`}>
       {getRoleIcon(role)}

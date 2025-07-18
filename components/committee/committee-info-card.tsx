@@ -31,7 +31,7 @@ interface Committee {
 
 interface CommitteeInfoCardProps {
   committee: Committee;
-  userRole?: 'admin' | 'curator' | 'reviewer' | null;
+  userRole?: 'admin' | 'reviewer' | null;
   isUserMember?: boolean;
   className?: string;
   showActions?: boolean;
@@ -48,12 +48,11 @@ export function CommitteeInfoCard({
   const focusAreas = committee.focusAreas ? JSON.parse(committee.focusAreas) : [];
   
   const getRoleIcon = () => {
-    switch (userRole) {
-      case 'admin': return <Crown className="w-4 h-4 text-purple-600" />;
-      case 'curator': return <Shield className="w-4 h-4 text-blue-600" />;
-      case 'reviewer': return <Eye className="w-4 h-4 text-green-600" />;
-      default: return null;
-    }
+          switch (userRole) {
+        case 'admin': return <Crown className="w-4 h-4 text-purple-600" />;
+        case 'reviewer': return <Shield className="w-4 h-4 text-blue-600" />;
+        default: return null;
+      }
   };
 
   const getRoleBadge = () => {
@@ -62,7 +61,7 @@ export function CommitteeInfoCard({
     return (
       <Badge className={`${
         userRole === 'admin' ? 'bg-purple-100 text-purple-800' :
-        userRole === 'curator' ? 'bg-blue-100 text-blue-800' :
+        userRole === 'reviewer' ? 'bg-blue-100 text-blue-800' :
         'bg-green-100 text-green-800'
       } flex items-center gap-1`}>
         {getRoleIcon()}
@@ -132,7 +131,7 @@ export function CommitteeInfoCard({
               <h4 className="font-medium text-sm text-gray-700 mb-2">Voting Threshold</h4>
               <div className="flex items-center gap-2">
                 <Users className="w-4 h-4 text-gray-500" />
-                <span className="text-sm">{committee.votingThreshold} curator votes required</span>
+                <span className="text-sm">{committee.votingThreshold} reviewer votes required</span>
               </div>
             </div>
           </div>

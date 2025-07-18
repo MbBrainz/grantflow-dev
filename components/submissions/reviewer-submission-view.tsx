@@ -5,11 +5,11 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { DiscussionThread } from '@/components/discussion/discussion-thread';
-import { CuratorVoting } from '@/components/discussion/curator-voting';
+import { ReviewerVoting } from '@/components/discussion/reviewer-voting';
 import { Vote, AlertTriangle, Clock, Users, CheckCircle, XCircle, MessageSquare, GitBranch, DollarSign, Target } from 'lucide-react';
 import { CommitteeInfoCard } from '@/components/committee/committee-info-card';
 
-interface CuratorSubmissionViewProps {
+interface ReviewerSubmissionViewProps {
   submission: any;
   currentUser: any;
   currentState: any;
@@ -20,7 +20,7 @@ interface CuratorSubmissionViewProps {
   onVoteSubmitted: () => Promise<void>;
 }
 
-export function CuratorSubmissionView({
+export function ReviewerSubmissionView({
   submission,
   currentUser,
   currentState,
@@ -29,14 +29,14 @@ export function CuratorSubmissionView({
   submissionContext,
   onPostMessage,
   onVoteSubmitted
-}: CuratorSubmissionViewProps) {
+}: ReviewerSubmissionViewProps) {
   const [activeTab, setActiveTab] = useState<'review' | 'technical' | 'analytics'>('review');
 
   // Calculate voting status - fix field names to match actual data structure
   const approveVotes = reviews?.filter(r => r.vote === 'approve').length || 0;
   const rejectVotes = reviews?.filter(r => r.vote === 'reject' || r.vote === 'request_changes').length || 0;
-  const userHasVoted = reviews?.some(r => r.curatorId === currentUser?.id);
-  const needsMyVote = !userHasVoted && submissionContext?.isCommitteeCurator;
+  const userHasVoted = reviews?.some(r => r.reviewerId === currentUser?.id);
+  const needsMyVote = !userHasVoted && submissionContext?.isCommitteeReviewer;
 
   return (
     <div className="space-y-6">
@@ -45,12 +45,12 @@ export function CuratorSubmissionView({
         <CommitteeInfoCard
           committee={submission.committee}
           userRole={submissionContext?.committeeRole}
-          isUserMember={submissionContext?.isCommitteeCurator}
+          isUserMember={submissionContext?.isCommitteeReviewer}
           className="border-l-4 border-l-blue-500"
         />
       )}
 
-      {/* Curator Action Hero */}
+      {/* Reviewer Action Hero */}
       <Card className="p-6 border-l-4 border-l-blue-500 bg-blue-50/50">
         <div className="flex items-start gap-4 mb-6">
           <div className="p-3 rounded-full bg-blue-100 text-blue-600">
@@ -71,7 +71,7 @@ export function CuratorSubmissionView({
             <p className="text-gray-600 text-lg">
               {needsMyVote 
                 ? 'Your vote is needed to proceed with this submission review.'
-                : 'Review the submission details and collaborate with other curators.'
+                : 'Review the submission details and collaborate with other reviewers.'
               }
             </p>
           </div>
@@ -121,7 +121,7 @@ export function CuratorSubmissionView({
               <Vote className="w-5 h-5" />
               Cast Your Vote
             </h3>
-            <CuratorVoting
+            <ReviewerVoting
               submissionId={submission.id}
               currentUser={currentUser}
               existingVotes={reviews}
@@ -179,6 +179,7 @@ export function CuratorSubmissionView({
                 onPostMessage={onPostMessage}
                 title={submission.title}
                 isPublic={true}
+                submissionContext={submissionContext}
               />
             </div>
           </div>

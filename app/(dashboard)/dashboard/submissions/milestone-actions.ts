@@ -9,7 +9,7 @@ import { db } from '@/lib/db/drizzle';
 import { milestones } from '@/lib/db/schema';
 import { 
   completeMilestoneWithPayout, 
-  isUserCurator,
+  isUserReviewer,
   getMilestoneById,
   getSubmissionById,
   createNotification,
@@ -60,8 +60,8 @@ export async function completeMilestone(formData: FormData) {
   const data = validation.data;
 
   try {
-    // Verify user is a curator for this committee
-    const isAuthorized = await isUserCurator(session.user.id);
+      // Verify user is a reviewer for this committee
+  const isAuthorized = await isUserReviewer(session.user.id);
     if (!isAuthorized) {
       console.log('[completeMilestone]: User not authorized');
       return {
@@ -109,7 +109,7 @@ export async function completeMilestone(formData: FormData) {
     // Revalidate relevant pages
     revalidatePath('/dashboard/submissions');
     revalidatePath(`/dashboard/submissions/${milestone.submissionId}`);
-    revalidatePath('/dashboard/curator');
+    revalidatePath('/dashboard/review');
 
     return {
       success: true,
@@ -147,10 +147,42 @@ export async function validateTransactionHash(hash: string, explorerUrl: string)
 
 // Schema for milestone submission validation
 const submitMilestoneSchema = z.object({
-  milestoneId: z.number().min(1, 'Invalid milestone ID'),
-  selectedCommits: z.array(z.string()).min(1, 'At least one commit must be selected'),
+  milestoneId: z.coerce.number().min(1, 'Invalid milestone ID'),
+  selectedCommits: z.string().transform((str, ctx) => {
+    try {
+      const parsed = JSON.parse(str);
+      if (!Array.isArray(parsed)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'selectedCommits must be an array' });
+        return z.NEVER;
+      }
+      if (parsed.length === 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'At least one commit must be selected' });
+        return z.NEVER;
+      }
+      return parsed as string[];
+    } catch {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid JSON for selectedCommits' });
+      return z.NEVER;
+    }
+  }),
   deliverables: z.string().min(10, 'Deliverables description must be at least 10 characters'),
-  githubCommitHashes: z.array(z.string()).min(1, 'GitHub commit hashes are required'),
+  githubCommitHashes: z.string().transform((str, ctx) => {
+    try {
+      const parsed = JSON.parse(str);
+      if (!Array.isArray(parsed)) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'githubCommitHashes must be an array' });
+        return z.NEVER;
+      }
+      if (parsed.length === 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'GitHub commit hashes are required' });
+        return z.NEVER;
+      }
+      return parsed as string[];
+    } catch {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Invalid JSON for githubCommitHashes' });
+      return z.NEVER;
+    }
+  }),
 });
 
 type SubmitMilestoneData = z.infer<typeof submitMilestoneSchema>;
@@ -238,7 +270,7 @@ export const submitMilestone = validatedActionWithUser(
           submittedBy: user.id
         }),
         githubCommitHash: data.selectedCommits[data.selectedCommits.length - 1], // Use latest commit as primary
-        status: 'submitted' as const,
+        status: 'in-review' as const,
         submittedAt: new Date(),
         updatedAt: new Date()
       };
@@ -264,31 +296,31 @@ export const submitMilestone = validatedActionWithUser(
       await ensureDiscussionForMilestone(data.milestoneId);
 
       // Post message to milestone discussion about submission
-      const message = `🚀 **Milestone Submitted**\n\nThis milestone has been submitted for review with ${data.selectedCommits.length} commits.\n\n**Deliverables Summary:**\n${data.deliverables}\n\n**Commits Included:**\n${data.selectedCommits.map(sha => `- \`${sha.substring(0, 7)}\``).join('\n')}`;
+      const message = `🔍 **Milestone In Review**\n\nThis milestone has been submitted and is now under review with ${data.selectedCommits.length} commits.\n\n**Deliverables Summary:**\n${data.deliverables}\n\n**Commits Included:**\n${data.selectedCommits.map(sha => `- \`${sha.substring(0, 7)}\``).join('\n')}`;
 
       await createMessage({
         discussionId: (await ensureDiscussionForMilestone(data.milestoneId)).id,
         content: message,
         messageType: 'status_change',
         metadata: JSON.stringify({
-          action: 'milestone_submitted',
+          action: 'milestone_in_review',
           milestoneId: data.milestoneId,
           commitsCount: data.selectedCommits.length,
           commits: data.selectedCommits
         })
       });
 
-      // Create notification for committee curators
+      // Create notification for committee reviewers
       try {
         await createNotification({
-          userId: submission.reviewerGroupId, // This should be updated to notify actual curators
-          type: 'milestone_submitted',
-          content: `New milestone submission: "${milestone.title}" by ${user.email}`,
+          userId: submission.reviewerGroupId, // This should be updated to notify actual reviewers
+          type: 'milestone_in_review',
+          content: `Milestone ready for review: "${milestone.title}" by ${user.email}`,
           submissionId: submission.id,
           milestoneId: data.milestoneId,
           groupId: submission.reviewerGroupId
         });
-        console.log('[submitMilestone]: Created notification for curators', { milestoneId: data.milestoneId });
+        console.log('[submitMilestone]: Created notification for reviewers', { milestoneId: data.milestoneId });
       } catch (notificationError) {
         console.log('[submitMilestone]: Failed to create notification', notificationError);
         // Don't fail the whole operation for notification errors
@@ -297,7 +329,7 @@ export const submitMilestone = validatedActionWithUser(
       // Revalidate relevant pages
       revalidatePath(`/dashboard/submissions/${submission.id}`);
       revalidatePath('/dashboard/submissions');
-      revalidatePath('/dashboard/curator');
+      revalidatePath('/dashboard/review');
 
       console.log('[submitMilestone]: Milestone submission completed successfully', {
         milestoneId: data.milestoneId,
@@ -307,7 +339,7 @@ export const submitMilestone = validatedActionWithUser(
       return { 
         success: true, 
         milestoneId: data.milestoneId,
-        message: 'Milestone submitted successfully for review'
+        message: 'Milestone is now in review'
       };
 
     } catch (error) {

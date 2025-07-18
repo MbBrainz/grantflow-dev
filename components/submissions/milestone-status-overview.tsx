@@ -71,7 +71,7 @@ function getMilestoneStatusInfo(milestone: Milestone) {
         icon: <Clock className="w-4 h-4" />,
         color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
         bgColor: 'bg-yellow-50',
-        description: 'Under curator review',
+        description: 'Under reviewer review',
         actionRequired: true
       };
     case 'completed':

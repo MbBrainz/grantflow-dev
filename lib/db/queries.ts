@@ -409,7 +409,7 @@ export async function markNotificationAsRead(notificationId: number, userId: num
     ));
 }
 
-// Group membership queries (replaces curator queries)
+// Group membership queries (reviewer role management)
 export async function getMembersByGroup(groupId: number) {
   return await db.query.groupMemberships.findMany({
     where: and(
@@ -1602,22 +1602,7 @@ export async function getSubmissionMilestonesOverview(submissionId: number) {
   };
 }
 
-// Missing functions for curator workflow
-export async function checkIsCurator(userId: number): Promise<boolean> {
-  return await isUserReviewer(userId);
-}
 
-export async function isUserCurator(userId: number): Promise<boolean> {
-  return await isUserReviewer(userId);
-}
-
-export async function getCuratorPendingActions() {
-  return await getReviewerPendingActions();
-}
-
-export async function getSubmissionForCuratorReview(submissionId: number) {
-  return await getSubmissionForReviewerReview(submissionId);
-}
 
 export async function getUserCommittees(userId: number) {
   const userMemberships = await getUserGroups(userId);

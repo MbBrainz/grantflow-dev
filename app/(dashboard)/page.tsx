@@ -118,10 +118,10 @@ export default function HomePage() {
               <div className="flex items-center justify-center h-12 w-12 rounded-xl bg-white/20 text-white mb-6">
                 <Shield className="h-6 w-6" />
               </div>
-              <h3 className="text-xl font-bold mb-4">Multi-Curator Voting</h3>
+              <h3 className="text-xl font-bold mb-4">Multi-Reviewer Voting</h3>
               <p className="text-blue-100 leading-relaxed">
                 Configure custom voting thresholds and approval workflows. 
-                Collaborate with co-curators through integrated discussion threads.
+                Collaborate with co-reviewers through integrated discussion threads.
               </p>
             </div>
 
@@ -178,7 +178,7 @@ export default function HomePage() {
               <h3 className="text-xl font-bold text-gray-900 mb-4">Real-time Tracking</h3>
               <p className="text-gray-600 leading-relaxed">
                 Track application status and milestone progress in real-time. 
-                Participate in discussions directly with committee curators.
+                                  Participate in discussions directly with committee reviewers.
               </p>
             </div>
           </div>

@@ -6,12 +6,12 @@ import type { User } from '@/lib/db/schema';
 interface SubmissionUserContext {
   user: User | null;
   isAuthenticated: boolean;
-  role: 'curator' | 'grantee' | 'admin' | null;
+  role: 'reviewer' | 'grantee' | 'admin' | null;
   
   // Submission-specific permissions
   isSubmissionOwner: boolean;
-  isCommitteeCurator: boolean;
-  committeeRole: 'admin' | 'curator' | 'reviewer' | null;
+  isCommitteeReviewer: boolean;
+  committeeRole: 'admin' | 'reviewer' | null;
   canVote: boolean;
   canEditSubmission: boolean;
   canViewPrivateDiscussions: boolean;
@@ -19,7 +19,7 @@ interface SubmissionUserContext {
   canTriggerPayouts: boolean;
   
   // View determination
-  viewType: 'curator' | 'grantee' | 'public';
+  viewType: 'reviewer' | 'grantee' | 'public';
   
   // Loading state
   isLoading: boolean;
@@ -42,7 +42,7 @@ export function useSubmissionContext(
     isAuthenticated: false,
     role: null,
     isSubmissionOwner: false,
-    isCommitteeCurator: false,
+    isCommitteeReviewer: false,
     committeeRole: null,
     canVote: false,
     canEditSubmission: false,
@@ -66,9 +66,9 @@ export function useSubmissionContext(
       // Basic ownership and committee checks
       const isSubmissionOwner = currentUser?.id === submission.submitterId;
       
-      // Check if user is curator for this submission's committee
-      let isCommitteeCurator = false;
-      let committeeRole: 'admin' | 'curator' | 'reviewer' | null = null;
+      // Check if user is reviewer for this submission's committee
+      let isCommitteeReviewer = false;
+      let committeeRole: 'admin' | 'reviewer' | null = null;
       
       if (currentUser && role === 'committee' && (submission as any).reviewerGroupId) {
         try {
@@ -76,33 +76,33 @@ export function useSubmissionContext(
           const response = await fetch(`/api/user/committee-membership?userId=${currentUser.id}&groupId=${(submission as any).reviewerGroupId}`);
           if (response.ok) {
             const membership = await response.json();
-            isCommitteeCurator = membership.isMember;
+            isCommitteeReviewer = membership.isMember;
             committeeRole = membership.role;
           } else {
             // Fallback: assume committee role has general access
-            isCommitteeCurator = role === 'committee';
+            isCommitteeReviewer = role === 'committee';
           }
         } catch (error) {
-          console.error('[useSubmissionContext]: Error checking curator status', error);
+          console.error('[useSubmissionContext]: Error checking reviewer status', error);
           // Fallback: assume committee role has general access  
-          isCommitteeCurator = role === 'committee';
+          isCommitteeReviewer = role === 'committee';
         }
       }
 
       // Determine permissions based on role and relationship
-      const canVote = isCommitteeCurator && !isSubmissionOwner;
+      const canVote = isCommitteeReviewer && !isSubmissionOwner;
       const canEditSubmission = isSubmissionOwner && (
         submission.status === 'draft' || 
         submission.status === 'changes_requested'
       );
-      const canViewPrivateDiscussions = isCommitteeCurator || currentUser?.primaryRole === 'committee';
-      const canManageWorkflow = isCommitteeCurator || currentUser?.primaryRole === 'committee';
-      const canTriggerPayouts = isCommitteeCurator || currentUser?.primaryRole === 'committee';
+      const canViewPrivateDiscussions = isCommitteeReviewer || currentUser?.primaryRole === 'committee';
+      const canManageWorkflow = isCommitteeReviewer || currentUser?.primaryRole === 'committee';
+      const canTriggerPayouts = isCommitteeReviewer || currentUser?.primaryRole === 'committee';
 
       // Determine primary view type
-      let viewType: 'curator' | 'grantee' | 'public' = 'public';
-      if (isCommitteeCurator) {
-        viewType = 'curator';
+      let viewType: 'reviewer' | 'grantee' | 'public' = 'public';
+      if (isCommitteeReviewer) {
+        viewType = 'reviewer';
       } else if (isSubmissionOwner) {
         viewType = 'grantee';
       }
@@ -110,9 +110,9 @@ export function useSubmissionContext(
       setContext({
         user: currentUser,
         isAuthenticated,
-        role: role === 'committee' ? 'curator' as const : role === 'team' ? 'grantee' as const : null,
+        role: role === 'committee' ? 'reviewer' as const : role === 'team' ? 'grantee' as const : null,
         isSubmissionOwner,
-        isCommitteeCurator,
+        isCommitteeReviewer,
         committeeRole,
         canVote,
         canEditSubmission,

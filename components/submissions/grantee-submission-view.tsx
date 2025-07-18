@@ -34,6 +34,11 @@ interface GranteeSubmissionViewProps {
   reviews: any[];
   onPostMessage: (content: string, type?: string) => Promise<void>;
   onVoteSubmitted: () => Promise<void>;
+  submissionContext?: {
+    isCommitteeReviewer?: boolean;
+    isSubmissionOwner?: boolean;
+    canViewPrivateDiscussions?: boolean;
+  };
 }
 
 export function GranteeSubmissionView({
@@ -43,7 +48,8 @@ export function GranteeSubmissionView({
   discussionData,
   reviews,
   onPostMessage,
-  onVoteSubmitted
+  onVoteSubmitted,
+  submissionContext
 }: GranteeSubmissionViewProps) {
   const [activeTab, setActiveTab] = useState<'status' | 'feedback' | 'milestones'>('status');
   const [submittingMilestone, setSubmittingMilestone] = useState<any | null>(null);
@@ -55,10 +61,10 @@ export function GranteeSubmissionView({
       case 'submitted':
         return {
           stage: 'Under Review',
-          description: 'Your application is being reviewed by the committee curators.',
+          description: 'Your application is being reviewed by the committee reviewers.',
           color: 'blue',
           icon: Clock,
-          nextStep: 'Wait for curator feedback and voting to complete.',
+          nextStep: 'Wait for reviewer feedback and voting to complete.',
           canEdit: false
         };
       case 'changes_requested':
@@ -67,7 +73,7 @@ export function GranteeSubmissionView({
           description: 'The committee has requested changes to your application.',
           color: 'orange',
           icon: AlertCircle,
-          nextStep: 'Review curator feedback and submit updated application.',
+          nextStep: 'Review reviewer feedback and submit updated application.',
           canEdit: true
         };
       case 'approved':
@@ -322,10 +328,10 @@ export function GranteeSubmissionView({
           <div className="space-y-6">
             <MilestoneStatusOverview submission={submission} />
             
-            {/* Curator Voting Summary */}
+            {/* Reviewer Voting Summary */}
             {reviews.length > 0 && (
               <div>
-                <h3 className="text-lg font-semibold mb-4">Curator Voting</h3>
+                <h3 className="text-lg font-semibold mb-4">Reviewer Voting</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="p-4 border rounded-lg">
                     <div className="flex items-center gap-2 mb-2">
@@ -354,10 +360,10 @@ export function GranteeSubmissionView({
         {/* Feedback Tab */}
         {activeTab === 'feedback' && (
           <div className="space-y-6">
-            {/* Curator Feedback Summary */}
+            {/* Reviewer Feedback Summary */}
             {reviews.length > 0 && (
               <div>
-                <h3 className="text-lg font-semibold mb-4">Curator Feedback</h3>
+                <h3 className="text-lg font-semibold mb-4">Reviewer Feedback</h3>
                 <div className="space-y-3">
                   {reviews.map((review: any) => (
                     <div key={review.id} className="p-4 border rounded-lg">
@@ -389,6 +395,7 @@ export function GranteeSubmissionView({
                 onPostMessage={onPostMessage}
                 title={submission.title}
                 isPublic={true}
+                submissionContext={submissionContext}
               />
             </div>
           </div>

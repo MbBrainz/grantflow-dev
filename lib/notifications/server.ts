@@ -108,7 +108,7 @@ export async function notifyNewMessage(
 
 export async function notifyVoteCast(
   submissionId: number,
-  curatorName: string,
+  reviewerName: string,
   vote: string,
   excludeUserId?: number
 ) {
@@ -121,10 +121,10 @@ export async function notifyVoteCast(
     const notification: NotificationData = {
       type: NOTIFICATION_TYPES.VOTE_CAST,
       title: `New vote on "${submission.title}"`,
-      message: `${curatorName} voted: ${vote}`,
+      message: `${reviewerName} voted: ${vote}`,
       submissionId,
       actionUrl: `/dashboard/submissions/${submissionId}`,
-      metadata: { curatorName, vote }
+      metadata: { reviewerName, vote }
     };
 
     const promises = usersToNotify.map(userId => 

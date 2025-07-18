@@ -180,7 +180,7 @@ export default async function SubmissionsPage() {
             <CardContent>
               <div className="text-2xl font-bold">{stats.underReview}</div>
               <p className="text-xs text-muted-foreground">
-                Pending curator review
+                                  Pending reviewer approval
               </p>
             </CardContent>
           </Card>

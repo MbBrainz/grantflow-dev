@@ -169,7 +169,7 @@ export const postMessageToSubmission = validatedActionWithUser(
         if (data.messageType === 'vote') {
           await notifyVoteCast(
             data.submissionId,
-            user.name || 'Anonymous Curator',
+            user.name || 'Anonymous Reviewer',
             data.content,
             user.id
           );
@@ -206,20 +206,20 @@ export const postMessageToSubmission = validatedActionWithUser(
   }
 );
 
-// Enhanced server actions for curator review interface
-export const getSubmissionForCuratorReview = validatedActionWithUser(
+// Enhanced server actions for reviewer review interface
+export const getSubmissionForReviewerReviewAction = validatedActionWithUser(
   z.object({
     submissionId: z.coerce.number(),
   }),
   async (data, formData, user) => {
     try {
-      console.log('[getSubmissionForCuratorReview]: Fetching comprehensive submission data', { 
+      console.log('[getSubmissionForReviewerReview]: Fetching comprehensive submission data', { 
         submissionId: data.submissionId, 
         userId: user.id 
       });
 
       const submissionData = await import('@/lib/db/queries').then(m => 
-        m.getSubmissionForCuratorReview(data.submissionId)
+        m.getSubmissionForReviewerReview(data.submissionId)
       );
 
       if (!submissionData) {
@@ -233,7 +233,7 @@ export const getSubmissionForCuratorReview = validatedActionWithUser(
       };
 
     } catch (error) {
-      console.error('[getSubmissionForCuratorReview]: Error fetching submission data', error);
+      console.error('[getSubmissionForReviewerReview]: Error fetching submission data', error);
       return { 
         error: 'Failed to load submission data. Please try again.' 
       };
