@@ -12,7 +12,7 @@ import {
   reviews,
   payouts,
   notifications
-} from './schema';
+} from '../schema';
 import { config } from 'dotenv';
 import postgres from 'postgres';
 import { hashPassword } from '@/lib/auth/session';

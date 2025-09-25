@@ -1,0 +1,347 @@
+# Database Layer Guidelines
+
+This file provides guidance for working with the database layer using Drizzle ORM in this TypeScript functional codebase. NOTE: All the tables are examples, make sure to check the actual db schema for which tables do exist.
+
+## Preferred Query Pattern: Use `query` over `select`
+
+**✅ PREFERRED: Use Relational Query Builder (`db.query`)**
+
+```typescript
+// ✅ Good - Using relational query builder
+const result = await db.query.users.findMany({
+  with: {
+    properties: true,
+    preferences: true
+  },
+  where: eq(users.isActive, true)
+});
+```
+NOTE: The above query would require the following relationships to be defined:
+```typescript
+export const userRelations = relations(users, ({ many, one }) => ({
+  clientPreferences: one(clientPreferences),
+  properties: many(properties),
+}));
+```
+
+
+
+
+**❌ AVOID: Raw SQL-like queries (`db.select`)**
+
+```typescript
+// ❌ Avoid - Raw SQL-like approach
+const result = await db
+  .select()
+  .from(users)
+  .leftJoin(properties, eq(users.id, properties.ownerId))
+  .where(eq(users.isActive, true));
+```
+
+## Why Prefer `query`?
+
+### 1. **Type Safety & Relations**
+The relational query builder provides full TypeScript support for relations:
+
+```typescript
+// ✅ Fully typed with relations
+const user = await db.query.users.findFirst({
+  with: {
+    properties: {
+      with: {
+        appointments: true,
+        city: true,
+        district: true
+      }
+    },
+    preferences: true
+  },
+  where: eq(users.id, userId)
+});
+
+// user.properties[0].city.name is fully typed!
+```
+
+### 2. **Cleaner Syntax**
+Relations are handled automatically without manual joins:
+
+```typescript
+// ✅ Clean and readable
+const properties = await db.query.listings.findMany({
+  with: {
+    owner: {
+      columns: {
+        id: true,
+        name: true,
+        phoneNumber: true
+      }
+    },
+    city: true,
+    appointments: {
+      where: eq(viewingAppointments.status, "confirmed")
+    }
+  },
+  where: eq(properties.status, "available")
+});
+```
+
+### 3. **Selective Loading**
+Choose exactly which fields and relations to load:
+
+```typescript
+// ✅ Only load what you need
+const users = await db.query.users.findMany({
+  columns: {
+    id: true,
+    name: true,
+    phoneNumber: true
+    // password and other sensitive fields excluded
+  },
+  with: {
+    preferences: {
+      columns: {
+        minRent: true,
+        maxRent: true,
+        preferredPropertyTypes: true
+      }
+    }
+  }
+});
+```
+
+## When to Use `select`
+
+Use `db.select` only for:
+
+### 1. **Complex Aggregations**
+```typescript
+// ✅ Appropriate use of select for aggregations
+const stats = await db
+  .select({
+    cityId: properties.cityId,
+    count: sql<number>`count(*)`,
+    avgRent: sql<number>`avg(${properties.rent})`
+  })
+  .from(properties)
+  .groupBy(properties.cityId);
+```
+
+### 2. **Custom Joins Not Supported by Relations**
+```typescript
+// ✅ When you need complex custom joins
+const result = await db
+  .select({
+    propertyId: properties.id,
+    appointmentCount: sql<number>`count(${viewingAppointments.id})`
+  })
+  .from(properties)
+  .leftJoin(viewingAppointments, eq(properties.id, viewingAppointments.propertyId))
+  .where(gte(viewingAppointments.createdAt, new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)))
+  .groupBy(properties.id);
+```
+
+## Common Patterns
+
+### 1. **Finding with Relations**
+```typescript
+// Find property with all related data
+export async function findPropertyWithDetails(id: number): AsyncResult<PropertyWithDetails | null> {
+  try {
+    const property = await db.query.listings.findFirst({
+      with: {
+        owner: {
+          columns: { id: true, name: true, phoneNumber: true }
+        },
+        city: true,
+        district: true,
+        appointments: {
+          with: {
+            viewer: {
+              columns: { id: true, name: true, phoneNumber: true }
+            }
+          },
+          where: eq(viewingAppointments.status, "confirmed")
+        }
+      },
+      where: eq(properties.id, id)
+    });
+
+    return success(property || null);
+  } catch (error) {
+    return failure(`Failed to find property: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+```
+
+### 2. **Filtering with Relations**
+```typescript
+// Search properties with owner and location info
+export async function searchPropertiesWithDetails(filters: SearchFilters): AsyncResult<PropertyListItem[]> {
+  try {
+    const results = await db.query.listings.findMany({
+      with: {
+        city: { columns: { name: true } },
+        district: { columns: { name: true } },
+        owner: { columns: { name: true } }
+      },
+      where: and(
+        eq(properties.status, "available"),
+        filters.cityId ? eq(properties.cityId, filters.cityId) : undefined,
+        filters.apartmentType ? eq(properties.apartmentType, filters.apartmentType) : undefined
+      ),
+      limit: filters.limit || 10,
+      offset: filters.offset || 0
+    });
+
+    return success(results.map(formatPropertyListItem));
+  } catch (error) {
+    return failure(`Search failed: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+```
+
+### 3. **Nested Filtering**
+```typescript
+// Find users with specific preferences
+export async function findUsersWithPreferences(): AsyncResult<UserWithPrefs[]> {
+  try {
+    const users = await db.query.users.findMany({
+      with: {
+        preferences: true,
+        properties: {
+          where: eq(properties.status, "available"),
+          limit: 5
+        }
+      },
+      where: eq(users.onboardingCompleted, true)
+    });
+
+    return success(users);
+  } catch (error) {
+    return failure(`Failed to find users: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+```
+
+## Performance Tips
+
+### 1. **Use Selective Loading**
+```typescript
+// ✅ Only load needed columns
+const users = await db.query.users.findMany({
+  columns: {
+    // Explicitly include only what you need
+    id: true,
+    name: true,
+    phoneNumber: true
+    // Exclude: email, createdAt, updatedAt, etc.
+  }
+});
+```
+
+### 2. **Limit Nested Relations**
+```typescript
+// ✅ Control nested relation loading
+const properties = await db.query.listings.findMany({
+  with: {
+    appointments: {
+      limit: 5, // Only latest 5 appointments
+      orderBy: [desc(viewingAppointments.createdAt)],
+      where: eq(viewingAppointments.status, "confirmed")
+    }
+  }
+});
+```
+
+### 3. **Use Pagination**
+```typescript
+// ✅ Always paginate large result sets
+export async function getPaginatedProperties(page: number, limit: number = 10) {
+  return await db.query.listings.findMany({
+    limit,
+    offset: (page - 1) * limit,
+    orderBy: [desc(properties.createdAt)]
+  });
+}
+```
+
+## Error Handling
+
+Always wrap database operations in Result types:
+
+```typescript
+export async function createProperty(data: NewProperty): AsyncResult<Property> {
+  try {
+    const [property] = await db.insert(properties)
+      .values(data)
+      .returning();
+
+    return success(property);
+  } catch (error) {
+    return failure(`Failed to create property: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+```
+
+## Type Safety Best Practices
+
+### Avoid `any` Types
+```typescript
+// ❌ AVOID - Using any types
+// ✅ PREFERRED - Use schema types
+import type { User } from "../schema";
+
+function processData(data: any): any {
+  return data.someProperty;
+}
+
+function processUser(user: User): string {
+  return user.name;
+}
+```
+
+or even better, if a function only requires specific properties of a type, then use `Pick<Type, "property1" | "property2" | "etc" >` for example
+```ts
+function listingTitleAndAddress(listing: Pick<Listing, "title" | "address">) {
+  return `${listing.title}, address: ${listing.address}`;
+}
+```
+
+### Create Specific Interfaces When Needed
+```typescript
+// ✅ Create specific interfaces for complex data
+interface UserWithPreferences extends User {
+  preferences?: ClientPreference
+  appointments?: ViewingAppointment[]
+}
+
+// ✅ Use Pick/Omit for partial types
+type UserSummary = Pick<User, "id" | "name" | "phoneNumber">;
+```
+
+## Summary
+
+- **Use `db.query` for 90% of your database operations**
+- **Leverage TypeScript relations for type safety**
+- **Use selective loading to optimize performance**
+- **Reserve `db.select` for complex aggregations and custom joins**
+- **Always wrap operations in Result<T, E> for consistent error handling**
+- **Avoid `any` types - use schema types or create specific interfaces**
+- **Prefer `unknown` over `any` when the type is truly unknown**
+
+For more details, see the [Drizzle Relational Query Builder documentation](https://orm.drizzle.team/docs/rqb).
+
+
+
+
+# db folder structure
+
+the folder structure in this db folder should be as follows: 
+```sh
+./queries/ # all query definitions in files separated per main table
+./writes/ # all write definitions in files separated per main table
+./seeds/ # all files that include seed definitions (for testing and mocking)
+./scripts/ # all db scripts 
+./schema.ts # All schema definitions and derived types
+./relations.ts # all schema relations
+./drizzle.ts # drizzle client with both schema and relations

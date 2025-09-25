@@ -16,7 +16,7 @@ import {
   notifications,
   type User,
   type Group
-} from './schema';
+} from '../schema';
 
 config();
 
