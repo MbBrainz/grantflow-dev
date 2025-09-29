@@ -30,7 +30,6 @@ export async function getMilestoneById(
   return result.length > 0 ? result[0] : null
 }
 
-
 export async function getSubmissionMilestonesOverview(submissionId: number) {
   const submissionMilestones = await db.query.milestones.findMany({
     where: eq(milestones.submissionId, submissionId),

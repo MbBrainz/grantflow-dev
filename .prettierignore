@@ -1,0 +1,74 @@
+# Dependencies
+node_modules
+.pnp
+.pnp.js
+
+# Build outputs
+.next
+out
+build
+dist
+
+# build
+*.yaml
+*.yml
+
+# Logs
+*.log
+
+# Environment files
+.env*
+
+# Binary and media files
+*.ico
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.webp
+*.woff
+*.woff2
+*.ttf
+*.eot
+
+# Lock files and package manager files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Database
+*.db
+*.sqlite
+*.sql
+
+# IDE
+.vscode
+.idea
+.cursor
+.claude
+.gitignore
+.prettierrc
+.prettierignore
+.gitignore
+.prettierrc
+.prettierignore
+.gitignore
+.npmrc
+
+# Misc
+.DS_Store
+*.pem
+*.css
+*.scss
+*.md
+*.json
+LICENSE
+
+
+
+# Specific JSON files (if needed)
+# Add any specific JSON files here that should not be formatted
+tsconfig.json
+
+.next
