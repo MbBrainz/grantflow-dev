@@ -41,7 +41,7 @@ This project uses **Drizzle ORM** for type-safe database operations with:
 
 - **TypeScript-first** approach with full type inference
 - **SQL-like syntax** that's familiar and powerful
-- **Multiple database support** - PostgreSQL, MySQL, SQLite
+- **PostgreSQL support** with Supabase integration
 - **Automatic migrations** with schema versioning
 - **Performance optimized** with prepared statements
 - **Edge runtime compatible** - Works with serverless
@@ -1236,43 +1236,17 @@ Remember: **Build robust, streaming-first AI applications with comprehensive err
 - **Rollback support** for schema changes
 - **Seed data management** for consistent environments
 
-## PostgreSQL with Neon
+## PostgreSQL with Supabase
 
 ```typescript
 // lib/db.ts
-import { drizzle } from 'drizzle-orm/neon-http'
-import { neon, neonConfig } from '@neondatabase/serverless'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
 
-neonConfig.fetchConnectionCache = true
-
-const sql = neon(process.env.DATABASE_URL!)
+const sql = postgres(process.env.DATABASE_URL!)
 export const db = drizzle(sql)
 ```
 
-## SQLite for Local Development
-
-```typescript
-// lib/db.ts
-import { drizzle } from 'drizzle-orm/better-sqlite3'
-import Database from 'better-sqlite3'
-
-const sqlite = new Database('./dev.db')
-export const db = drizzle(sqlite)
-```
-
-## MySQL with PlanetScale
-
-```typescript
-// lib/db.ts
-import { drizzle } from 'drizzle-orm/mysql2'
-import mysql from 'mysql2/promise'
-
-const connection = mysql.createPool({
-  uri: process.env.DATABASE_URL,
-})
-
-export const db = drizzle(connection)
-```
 
 ## User Management Schema
 
@@ -1392,16 +1366,20 @@ export async function createUser(userData: NewUser) {
   return user
 }
 
-// Get user by ID
+// Get user by ID - Using query pattern
 export async function getUserById(id: number) {
-  const user = await db.select().from(users).where(eq(users.id, id))
-  return user[0]
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, id),
+  })
+  return user
 }
 
-// Get user by email
+// Get user by email - Using query pattern
 export async function getUserByEmail(email: string) {
-  const user = await db.select().from(users).where(eq(users.email, email))
-  return user[0]
+  const user = await db.query.users.findFirst({
+    where: eq(users.email, email),
+  })
+  return user
 }
 
 // Update user
@@ -1419,17 +1397,16 @@ export async function deleteUser(id: number) {
   await db.delete(users).where(eq(users.id, id))
 }
 
-// Get paginated users
+// Get paginated users - Using query pattern
 export async function getPaginatedUsers(page = 1, limit = 10) {
   const offset = (page - 1) * limit
 
   const [userList, totalCount] = await Promise.all([
-    db
-      .select()
-      .from(users)
-      .limit(limit)
-      .offset(offset)
-      .orderBy(desc(users.createdAt)),
+    db.query.users.findMany({
+      limit,
+      offset,
+      orderBy: [desc(users.createdAt)],
+    }),
     db.select({ count: count() }).from(users),
   ])
 
@@ -1450,43 +1427,37 @@ import { db } from '@/lib/db'
 import { posts, users } from '@/schema'
 import { eq, desc, and, ilike } from 'drizzle-orm'
 
-// Get posts with authors
+// Get posts with authors - Using query pattern
 export async function getPostsWithAuthors() {
-  return await db
-    .select({
-      id: posts.id,
-      title: posts.title,
-      content: posts.content,
-      published: posts.published,
-      createdAt: posts.createdAt,
+  return await db.query.posts.findMany({
+    with: {
       author: {
-        id: users.id,
-        name: users.name,
-        email: users.email,
+        columns: {
+          id: true,
+          name: true,
+          email: true,
+        },
       },
-    })
-    .from(posts)
-    .innerJoin(users, eq(posts.authorId, users.id))
-    .where(eq(posts.published, true))
-    .orderBy(desc(posts.createdAt))
+    },
+    where: eq(posts.published, true),
+    orderBy: [desc(posts.createdAt)],
+  })
 }
 
-// Search posts
+// Search posts - Using query pattern
 export async function searchPosts(query: string) {
-  return await db
-    .select()
-    .from(posts)
-    .where(and(eq(posts.published, true), ilike(posts.title, `%${query}%`)))
-    .orderBy(desc(posts.createdAt))
+  return await db.query.posts.findMany({
+    where: and(eq(posts.published, true), ilike(posts.title, `%${query}%`)),
+    orderBy: [desc(posts.createdAt)],
+  })
 }
 
-// Get user's posts
+// Get user's posts - Using query pattern
 export async function getUserPosts(userId: number) {
-  return await db
-    .select()
-    .from(posts)
-    .where(eq(posts.authorId, userId))
-    .orderBy(desc(posts.createdAt))
+  return await db.query.posts.findMany({
+    where: eq(posts.authorId, userId),
+    orderBy: [desc(posts.createdAt)],
+  })
 }
 ```
 
@@ -1496,9 +1467,9 @@ export async function getUserPosts(userId: number) {
 // lib/queries/analytics.ts
 import { db } from '@/lib/db'
 import { orders, orderItems, products, users } from '@/schema'
-import { sum, count, avg, desc, gte } from 'drizzle-orm'
+import { sum, count, avg, desc, gte, lte, and, eq } from 'drizzle-orm'
 
-// Sales analytics
+// Sales analytics - Using select pattern for aggregations
 export async function getSalesAnalytics(startDate: Date, endDate: Date) {
   return await db
     .select({
@@ -1512,7 +1483,7 @@ export async function getSalesAnalytics(startDate: Date, endDate: Date) {
     )
 }
 
-// Top selling products
+// Top selling products - Using select pattern for complex joins and aggregations
 export async function getTopSellingProducts(limit = 10) {
   return await db
     .select({
@@ -1573,11 +1544,11 @@ npx drizzle-kit studio
 
 ```typescript
 // scripts/migrate.ts
-import { drizzle } from 'drizzle-orm/neon-http';
-import { migrate } from 'drizzle-orm/neon-http/migrator';
-import { neon } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/postgres-js';
+import { migrate } from 'drizzle-orm/postgres-js/migrator';
+import postgres from 'postgres';
 
-const sql = neon(process.env.DATABASE_URL!);
+const sql = postgres(process.env.DATABASE_URL!);
 const db = drizzle(sql);
 
 async function runMigrations() {
@@ -1652,19 +1623,16 @@ seedDatabase().catch(console.error)
 import { db } from '@/lib/db'
 import { users } from '@/schema/users'
 import { eq } from 'drizzle-orm'
+import { placeholder } from 'drizzle-orm'
 
-// Prepare frequently used queries
-export const getUserByIdPrepared = db
-  .select()
-  .from(users)
-  .where(eq(users.id, placeholder('id')))
-  .prepare()
+// Prepare frequently used queries - Using query pattern
+export const getUserByIdPrepared = db.query.users.findFirst({
+  where: eq(users.id, placeholder('id')),
+}).prepare()
 
-export const getUserByEmailPrepared = db
-  .select()
-  .from(users)
-  .where(eq(users.email, placeholder('email')))
-  .prepare()
+export const getUserByEmailPrepared = db.query.users.findFirst({
+  where: eq(users.email, placeholder('email')),
+}).prepare()
 
 // Usage
 const user = await getUserByIdPrepared.execute({ id: 123 })
@@ -1754,58 +1722,10 @@ DATABASE_URL=postgresql://username:password@localhost:5432/myapp_development
 DATABASE_URL_TEST=postgresql://username:password@localhost:5432/myapp_test
 DATABASE_URL_PRODUCTION=postgresql://username:password@host:5432/myapp_production
 
-# For Neon (serverless PostgreSQL)
+# For Supabase (serverless PostgreSQL)
 
-DATABASE_URL=postgresql://username:password@ep-cool-darkness-123456.us-east-1.aws.neon.tech/neondb?sslmode=require
+DATABASE_URL=postgresql://postgres:password@db.abcdefghijklmnop.supabase.co:5432/postgres?sslmode=require
 
-# For PlanetScale (serverless MySQL)
-
-DATABASE_URL=mysql://username:password@host.connect.psdb.cloud/database?sslmode=require
-
-# For local SQLite
-
-DATABASE_URL=file:./dev.db
-```
-
-## Repository Pattern
-
-```typescript
-// lib/repositories/user-repository.ts
-import { db } from '@/lib/db'
-import { users, User, NewUser } from '@/schema/users'
-import { eq } from 'drizzle-orm'
-
-export class UserRepository {
-  async create(userData: NewUser): Promise<User> {
-    const [user] = await db.insert(users).values(userData).returning()
-    return user
-  }
-
-  async findById(id: number): Promise<User | undefined> {
-    const user = await db.select().from(users).where(eq(users.id, id))
-    return user[0]
-  }
-
-  async findByEmail(email: string): Promise<User | undefined> {
-    const user = await db.select().from(users).where(eq(users.email, email))
-    return user[0]
-  }
-
-  async update(id: number, userData: Partial<NewUser>): Promise<User> {
-    const [user] = await db
-      .update(users)
-      .set(userData)
-      .where(eq(users.id, id))
-      .returning()
-    return user
-  }
-
-  async delete(id: number): Promise<void> {
-    await db.delete(users).where(eq(users.id, id))
-  }
-}
-
-export const userRepository = new UserRepository()
 ```
 
 ## Transaction Handling
@@ -1882,142 +1802,142 @@ export async function createOrderWithItems(
 - **Shadow and border radius** system for depth
 - **Animation and transition** utilities for micro-interactions
 
-## Basic Tailwind Config
+## Tailwind CSS v4 Setup
 
-```javascript
-// tailwind.config.js
-/** @type {import('tailwindcss').Config} */
-module.exports = {
-  content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
-  theme: {
-    extend: {
-      // Custom configuration here
-    },
-  },
-  plugins: [],
+```css
+/* globals.css - CSS-first configuration */
+@import "tailwindcss";
+
+@theme {
+  /* Custom theme configuration using CSS variables */
+  --color-primary-50: #f0f9ff;
+  --color-primary-100: #e0f2fe;
+  --color-primary-200: #bae6fd;
+  --color-primary-300: #7dd3fc;
+  --color-primary-400: #38bdf8;
+  --color-primary-500: #0ea5e9;
+  --color-primary-600: #0284c7;
+  --color-primary-700: #0369a1;
+  --color-primary-800: #075985;
+  --color-primary-900: #0c4a6e;
+  --color-primary-950: #082f49;
+  
+  --font-sans: "Inter", "system-ui", "sans-serif";
+  --font-mono: "JetBrains Mono", "Consolas", "monospace";
+  
+  --spacing-18: 4.5rem;
+  --spacing-88: 22rem;
 }
 ```
 
 ## Design System Configuration
 
-```javascript
-// tailwind.config.js
-module.exports = {
-  content: ['./src/**/*.{js,ts,jsx,tsx}'],
-  darkMode: 'class',
-  theme: {
-    extend: {
-      colors: {
-        brand: {
-          50: '#f0f9ff',
-          100: '#e0f2fe',
-          200: '#bae6fd',
-          300: '#7dd3fc',
-          400: '#38bdf8',
-          500: '#0ea5e9',
-          600: '#0284c7',
-          700: '#0369a1',
-          800: '#075985',
-          900: '#0c4a6e',
-          950: '#082f49',
-        },
-        gray: {
-          50: '#f9fafb',
-          100: '#f3f4f6',
-          200: '#e5e7eb',
-          300: '#d1d5db',
-          400: '#9ca3af',
-          500: '#6b7280',
-          600: '#4b5563',
-          700: '#374151',
-          800: '#1f2937',
-          900: '#111827',
-          950: '#030712',
-        },
-      },
-      fontFamily: {
-        sans: ['Inter', 'system-ui', 'sans-serif'],
-        mono: ['JetBrains Mono', 'Consolas', 'monospace'],
-      },
-      spacing: {
-        18: '4.5rem',
-        88: '22rem',
-      },
-      animation: {
-        'fade-in': 'fadeIn 0.5s ease-in-out',
-        'slide-up': 'slideUp 0.3s ease-out',
-        'bounce-gentle': 'bounceGentle 2s infinite',
-      },
-      keyframes: {
-        fadeIn: {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        slideUp: {
-          '0%': { transform: 'translateY(10px)', opacity: '0' },
-          '100%': { transform: 'translateY(0)', opacity: '1' },
-        },
-        bounceGentle: {
-          '0%, 100%': { transform: 'translateY(-5%)' },
-          '50%': { transform: 'translateY(0)' },
-        },
-      },
-    },
-  },
-  plugins: [
-    require('@tailwindcss/typography'),
-    require('@tailwindcss/forms'),
-    require('@tailwindcss/aspect-ratio'),
-    require('@tailwindcss/container-queries'),
-  ],
+```css
+/* globals.css - Complete design system with Tailwind CSS v4 */
+@import "tailwindcss";
+
+@theme {
+  /* Brand Colors */
+  --color-brand-50: #f0f9ff;
+  --color-brand-100: #e0f2fe;
+  --color-brand-200: #bae6fd;
+  --color-brand-300: #7dd3fc;
+  --color-brand-400: #38bdf8;
+  --color-brand-500: #0ea5e9;
+  --color-brand-600: #0284c7;
+  --color-brand-700: #0369a1;
+  --color-brand-800: #075985;
+  --color-brand-900: #0c4a6e;
+  --color-brand-950: #082f49;
+  
+  /* Gray Scale */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  --color-gray-950: #030712;
+  
+  /* Typography */
+  --font-sans: "Inter", "system-ui", "sans-serif";
+  --font-mono: "JetBrains Mono", "Consolas", "monospace";
+  
+  /* Spacing */
+  --spacing-18: 4.5rem;
+  --spacing-88: 22rem;
+  
+  /* Animations */
+  --animate-fade-in: fadeIn 0.5s ease-in-out;
+  --animate-slide-up: slideUp 0.3s ease-out;
+  --animate-bounce-gentle: bounceGentle 2s infinite;
+}
+
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slideUp {
+  0% { transform: translateY(10px); opacity: 0; }
+  100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes bounceGentle {
+  0%, 100% { transform: translateY(-5%); }
+  50% { transform: translateY(0); }
 }
 ```
 
 ## Advanced Configuration with CSS Variables
 
-```javascript
-// tailwind.config.js
-module.exports = {
-  theme: {
-    extend: {
-      colors: {
-        background: 'hsl(var(--background))',
-        foreground: 'hsl(var(--foreground))',
-        primary: {
-          DEFAULT: 'hsl(var(--primary))',
-          foreground: 'hsl(var(--primary-foreground))',
-        },
-        secondary: {
-          DEFAULT: 'hsl(var(--secondary))',
-          foreground: 'hsl(var(--secondary-foreground))',
-        },
-        muted: {
-          DEFAULT: 'hsl(var(--muted))',
-          foreground: 'hsl(var(--muted-foreground))',
-        },
-        accent: {
-          DEFAULT: 'hsl(var(--accent))',
-          foreground: 'hsl(var(--accent-foreground))',
-        },
-        destructive: {
-          DEFAULT: 'hsl(var(--destructive))',
-          foreground: 'hsl(var(--destructive-foreground))',
-        },
-        border: 'hsl(var(--border))',
-        input: 'hsl(var(--input))',
-        ring: 'hsl(var(--ring))',
-      },
-      borderRadius: {
-        lg: 'var(--radius)',
-        md: 'calc(var(--radius) - 2px)',
-        sm: 'calc(var(--radius) - 4px)',
-      },
-    },
-  },
+```css
+/* globals.css - Advanced theme with CSS variables for shadcn/ui compatibility */
+@import "tailwindcss";
+
+@theme {
+  /* Light theme variables */
+  --color-background: 0 0% 100%;
+  --color-foreground: 222.2 84% 4.9%;
+  --color-primary: 221.2 83.2% 53.3%;
+  --color-primary-foreground: 210 40% 98%;
+  --color-secondary: 210 40% 96%;
+  --color-secondary-foreground: 222.2 84% 4.9%;
+  --color-muted: 210 40% 96%;
+  --color-muted-foreground: 215.4 16.3% 46.9%;
+  --color-accent: 210 40% 96%;
+  --color-accent-foreground: 222.2 84% 4.9%;
+  --color-destructive: 0 84.2% 60.2%;
+  --color-destructive-foreground: 210 40% 98%;
+  --color-border: 214.3 31.8% 91.4%;
+  --color-input: 214.3 31.8% 91.4%;
+  --color-ring: 221.2 83.2% 53.3%;
+  --color-radius: 0.5rem;
+}
+
+/* Dark theme variables */
+@media (prefers-color-scheme: dark) {
+  @theme {
+    --color-background: 222.2 84% 4.9%;
+    --color-foreground: 210 40% 98%;
+    --color-primary: 217.2 91.2% 59.8%;
+    --color-primary-foreground: 222.2 84% 4.9%;
+    --color-secondary: 217.2 32.6% 17.5%;
+    --color-secondary-foreground: 210 40% 98%;
+    --color-muted: 217.2 32.6% 17.5%;
+    --color-muted-foreground: 215 20.2% 65.1%;
+    --color-accent: 217.2 32.6% 17.5%;
+    --color-accent-foreground: 210 40% 98%;
+    --color-destructive: 0 62.8% 30.6%;
+    --color-destructive-foreground: 210 40% 98%;
+    --color-border: 217.2 32.6% 17.5%;
+    --color-input: 217.2 32.6% 17.5%;
+    --color-ring: 224.3 76.3% 94.1%;
+  }
 }
 ```
 
@@ -2218,33 +2138,13 @@ function ProductCard() {
 }
 ```
 
-## CSS Variables Approach
+## PostCSS Configuration
 
-```css
-/* globals.css */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-
-@layer base {
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 222.2 84% 4.9%;
-  }
-
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 84% 4.9%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-  }
-}
+```javascript
+// postcss.config.js - Required for Tailwind CSS v4
+export default {
+  plugins: ["@tailwindcss/postcss"],
+};
 ```
 
 ## Theme Toggle Component
@@ -2274,29 +2174,7 @@ function ThemeToggle() {
     </button>
   )
 }
-```
 
-## Content Configuration
-
-```javascript
-// Optimized content paths for better purging
-module.exports = {
-  content: [
-    './pages/**/*.{js,ts,jsx,tsx,mdx}',
-    './components/**/*.{js,ts,jsx,tsx,mdx}',
-    './app/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/**/*.{js,ts,jsx,tsx,mdx}',
-    // Include node_modules if using component libraries
-    './node_modules/@my-ui-lib/**/*.{js,ts,jsx,tsx}',
-  ],
-  safelist: [
-    // Keep dynamic classes that might be missed by purging
-    {
-      pattern: /bg-(red|green|blue)-(100|500|900)/,
-      variants: ['hover', 'focus'],
-    },
-  ],
-}
 ```
 
 ## Custom Utilities
@@ -2352,39 +2230,38 @@ module.exports = {
 
 ## Custom Animations
 
-```javascript
-// Advanced animations in Tailwind config
-module.exports = {
-  theme: {
-    extend: {
-      animation: {
-        'spin-slow': 'spin 3s linear infinite',
-        'pulse-fast': 'pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-        'bounce-x': 'bounceX 1s infinite',
-        'fade-in-up': 'fadeInUp 0.5s ease-out',
-        'slide-in-right': 'slideInRight 0.3s ease-out',
-        'scale-in': 'scaleIn 0.2s ease-out',
-      },
-      keyframes: {
-        bounceX: {
-          '0%, 100%': { transform: 'translateX(-25%)' },
-          '50%': { transform: 'translateX(0)' },
-        },
-        fadeInUp: {
-          '0%': { opacity: '0', transform: 'translateY(20px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        slideInRight: {
-          '0%': { opacity: '0', transform: 'translateX(20px)' },
-          '100%': { opacity: '1', transform: 'translateX(0)' },
-        },
-        scaleIn: {
-          '0%': { opacity: '0', transform: 'scale(0.95)' },
-          '100%': { opacity: '1', transform: 'scale(1)' },
-        },
-      },
-    },
-  },
+```css
+/* Advanced animations with Tailwind CSS v4 */
+@import "tailwindcss";
+
+@theme {
+  /* Custom animations */
+  --animate-spin-slow: spin 3s linear infinite;
+  --animate-pulse-fast: pulse 1s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-bounce-x: bounceX 1s infinite;
+  --animate-fade-in-up: fadeInUp 0.5s ease-out;
+  --animate-slide-in-right: slideInRight 0.3s ease-out;
+  --animate-scale-in: scaleIn 0.2s ease-out;
+}
+
+@keyframes bounceX {
+  0%, 100% { transform: translateX(-25%); }
+  50% { transform: translateX(0); }
+}
+
+@keyframes fadeInUp {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInRight {
+  0% { opacity: 0; transform: translateX(20px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes scaleIn {
+  0% { opacity: 0; transform: scale(0.95); }
+  100% { opacity: 1; transform: scale(1); }
 }
 ```
 
@@ -2480,49 +2357,37 @@ function FocusExample() {
 }
 ```
 
-## Typography Plugin
+## Plugin Configuration
 
-```javascript
-// @tailwindcss/typography configuration
-module.exports = {
-  plugins: [
-    require('@tailwindcss/typography')({
-      className: 'prose',
-    }),
-  ],
-  theme: {
-    extend: {
-      typography: {
-        DEFAULT: {
-          css: {
-            maxWidth: 'none',
-            color: 'inherit',
-            a: {
-              color: 'inherit',
-              textDecoration: 'none',
-              fontWeight: '500',
-            },
-            'a:hover': {
-              color: '#0ea5e9',
-            },
-          },
-        },
-      },
-    },
-  },
+```css
+/* Tailwind CSS v4 - Plugin configuration is now handled differently */
+@import "tailwindcss";
+
+/* Typography plugin styles can be added as custom CSS */
+.prose {
+  max-width: none;
+  color: inherit;
 }
-```
 
-## Forms Plugin
+.prose a {
+  color: inherit;
+  text-decoration: none;
+  font-weight: 500;
+}
 
-```javascript
-// @tailwindcss/forms configuration
-module.exports = {
-  plugins: [
-    require('@tailwindcss/forms')({
-      strategy: 'class', // or 'base'
-    }),
-  ],
+.prose a:hover {
+  color: #0ea5e9;
+}
+
+/* Forms plugin styles */
+@layer base {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  textarea,
+  select {
+    @apply block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm transition-colors focus:border-brand-500 focus:ring-1 focus:ring-brand-500 focus:outline-none;
+  }
 }
 ```
 
@@ -2536,7 +2401,7 @@ module.exports = {
 - **shadcn/ui** v0.8.0: Beautiful, accessible components with Radix UI and Tailwind CSS
 - **Vercel AI SDK** v1.0.0: Streaming AI applications with function calling and multi-provider support
 - **Drizzle ORM** v1.0.0: Type-safe database operations with schema management and migrations
-- **Tailwind CSS** v3.4.0: Utility-first CSS framework for rapid UI development
+- **Tailwind CSS** v4.0.0: Utility-first CSS framework with CSS-first configuration
 
 ### Dependencies
 
@@ -2552,7 +2417,7 @@ These packages should be installed in your project:
 - **react**: >=19.0.0 or >=18.0.0
 - **react-dom**: >=19.0.0 or >=18.0.0
 - **typescript**: >=5.0.0
-- **tailwindcss**: >=3.4.0
+- **tailwindcss**: >=4.0.0
 - **ai**: >=3.0.0
 - **drizzle-orm**: >=0.40.0
 - **drizzle-kit**: >=0.28.0
