@@ -1,24 +1,28 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db/drizzle';
-import { groupMemberships } from '@/lib/db/schema';
-import { eq, and } from 'drizzle-orm';
+import { NextRequest, NextResponse } from 'next/server'
+import { db } from '@/lib/db/drizzle'
+import { groupMemberships } from '@/lib/db/schema'
+import { eq, and } from 'drizzle-orm'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const groupId = searchParams.get('groupId') || searchParams.get('committeeId');
+    const { searchParams } = new URL(request.url)
+    const userId = searchParams.get('userId')
+    const groupId =
+      searchParams.get('groupId') || searchParams.get('committeeId')
 
     if (!userId || !groupId) {
-      return NextResponse.json({ 
-        error: 'Missing required parameters: userId and groupId' 
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          error: 'Missing required parameters: userId and groupId',
+        },
+        { status: 400 }
+      )
     }
 
-    console.log('[committee-membership]: Checking membership', { 
-      userId: parseInt(userId), 
-      groupId: parseInt(groupId) 
-    });
+    console.log('[committee-membership]: Checking membership', {
+      userId: parseInt(userId),
+      groupId: parseInt(groupId),
+    })
 
     // Check if user is a member of this group/committee
     const membership = await db.query.groupMemberships.findFirst({
@@ -34,34 +38,38 @@ export async function GET(request: NextRequest) {
             name: true,
             description: true,
             isActive: true,
-            type: true
-          }
-        }
-      }
-    });
+            type: true,
+          },
+        },
+      },
+    })
 
     if (membership) {
       return NextResponse.json({
         isMember: true,
         role: membership.role,
-        permissions: membership.permissions ? JSON.parse(membership.permissions) : [],
+        permissions: membership.permissions
+          ? JSON.parse(membership.permissions)
+          : [],
         joinedAt: membership.joinedAt,
-        group: membership.group
-      });
+        group: membership.group,
+      })
     } else {
       return NextResponse.json({
         isMember: false,
         role: null,
         permissions: [],
         joinedAt: null,
-        committee: null
-      });
+        committee: null,
+      })
     }
-
   } catch (error) {
-    console.error('[committee-membership]: Error checking membership', error);
-    return NextResponse.json({ 
-      error: 'Failed to check committee membership' 
-    }, { status: 500 });
+    console.error('[committee-membership]: Error checking membership', error)
+    return NextResponse.json(
+      {
+        error: 'Failed to check committee membership',
+      },
+      { status: 500 }
+    )
   }
-} 
+}

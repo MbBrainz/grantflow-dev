@@ -1,29 +1,33 @@
-import { 
+import {
   createNotification as dbCreateNotification,
-  getUser 
-} from '@/lib/db/queries';
-import { sendNotificationToUser, broadcastNotification } from '@/lib/notifications/utils';
+  getUser,
+} from '@/lib/db/queries'
+import {
+  sendNotificationToUser,
+  broadcastNotification,
+} from '@/lib/notifications/utils'
 
 // Notification types
 export const NOTIFICATION_TYPES = {
   NEW_MESSAGE: 'new_message',
-  VOTE_CAST: 'vote_cast', 
+  VOTE_CAST: 'vote_cast',
   STATUS_CHANGE: 'status_change',
   SUBMISSION_CREATED: 'submission_created',
   REVIEW_REQUESTED: 'review_requested',
-} as const;
+} as const
 
-export type NotificationType = typeof NOTIFICATION_TYPES[keyof typeof NOTIFICATION_TYPES];
+export type NotificationType =
+  (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES]
 
 // Notification data structure
 export interface NotificationData {
-  type: NotificationType;
-  title: string;
-  message: string;
-  submissionId?: number;
-  discussionId?: number;
-  actionUrl?: string;
-  metadata?: Record<string, any>;
+  type: NotificationType
+  title: string
+  message: string
+  submissionId?: number
+  discussionId?: number
+  actionUrl?: string
+  metadata?: Record<string, any>
 }
 
 // Create and store notification in database
@@ -32,7 +36,10 @@ export async function createNotification(
   data: NotificationData
 ): Promise<boolean> {
   try {
-    console.log(`[notifications-server]: Creating notification for user ${userId}`, data);
+    console.log(
+      `[notifications-server]: Creating notification for user ${userId}`,
+      data
+    )
 
     // Store in database
     await dbCreateNotification({
@@ -46,23 +53,27 @@ export async function createNotification(
         actionUrl: data.actionUrl,
         metadata: data.metadata,
       }),
-    });
+    })
 
     // Send real-time notification via SSE
     const realtimeNotification = {
       ...data,
       userId,
       id: Date.now(), // Temporary ID for real-time
-    };
+    }
 
-    const sent = sendNotificationToUser(userId, realtimeNotification);
-    
-    console.log(`[notifications-server]: Notification created and sent via SSE: ${sent}`);
-    return true;
+    const sent = sendNotificationToUser(userId, realtimeNotification)
 
+    console.log(
+      `[notifications-server]: Notification created and sent via SSE: ${sent}`
+    )
+    return true
   } catch (error) {
-    console.error(`[notifications-server]: Failed to create notification for user ${userId}`, error);
-    return false;
+    console.error(
+      `[notifications-server]: Failed to create notification for user ${userId}`,
+      error
+    )
+    return false
   }
 }
 
@@ -77,11 +88,11 @@ export async function notifyNewMessage(
 ) {
   try {
     // Get submission details to find relevant users
-    const submission = await getSubmissionWithParticipants(submissionId);
-    if (!submission) return;
+    const submission = await getSubmissionWithParticipants(submissionId)
+    if (!submission) return
 
     // Determine who should be notified
-    const usersToNotify = getNotificationTargets(submission, excludeUserId);
+    const usersToNotify = getNotificationTargets(submission, excludeUserId)
 
     const notification: NotificationData = {
       type: NOTIFICATION_TYPES.NEW_MESSAGE,
@@ -90,19 +101,20 @@ export async function notifyNewMessage(
       submissionId,
       discussionId,
       actionUrl: `/dashboard/submissions/${submissionId}`,
-      metadata: { authorName }
-    };
+      metadata: { authorName },
+    }
 
     // Create notifications for all relevant users
-    const promises = usersToNotify.map(userId => 
+    const promises = usersToNotify.map(userId =>
       createNotification(userId, notification)
-    );
+    )
 
-    await Promise.all(promises);
-    console.log(`[notifications-server]: New message notifications sent to ${usersToNotify.length} users`);
-
+    await Promise.all(promises)
+    console.log(
+      `[notifications-server]: New message notifications sent to ${usersToNotify.length} users`
+    )
   } catch (error) {
-    console.error('[notifications-server]: Failed to notify new message', error);
+    console.error('[notifications-server]: Failed to notify new message', error)
   }
 }
 
@@ -113,10 +125,10 @@ export async function notifyVoteCast(
   excludeUserId?: number
 ) {
   try {
-    const submission = await getSubmissionWithParticipants(submissionId);
-    if (!submission) return;
+    const submission = await getSubmissionWithParticipants(submissionId)
+    if (!submission) return
 
-    const usersToNotify = getNotificationTargets(submission, excludeUserId);
+    const usersToNotify = getNotificationTargets(submission, excludeUserId)
 
     const notification: NotificationData = {
       type: NOTIFICATION_TYPES.VOTE_CAST,
@@ -124,18 +136,19 @@ export async function notifyVoteCast(
       message: `${reviewerName} voted: ${vote}`,
       submissionId,
       actionUrl: `/dashboard/submissions/${submissionId}`,
-      metadata: { reviewerName, vote }
-    };
+      metadata: { reviewerName, vote },
+    }
 
-    const promises = usersToNotify.map(userId => 
+    const promises = usersToNotify.map(userId =>
       createNotification(userId, notification)
-    );
+    )
 
-    await Promise.all(promises);
-    console.log(`[notifications-server]: Vote cast notifications sent to ${usersToNotify.length} users`);
-
+    await Promise.all(promises)
+    console.log(
+      `[notifications-server]: Vote cast notifications sent to ${usersToNotify.length} users`
+    )
   } catch (error) {
-    console.error('[notifications-server]: Failed to notify vote cast', error);
+    console.error('[notifications-server]: Failed to notify vote cast', error)
   }
 }
 
@@ -145,10 +158,10 @@ export async function notifyStatusChange(
   excludeUserId?: number
 ) {
   try {
-    const submission = await getSubmissionWithParticipants(submissionId);
-    if (!submission) return;
+    const submission = await getSubmissionWithParticipants(submissionId)
+    if (!submission) return
 
-    const usersToNotify = getNotificationTargets(submission, excludeUserId);
+    const usersToNotify = getNotificationTargets(submission, excludeUserId)
 
     const notification: NotificationData = {
       type: NOTIFICATION_TYPES.STATUS_CHANGE,
@@ -156,18 +169,22 @@ export async function notifyStatusChange(
       message: `Submission status updated to: ${newStatus}`,
       submissionId,
       actionUrl: `/dashboard/submissions/${submissionId}`,
-      metadata: { newStatus }
-    };
+      metadata: { newStatus },
+    }
 
-    const promises = usersToNotify.map(userId => 
+    const promises = usersToNotify.map(userId =>
       createNotification(userId, notification)
-    );
+    )
 
-    await Promise.all(promises);
-    console.log(`[notifications-server]: Status change notifications sent to ${usersToNotify.length} users`);
-
+    await Promise.all(promises)
+    console.log(
+      `[notifications-server]: Status change notifications sent to ${usersToNotify.length} users`
+    )
   } catch (error) {
-    console.error('[notifications-server]: Failed to notify status change', error);
+    console.error(
+      '[notifications-server]: Failed to notify status change',
+      error
+    )
   }
 }
 
@@ -180,23 +197,26 @@ async function getSubmissionWithParticipants(submissionId: number) {
     title: `Submission ${submissionId}`,
     submitterId: 1, // This should come from actual DB query
     participants: [1, 2], // This should include all users who have participated
-  };
+  }
 }
 
 // Helper to determine who should receive notifications
-function getNotificationTargets(submission: any, excludeUserId?: number): number[] {
-  const targets = new Set<number>();
-  
+function getNotificationTargets(
+  submission: any,
+  excludeUserId?: number
+): number[] {
+  const targets = new Set<number>()
+
   // Always notify the submission author
-  targets.add(submission.submitterId);
-  
+  targets.add(submission.submitterId)
+
   // Add any participants in discussions
-  submission.participants?.forEach((userId: number) => targets.add(userId));
-  
+  submission.participants?.forEach((userId: number) => targets.add(userId))
+
   // Remove the user who triggered the notification
   if (excludeUserId) {
-    targets.delete(excludeUserId);
+    targets.delete(excludeUserId)
   }
-  
-  return Array.from(targets);
-} 
+
+  return Array.from(targets)
+}

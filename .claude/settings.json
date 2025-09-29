@@ -1,0 +1,263 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(npm run build:*)",
+      "Bash(npm run lint:*)",
+      "Bash(npm run test:*)",
+      "Bash(npm run type-check:*)",
+      "Bash(npx next:*)",
+      "Write(app/**/*)",
+      "Write(src/**/*)",
+      "Write(components/**/*)",
+      "Write(lib/**/*)",
+      "Write(public/**/*)",
+      "Read(next.config.js)",
+      "Read(package.json)",
+      "Read(tsconfig.json)",
+      "Edit(tailwind.config.js)",
+      "Bash(npx shadcn@latest:*)",
+      "Bash(npx prettier:*)",
+      "Bash(npx eslint:*)",
+      "Write(styles/**/*)",
+      "Read(components.json)",
+      "Read(tailwind.config.js)",
+      "Edit(components.json)",
+      "Bash(npm:*)",
+      "Bash(pnpm:*)",
+      "Bash(yarn:*)",
+      "Bash(npx:*)",
+      "Bash(node:*)",
+      "Bash(git:*)",
+      "Bash(curl:*)",
+      "Bash(mkdir:*)",
+      "Bash(cp:*)",
+      "Bash(mv:*)",
+      "Bash(rm:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(grep:*)",
+      "Bash(find:*)",
+      "Bash(jq:*)",
+      "Bash(echo:*)",
+      "Bash(vercel:*)",
+      "Bash(docker:*)",
+      "Write",
+      "Edit",
+      "MultiEdit",
+      "Read",
+      "Glob",
+      "Grep",
+      "LS",
+      "Task",
+      "Bash(npm run db:*)",
+      "Bash(npx drizzle-kit:*)",
+      "Bash(npm run migrate:*)",
+      "Bash(npm run seed:*)",
+      "Write(drizzle/**/*)",
+      "Write(src/schema/**/*)",
+      "Write(src/lib/db.ts)",
+      "Read(drizzle.config.ts)",
+      "Bash(npx tailwindcss:*)",
+      "Bash(npx @tailwindcss/*:*)",
+      "Write(pages/**/*)",
+      "Edit(globals.css)",
+      "Edit(src/styles/**/*)"
+    ],
+    "deny": [
+      "Read(.env.production)",
+      "Read(.env.local)",
+      "Write(.env)",
+      "Bash(rm -rf:*)",
+      "Bash(npm publish:*)",
+      "Read(node_modules/**)",
+      "Write(node_modules/**)",
+      "Bash(sudo:*)",
+      "Bash(su:*)",
+      "Read(.env)",
+      "Read(.env.*)",
+      "Read(*/secrets/*)",
+      "Read(**/secrets/**)",
+      "Write(.env.*)"
+    ]
+  },
+  "env": {
+    "NODE_ENV": "development",
+    "NEXT_PUBLIC_APP_ENV": "development",
+    "SHADCN_STYLE": "new-york",
+    "SHADCN_BASE_COLOR": "zinc",
+    "AI_SDK_EXPERT_MODE": "advanced",
+    "CLAUDE_CODE_AI_SDK_CONFIG": "loaded",
+    "ENABLE_REASONING_MODELS": "true",
+    "ENABLE_COMPUTER_USE": "true",
+    "ENABLE_GENERATIVE_UI": "true",
+    "ENABLE_EDGE_OPTIMIZATION": "true",
+    "ENABLE_ADVANCED_MONITORING": "true",
+    "TAILWIND_CONFIG": "tailwind.config.js",
+    "TAILWIND_DARK_MODE": "class"
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo 'Creating/updating file: $FILE_PATH'",
+            "timeout": 5
+          }
+        ],
+        "matcher": "Write"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read file_path; if echo \"$file_path\" | grep -q '\\.env'; then echo \"🔒 WARNING: Writing to environment file. Ensure no secrets are committed!\"; echo \"🔑 AI SDK environment variables checklist:\"; echo \"  • ANTHROPIC_API_KEY for Claude models\"; echo \"  • OPENAI_API_KEY for GPT models\"; echo \"  • Provider-specific configurations\"; echo \"  • Edge runtime settings\"; fi; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read file_path; if echo \"$file_path\" | grep -q 'api.*route'; then echo \"🛡️ Creating AI SDK API route: $file_path\"; echo \"📋 Advanced implementation checklist:\"; echo \"  ✅ Edge Runtime compatibility (runtime = 'edge')\"; echo \"  ✅ Advanced streaming with timeouts\"; echo \"  ✅ Multi-step tool execution with stopWhen\"; echo \"  ✅ Background processing with waitUntil\"; echo \"  ✅ Provider fallback mechanisms\"; echo \"  ✅ Comprehensive error handling\"; echo \"  ✅ Rate limiting and security\"; echo \"  ✅ Performance monitoring integration\"; fi; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read file_path; if echo \"$file_path\" | grep -q 'next\\.config'; then echo \"⚙️ Next.js configuration update: $file_path\"; echo \"🚀 Advanced AI SDK optimizations:\"; echo \"  • Edge Runtime configuration\"; echo \"  • Bundle optimization for AI SDK\"; echo \"  • Streaming response headers\"; echo \"  • Performance monitoring setup\"; fi; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read file_path; if echo \"$file_path\" | grep -q 'vercel\\.json'; then echo \"🌐 Vercel configuration detected: $file_path\"; echo \"⚡ Edge deployment optimizations:\"; echo \"  • Regional function deployment\"; echo \"  • Edge Runtime configuration\"; echo \"  • Custom headers for AI responses\"; echo \"  • Performance monitoring setup\"; fi; }"
+          }
+        ],
+        "matcher": "Write"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | { read cmd; if echo \"$cmd\" | grep -q 'rm.*-rf'; then echo \"⚠️ CAUTION: Destructive operation detected!\"; echo \"Please review: $cmd\"; echo \"💾 Consider backing up important AI models/data first\"; fi; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | { read cmd; if echo \"$cmd\" | grep -q 'git.*push'; then echo \"📤 Git push detected\"; echo \"🔍 Pre-push AI SDK checklist:\"; echo \"  • No API keys in commits\"; echo \"  • AI SDK dependencies updated\"; echo \"  • Tests passing\"; echo \"  • Performance benchmarks acceptable\"; fi; }"
+          }
+        ],
+        "matcher": "Bash"
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx prettier --write $FILE_PATH",
+            "timeout": 10
+          }
+        ],
+        "matcher": "Write|Edit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx prettier --write",
+            "timeout": 10
+          }
+        ],
+        "matcher": "Write|Edit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read file_path; if echo \"$file_path\" | grep -q '\\.(ts|tsx|js|jsx)$'; then echo \"🔧 Formatting $file_path with Prettier...\"; npx prettier --write \"$file_path\" 2>/dev/null || echo \"⚠️ Prettier not available\"; fi; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read file_path; if echo \"$file_path\" | grep -q 'api.*route\\.(ts|js)$'; then echo \"🚀 AI SDK API route detected: $file_path\"; echo \"📋 Advanced checklist:\"; echo \"  • Edge Runtime compatibility (runtime = 'edge')\"; echo \"  • Streaming with proper timeouts\"; echo \"  • Error boundaries and recovery\"; echo \"  • Rate limiting and security\"; echo \"  • Monitoring and analytics integration\"; fi; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read file_path; if echo \"$file_path\" | grep -q 'package\\.json$'; then echo \"📦 Package.json updated: $file_path\"; echo \"🔄 Run 'npm install' to sync dependencies\"; echo \"💡 Consider updating Vercel config for Edge Runtime\"; fi; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read file_path; if echo \"$file_path\" | grep -q 'streamUI\\|generateUI'; then echo \"🎨 Generative UI detected: $file_path\"; echo \"✨ Advanced UI features available:\"; echo \"  • Dynamic component streaming\"; echo \"  • Real-time chart generation\"; echo \"  • Interactive form creation\"; echo \"  • Dashboard widgets\"; fi; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read file_path; if echo \"$file_path\" | grep -q 'computer.*tool\\|computer_20241022'; then echo \"🖥️ Computer Use implementation detected: $file_path\"; echo \"🔐 Security reminders:\"; echo \"  • Validate all actions before execution\"; echo \"  • Implement rate limiting\"; echo \"  • Add permission controls\"; echo \"  • Log all computer interactions\"; fi; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.file_path' | { read file_path; if echo \"$file_path\" | grep -q 'o1-preview\\|o1-mini\\|deepseek.*reasoner'; then echo \"🧠 Reasoning model detected: $file_path\"; echo \"💭 Reasoning optimizations:\"; echo \"  • Enable thinking mode visibility\"; echo \"  • Increase token limits (8K-32K)\"; echo \"  • Add reasoning-specific prompts\"; echo \"  • Monitor thinking token usage\"; fi; }"
+          }
+        ],
+        "matcher": "Write|Edit|MultiEdit"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | { read cmd; if echo \"$cmd\" | grep -q 'npm install.*@ai-sdk'; then echo \"🤖 AI SDK dependency installed!\"; echo \"🌟 Advanced features now available:\"; echo \"  • Reasoning models (O1, O3-mini, DeepSeek R1)\"; echo \"  • Computer use capabilities\"; echo \"  • Generative UI with streamUI\"; echo \"  • Multi-modal streaming\"; echo \"  • Edge runtime optimization\"; fi; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | { read cmd; if echo \"$cmd\" | grep -q 'npm.*test'; then echo \"🧪 Tests completed\"; echo \"📊 Advanced testing coverage:\"; echo \"  • Streaming response validation\"; echo \"  • Error recovery mechanisms\"; echo \"  • Tool execution testing\"; echo \"  • Edge runtime compatibility\"; echo \"  • Performance benchmarks\"; fi; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | { read cmd; if echo \"$cmd\" | grep -q 'vercel.*deploy'; then echo \"🚀 Vercel deployment detected\"; echo \"⚡ Edge optimization reminders:\"; echo \"  • Verify Edge Runtime configuration\"; echo \"  • Check bundle size limits\"; echo \"  • Test regional performance\"; echo \"  • Monitor cold start times\"; fi; }"
+          },
+          {
+            "type": "command",
+            "command": "jq -r '.tool_input.command' | { read cmd; if echo \"$cmd\" | grep -q 'build'; then echo \"🏗️ Build process initiated\"; echo \"🔍 Advanced build checks:\"; echo \"  • TypeScript compilation\"; echo \"  • Bundle analysis\"; echo \"  • Dependency optimization\"; echo \"  • Performance profiling\"; fi; }"
+          }
+        ],
+        "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx prettier --write $FILE_PATH",
+            "timeout": 10
+          }
+        ],
+        "matcher": "Write"
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx prettier --write",
+            "timeout": 10
+          }
+        ],
+        "matcher": "Write|Edit"
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "if [ -f \"package.json\" ] && grep -q '@ai-sdk' package.json; then echo \"\\n🎯 Advanced AI SDK Development Session Complete\"; echo \"\\n🚀 Cutting-edge AI features implemented:\"; echo \"  ✨ Generative UI with streamUI\"; echo \"  🧠 Reasoning models (O1, O3-mini, DeepSeek)\"; echo \"  🖥️ Computer use automation\"; echo \"  ⚡ Edge runtime optimization\"; echo \"  📊 Performance monitoring\"; echo \"  🔧 Advanced streaming patterns\"; echo \"\\n📋 Final production checklist:\"; echo \"  ✓ Streaming responses optimized?\"; echo \"  ✓ Error boundaries implemented?\"; echo \"  ✓ Edge runtime configured?\"; echo \"  ✓ Monitoring and analytics active?\"; echo \"  ✓ Security measures in place?\"; echo \"  ✓ Performance tested?\"; echo \"  ✓ Cost tracking enabled?\"; echo \"\\n🌟 Ready to deploy next-generation AI experiences!\"; fi"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo \"🤖 Claude Code Advanced AI SDK Expert is ready!\"; echo \"\\n🌟 Advanced capabilities available:\"; echo \"  🧠 Reasoning Models (O1, O3-mini, DeepSeek R1)\"; echo \"  🖥️ Computer Use Automation\"; echo \"  🎨 Generative UI with streamUI\"; echo \"  ⚡ Edge Runtime Optimization\"; echo \"  📊 Performance Monitoring\"; echo \"  🔧 Multi-step Agent Workflows\"; echo \"\\n💡 Use specialized agents and commands for advanced features!\""
+          }
+        ]
+      }
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "echo '🎨 Tailwind CSS | $(basename $(pwd))'"
+  }
+}

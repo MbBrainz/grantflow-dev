@@ -1,11 +1,11 @@
-'use client';
+'use client'
 
-import { useState, useEffect } from 'react';
-import { Copy, Check } from 'lucide-react';
+import { useState, useEffect } from 'react'
+import { Copy, Check } from 'lucide-react'
 
 export function Terminal() {
-  const [terminalStep, setTerminalStep] = useState(0);
-  const [copied, setCopied] = useState(false);
+  const [terminalStep, setTerminalStep] = useState(0)
+  const [copied, setCopied] = useState(false)
   const terminalSteps = [
     'git clone https://github.com/nextjs/saas-starter',
     'pnpm install',
@@ -13,36 +13,36 @@ export function Terminal() {
     'pnpm db:migrate',
     'pnpm db:seed',
     'pnpm dev 🎉',
-  ];
+  ]
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      setTerminalStep((prev) =>
+      setTerminalStep(prev =>
         prev < terminalSteps.length - 1 ? prev + 1 : prev
-      );
-    }, 500);
+      )
+    }, 500)
 
-    return () => clearTimeout(timer);
-  }, [terminalStep]);
+    return () => clearTimeout(timer)
+  }, [terminalStep])
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(terminalSteps.join('\n'));
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+    navigator.clipboard.writeText(terminalSteps.join('\n'))
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
-    <div className="w-full rounded-lg shadow-lg overflow-hidden bg-gray-900 text-white font-mono text-sm relative">
+    <div className="relative w-full overflow-hidden rounded-lg bg-gray-900 font-mono text-sm text-white shadow-lg">
       <div className="p-4">
-        <div className="flex justify-between items-center mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <div className="flex space-x-2">
-            <div className="w-3 h-3 rounded-full bg-red-500"></div>
-            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <div className="w-3 h-3 rounded-full bg-green-500"></div>
+            <div className="h-3 w-3 rounded-full bg-red-500"></div>
+            <div className="h-3 w-3 rounded-full bg-yellow-500"></div>
+            <div className="h-3 w-3 rounded-full bg-green-500"></div>
           </div>
           <button
             onClick={copyToClipboard}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-400 transition-colors hover:text-white"
             aria-label="Copy to clipboard"
           >
             {copied ? (
@@ -64,5 +64,5 @@ export function Terminal() {
         </div>
       </div>
     </div>
-  );
+  )
 }

@@ -1,15 +1,15 @@
-'use client';
+'use client'
 
-import { useEffect, useState } from 'react';
-import Lottie from 'lottie-react';
+import { useEffect, useState } from 'react'
+import Lottie from 'lottie-react'
 
 interface LottieAnimationProps {
-  animationPath: string;
-  className?: string;
-  loop?: boolean;
-  autoplay?: boolean;
-  width?: number;
-  height?: number;
+  animationPath: string
+  className?: string
+  loop?: boolean
+  autoplay?: boolean
+  width?: number
+  height?: number
 }
 
 export function LottieAnimation({
@@ -20,63 +20,63 @@ export function LottieAnimation({
   width,
   height,
 }: LottieAnimationProps) {
-  const [animationData, setAnimationData] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [animationData, setAnimationData] = useState(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const loadAnimation = async () => {
       try {
-        setIsLoading(true);
-        setError(null);
-        
-        const response = await fetch(animationPath);
-        if (!response.ok) {
-          throw new Error(`Failed to load animation: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        setAnimationData(data);
-      } catch (err) {
-        console.error('[LottieAnimation]: Failed to load animation', err);
-        setError(err instanceof Error ? err.message : 'Unknown error');
-      } finally {
-        setIsLoading(false);
-      }
-    };
+        setIsLoading(true)
+        setError(null)
 
-    loadAnimation();
-  }, [animationPath]);
+        const response = await fetch(animationPath)
+        if (!response.ok) {
+          throw new Error(`Failed to load animation: ${response.statusText}`)
+        }
+
+        const data = await response.json()
+        setAnimationData(data)
+      } catch (err) {
+        console.error('[LottieAnimation]: Failed to load animation', err)
+        setError(err instanceof Error ? err.message : 'Unknown error')
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    loadAnimation()
+  }, [animationPath])
 
   if (isLoading) {
     return (
-      <div 
+      <div
         className={`flex items-center justify-center ${className}`}
         style={{ width, height }}
       >
-        <div className="animate-pulse bg-gray-200 rounded-lg w-full h-full min-h-[200px]">
-          <div className="flex items-center justify-center h-full text-gray-500">
+        <div className="h-full min-h-[200px] w-full animate-pulse rounded-lg bg-gray-200">
+          <div className="flex h-full items-center justify-center text-gray-500">
             Loading animation...
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   if (error || !animationData) {
     return (
-      <div 
+      <div
         className={`flex items-center justify-center ${className}`}
         style={{ width, height }}
       >
-        <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-lg w-full h-full min-h-[200px] flex items-center justify-center">
+        <div className="flex h-full min-h-[200px] w-full items-center justify-center rounded-lg bg-gradient-to-br from-blue-50 to-purple-50">
           <div className="text-center text-gray-600">
-            <div className="text-4xl mb-2">🎬</div>
+            <div className="mb-2 text-4xl">🎬</div>
             <div className="text-sm">Animation not available</div>
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -88,5 +88,5 @@ export function LottieAnimation({
         style={{ width: '100%', height: '100%' }}
       />
     </div>
-  );
-} 
+  )
+}

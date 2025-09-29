@@ -27,11 +27,11 @@ This directory contains Lottie animation JSON files used throughout the GrantFlo
 ## Usage Example
 
 ```tsx
-import { LottieAnimation } from "@/components/ui/lottie-animation";
+import { LottieAnimation } from '@/components/ui/lottie-animation'
 
-<LottieAnimation 
+;<LottieAnimation
   animationPath="/animations/grant-flow.json"
-  className="w-full h-full max-w-lg mx-auto"
+  className="mx-auto h-full w-full max-w-lg"
   loop={true}
   autoplay={true}
 />
@@ -42,4 +42,4 @@ import { LottieAnimation } from "@/components/ui/lottie-animation";
 - Optimize animations for web (reduce complexity, keyframes)
 - Use appropriate sizing to avoid loading large animations
 - Consider loading states for slow connections
-- Test animations on mobile devices for performance 
+- Test animations on mobile devices for performance

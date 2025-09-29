@@ -1,34 +1,34 @@
-'use client';
+'use client'
 
-import { useActionState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
-import { updateAccount } from '@/app/(login)/actions';
-import { User } from '@/lib/db/schema';
-import useSWR from 'swr';
-import { Suspense } from 'react';
+import { useActionState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Label } from '@/components/ui/label'
+import { Loader2 } from 'lucide-react'
+import { updateAccount } from '@/app/(login)/actions'
+import { User } from '@/lib/db/schema'
+import useSWR from 'swr'
+import { Suspense } from 'react'
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 type ActionState = {
-  name?: string;
-  error?: string;
-  success?: string;
-};
+  name?: string
+  error?: string
+  success?: string
+}
 
 type AccountFormProps = {
-  state: ActionState;
-  nameValue?: string;
-  emailValue?: string;
-};
+  state: ActionState
+  nameValue?: string
+  emailValue?: string
+}
 
 function AccountForm({
   state,
   nameValue = '',
-  emailValue = ''
+  emailValue = '',
 }: AccountFormProps) {
   return (
     <>
@@ -58,29 +58,29 @@ function AccountForm({
         />
       </div>
     </>
-  );
+  )
 }
 
 function AccountFormWithData({ state }: { state: ActionState }) {
-  const { data: user } = useSWR<User>('/api/user', fetcher);
+  const { data: user } = useSWR<User>('/api/user', fetcher)
   return (
     <AccountForm
       state={state}
       nameValue={user?.name ?? ''}
       emailValue={user?.email ?? ''}
     />
-  );
+  )
 }
 
 export default function GeneralPage() {
   const [state, formAction, isPending] = useActionState<ActionState, FormData>(
     updateAccount,
     {}
-  );
+  )
 
   return (
     <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
+      <h1 className="mb-6 text-lg font-medium text-gray-900 lg:text-2xl">
         General Settings
       </h1>
 
@@ -94,14 +94,14 @@ export default function GeneralPage() {
               <AccountFormWithData state={state} />
             </Suspense>
             {state.error && (
-              <p className="text-red-500 text-sm">{state.error}</p>
+              <p className="text-sm text-red-500">{state.error}</p>
             )}
             {state.success && (
-              <p className="text-green-500 text-sm">{state.success}</p>
+              <p className="text-sm text-green-500">{state.success}</p>
             )}
             <Button
               type="submit"
-              className="bg-orange-500 hover:bg-orange-600 text-white"
+              className="bg-orange-500 text-white hover:bg-orange-600"
               disabled={isPending}
             >
               {isPending ? (
@@ -117,5 +117,5 @@ export default function GeneralPage() {
         </CardContent>
       </Card>
     </section>
-  );
+  )
 }

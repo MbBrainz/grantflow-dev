@@ -11,6 +11,7 @@ Two-sided marketplace platform where **grant committees** create discoverable pr
 ## Platform Features
 
 ### For Grant Committees
+
 - Create and manage committee profiles with branding, focus areas, and funding criteria
 - Set up grant programs with clear application requirements and milestone structures
 - Configure multi-curator approval workflows and voting thresholds
@@ -24,6 +25,7 @@ Two-sided marketplace platform where **grant committees** create discoverable pr
 - Multi-sig wallet integration for automated payouts
 
 ### For Grantee Teams
+
 - Discover grant committees and browse available funding opportunities
 - Submit applications through structured forms tailored to each committee's requirements
 - Link GitHub repos/PRs/commits as proof of deliverables and progress
@@ -37,6 +39,7 @@ Two-sided marketplace platform where **grant committees** create discoverable pr
 - Team profile and grant history tracking
 
 ### Shared Platform Features
+
 - **Committee Discovery:** Browse and compare grant committees with their focus areas, funding amounts, and approval rates
 - **Public Transparency:** View submission status, discussion history, and voting outcomes for all committees
 - **Committee Profiles:** Detailed pages showing committee information, past grants, curator bios, and review criteria
@@ -52,6 +55,7 @@ Two-sided marketplace platform where **grant committees** create discoverable pr
 - Submission and Authentication should be 100% web3 based
 
 ### Smart Contract Backend
+
 - Multi-curator approval logic
 - Automatic payout via bounty precompile
 - Immutable record of reviews and decisions
@@ -61,44 +65,47 @@ Two-sided marketplace platform where **grant committees** create discoverable pr
 - General web3 foundation grants: https://grants.web3.foundation/docs/Process/how-to-apply
 - Active bounty programs: https://bounties.usepapi.app/
 - Fast Grants
-    - Apply: https://github.com/Polkadot-Fast-Grants/apply
-    - Review; https://github.com/Polkadot-Fast-Grants/delivery
+  - Apply: https://github.com/Polkadot-Fast-Grants/apply
+  - Review; https://github.com/Polkadot-Fast-Grants/delivery
 - UI Bounty program
-    - https://www.uxbounty.xyz/
+  - https://www.uxbounty.xyz/
 
 <aside>
 💡
 
-*Terminology* **Approved Grant**
+_Terminology_ **Approved Grant**
 
 A plan proposed by a third party (hereafter the "grantee") and approved by the grant committee, that exists of the following features:
 
-***An Executive Summary*** that explains what the the project will be building and how it will benefit the organization or ecosystem represented by the grant committee
+**_An Executive Summary_** that explains what the the project will be building and how it will benefit the organization or ecosystem represented by the grant committee
 
-*A **milestone based implementation plan*** that specifies per milestone what the requirements are to meet the milestone, how the grantee wants to complete these milestones, what the timeframe per milestone is and what the reward per milestone is.
+\*A **milestone based implementation plan\*** that specifies per milestone what the requirements are to meet the milestone, how the grantee wants to complete these milestones, what the timeframe per milestone is and what the reward per milestone is.
 
-***A Post-Grant development plan*** that specifies how the project will continue its development and existence after the grant has been approved
+**_A Post-Grant development plan_** that specifies how the project will continue its development and existence after the grant has been approved
 
-*Find the exact description here: https://github.com/Polkadot-Fast-Grants/apply/blob/master/README.md#tips-for-good-applications*
+_Find the exact description here: https://github.com/Polkadot-Fast-Grants/apply/blob/master/README.md#tips-for-good-applications_
 
 </aside>
 
 ## Grant Process Flow
 
-*Based on interview with Fast Grants committee member sachalansky*
+_Based on interview with Fast Grants committee member sachalansky_
 
 ### Two Main Phases
+
 1. **Grant Approval Phase:** Application submission, review, and approval
 2. **Grant Awarding Phase:** Milestone tracking, review, and payouts
 
 ### Multi-Committee Platform Workflow
 
 **Committee Setup:**
+
 1. Grant committees create profiles with branding, focus areas, and review criteria
 2. Configure curator roles, voting thresholds, and approval workflows
 3. Set up grant programs with funding amounts and milestone requirements
 
 **Grant Application Process:**
+
 1. Grantee teams browse committee marketplace and compare profiles, focus areas, and funding amounts
 2. Submit applications to specific committees through customized webapp forms
 3. Committee-specific discussion threads initiated for each submission
@@ -107,6 +114,7 @@ A plan proposed by a third party (hereafter the "grantee") and approved by the g
 6. Committee approval through configured voting system and thresholds
 
 **Milestone Management:**
+
 1. Grantees submit milestone updates through webapp with GitHub repo/PR/commit links
 2. Committee tracks progress through dedicated milestone discussion threads
 3. Committee review in milestone-specific discussion threads with GitHub repository analysis
@@ -132,20 +140,23 @@ Sub Problem: Assessment problem
 ## Technical Implementation
 
 ### What the Application Should NOT Include
+
 - Chat feature for committee outside of submission context
 - External chat integrations (Discord, Telegram) for primary workflow
 - GitHub PR creation for discussion (only for code references)
 
 ### Optional AI Integration
+
 - Reduce the burden of simple steps like:
-    - Initial feedback of submissions
-    - Simplifying review steps by guiding curators through linked codebases
-    - Analyzing GitHub repositories linked in submissions
-    - Suggesting relevant questions during review process
+  - Initial feedback of submissions
+  - Simplifying review steps by guiding curators through linked codebases
+  - Analyzing GitHub repositories linked in submissions
+  - Suggesting relevant questions during review process
 - (Potentially) summarizing discussion threads and providing review insights
 - **Important:** AI here is an optional addition to the platform
 
 ### Technology Stack
+
 - Nextjs 15 typescript app
 - Vercel AI sdk for AI tasks
 - Database Schema definition using typescript first approach with drizzle ORM
@@ -153,9 +164,9 @@ Sub Problem: Assessment problem
 - PostgreSQL database (Supabase)
 - **Real-time infrastructure** for live discussion updates
 - GitHub integration using https://github.com/octokit/octokit.js/ REST library to:
-    - **READ ONLY**: verify repository links, analyze commits, fetch PR data
-    - **NO PR CREATION**: GitHub used purely for code repository references
-    - Quick overview of edited files from linked repos/PRs/commits
+  - **READ ONLY**: verify repository links, analyze commits, fetch PR data
+  - **NO PR CREATION**: GitHub used purely for code repository references
+  - Quick overview of edited files from linked repos/PRs/commits
 
 ## Key Architectural Changes
 
@@ -163,6 +174,7 @@ Sub Problem: Assessment problem
 **TO:** Multi-committee marketplace platform with webapp-centric workflows and GitHub as code reference
 
 ### Platform Benefits
+
 - **Committee Discovery:** Centralized marketplace for grant opportunities with committee comparison
 - **Scalable Governance:** Multiple committees can operate independently with custom workflows
 - **Unified Communication:** All discussions happen within webapp regardless of committee
@@ -172,4 +184,4 @@ Sub Problem: Assessment problem
 - **Real-time Collaboration:** Live updates and notifications for all committee activities
 - **AI Integration:** Opportunities for discussion analysis and review assistance across platform
 - **Portfolio Management:** Teams can track applications across multiple committees
-- **Committee Autonomy:** Each committee maintains control over their specific requirements and processes 
+- **Committee Autonomy:** Each committee maintains control over their specific requirements and processes

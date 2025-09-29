@@ -3,6 +3,7 @@
 ## 1. Current Status ✅
 
 ### MVP Platform Ready
+
 The GrantFlow platform has been successfully transformed from a SaaS template to a clean grant platform MVP:
 
 - **✅ Clean Architecture:** All SaaS template backwards compatibility removed
@@ -12,6 +13,7 @@ The GrantFlow platform has been successfully transformed from a SaaS template to
 - **✅ Milestone Completion:** Committee members can complete milestones with multisig transaction verification
 
 ### Recently Completed (January 2025)
+
 - **✅ Backwards Compatibility Removal:** Eliminated all team/SaaS template code
 - **✅ Database Schema Cleanup:** Removed unused tables (teams, teamMembers, activityLogs, invitations)
 - **✅ Query Optimization:** Updated all database queries for grant platform
@@ -30,6 +32,7 @@ The GrantFlow platform has been successfully transformed from a SaaS template to
 - **✅ Discussion Permission Bug Fix:** Fixed critical permission logic bug in `DiscussionThread` component where `isPublic={true}` was incorrectly preventing authenticated users from posting messages. Updated permission logic to allow posting when discussion is public OR user has reviewer/submission owner permissions. Enhanced component to accept `submissionContext` for more sophisticated permission checking.
 
 ## Terminology Migration Completed
+
 - **✅ Complete Curator → Reviewer Migration:** Completely renamed all "curator" references to "reviewer" throughout the entire codebase with NO backwards compatibility. This includes:
   - Database function names (`checkIsCurator` → `checkIsReviewer`, etc.)
   - Component names (`CuratorSubmissionView` → `ReviewerSubmissionView`)
@@ -42,7 +45,9 @@ The GrantFlow platform has been successfully transformed from a SaaS template to
 ## 1.1 Role-Based Action Sets & UI Flows 🆕 **PRIORITY**
 
 ### Problem Statement
+
 Current platform shows same view to all users regardless of role, missing differentiated experiences for:
+
 - **Curators** (reviewers/voters) vs **Grantees** (applicants) vs **Public** (transparency seekers)
 - Different action capabilities and information needs per role
 - Missing public transparency layer for non-authenticated users
@@ -50,18 +55,22 @@ Current platform shows same view to all users regardless of role, missing differ
 ### Action Set Definitions
 
 #### **Curator Actions** (Authenticated + Role: curator)
+
 **Primary Goals:** Review, vote, provide feedback, manage approval workflow
+
 - **VOTE** on submission approval/rejection with reasoning
 - **DISCUSS** in curator-only threads and public threads
 - **REQUEST CHANGES** with specific feedback requirements
 - **REVIEW MILESTONES** and approve/reject milestone submissions
-- **TRIGGER PAYOUTS** via multisig transaction initiation  
+- **TRIGGER PAYOUTS** via multisig transaction initiation
 - **MANAGE WORKFLOW** (set status, escalate, assign reviewers)
 - **VIEW ANALYTICS** (committee performance, review queue stats)
 - **EXPORT REPORTS** for committee governance
 
 #### **Grantee Actions** (Authenticated + Role: grantee + submission owner)
+
 **Primary Goals:** Track progress, respond to feedback, submit deliverables
+
 - **TRACK STATUS** of application through approval pipeline
 - **RESPOND TO FEEDBACK** from curators with clarifications
 - **SUBMIT MILESTONE UPDATES** with GitHub links and deliverables
@@ -71,7 +80,9 @@ Current platform shows same view to all users regardless of role, missing differ
 - **APPEAL DECISIONS** through structured feedback mechanism
 
 #### **Public View Actions** (Non-authenticated or other users)
+
 **Primary Goals:** Transparency, learning, potential future application
+
 - **VIEW SUBMISSION STATUS** and approval timeline
 - **READ PUBLIC DISCUSSIONS** and voting rationale (read-only)
 - **BROWSE COMMITTEE ACTIVITY** and success rates
@@ -84,6 +95,7 @@ Current platform shows same view to all users regardless of role, missing differ
 #### **Submission Detail Page - Role-Based Views**
 
 **🎯 Curator View Layout:**
+
 ```
 [ACTIVE REVIEW PANEL - Prominent]
 ├─ Pending Actions (Vote Required, Review Due, etc.)
@@ -93,21 +105,22 @@ Current platform shows same view to all users regardless of role, missing differ
 └─ Workflow Controls (Set Status, Assign Co-reviewers)
 
 [SECONDARY PANELS]
-├─ Public Discussion (Read + Moderate)  
+├─ Public Discussion (Read + Moderate)
 ├─ Grantee Information (Contact, History, GitHub)
 ├─ Technical Review (Linked repos, code analysis)
 └─ Committee Analytics (Similar submissions, success patterns)
 ```
 
 **📝 Grantee View Layout:**
+
 ```
 [CURRENT STATUS HERO - Prominent]
 ├─ Application Stage (Clear progress indicator)
-├─ Required Actions (Response needed, milestone due, etc.)  
+├─ Required Actions (Response needed, milestone due, etc.)
 ├─ Next Steps (What grantee needs to do)
 └─ Estimated Timeline (When to expect updates)
 
-[COMMUNICATION PANEL]  
+[COMMUNICATION PANEL]
 ├─ Curator Feedback (Read curator comments + responses)
 ├─ Public Discussion Thread (Participate with community)
 ├─ Milestone Submission Form (When applicable)
@@ -120,6 +133,7 @@ Current platform shows same view to all users regardless of role, missing differ
 ```
 
 **🌍 Public View Layout:**
+
 ```
 [TRANSPARENCY OVERVIEW - Prominent]
 ├─ Submission Summary (Title, amount, status, timeline)
@@ -129,7 +143,7 @@ Current platform shows same view to all users regardless of role, missing differ
 
 [LEARNING RESOURCES]
 ├─ Project Details (Executive summary, goals, impact)
-├─ Technical Deliverables (GitHub links, documentation)  
+├─ Technical Deliverables (GitHub links, documentation)
 ├─ Committee Information (Focus area, approval criteria)
 └─ Similar Applications (Examples, success patterns)
 ```
@@ -137,31 +151,33 @@ Current platform shows same view to all users regardless of role, missing differ
 ### Technical Implementation Strategy
 
 #### **Role Detection & Access Control**
+
 ```typescript
 // Enhanced user context with submission relationship
 interface UserContext {
-  user: User | null;
-  isAuthenticated: boolean;
-  role: 'curator' | 'grantee' | 'admin' | null;
-  
+  user: User | null
+  isAuthenticated: boolean
+  role: 'curator' | 'grantee' | 'admin' | null
+
   // Submission-specific permissions
-  isSubmissionOwner: boolean;
-  isCommitteeCurator: boolean;
-  canVote: boolean;
-  canEditSubmission: boolean;
-  canViewPrivateDiscussions: boolean;
+  isSubmissionOwner: boolean
+  isCommitteeCurator: boolean
+  canVote: boolean
+  canEditSubmission: boolean
+  canViewPrivateDiscussions: boolean
 }
 ```
 
 #### **Component Architecture**
+
 ```
 SubmissionDetailView (Router)
 ├─ CuratorSubmissionView (role: curator)
-├─ GranteeSubmissionView (role: grantee + owner)  
+├─ GranteeSubmissionView (role: grantee + owner)
 ├─ PublicSubmissionView (unauthenticated or other)
 └─ SharedComponents (reused across views)
     ├─ ProjectOverview
-    ├─ TimelineDisplay  
+    ├─ TimelineDisplay
     ├─ PublicDiscussion
     └─ TechnicalDetails
 ```
@@ -169,24 +185,28 @@ SubmissionDetailView (Router)
 ### Implementation Priority
 
 #### **Phase 1: Role Detection & Routing** ⚡ IMMEDIATE
+
 1. **Fix database query error** blocking current active step functionality
 2. **Add role-based routing** in SubmissionDetailView component
 3. **Create UserContext hook** with submission-specific permissions
 4. **Implement basic view switching** (curator vs grantee vs public)
 
-#### **Phase 2: Curator-Focused Interface** 
+#### **Phase 2: Curator-Focused Interface**
+
 1. **Enhanced voting interface** with approval workflow
 2. **Curator-only discussion threads** with moderation tools
 3. **Review queue optimization** with filtering and assignment
 4. **Committee analytics dashboard** for decision support
 
 #### **Phase 3: Grantee Experience Optimization**
-1. **Progress tracking hero** with clear next steps  
+
+1. **Progress tracking hero** with clear next steps
 2. **Simplified response interface** for curator feedback
 3. **Milestone submission optimization** with GitHub integration
 4. **Application editing workflow** during revision phases
 
 #### **Phase 4: Public Transparency**
+
 1. **Read-only public views** with sensitive data filtering
 2. **Committee performance metrics** for accountability
 3. **Community learning resources** from past applications
@@ -197,6 +217,7 @@ This role-based approach solves the core UX problem: **each user sees exactly wh
 ## 2. Core Features & Flows (Two-Sided Platform)
 
 ### A. Committee Onboarding & Management
+
 - **Committee Registration:** GitHub OAuth + committee profile creation
 - **Committee Profile Setup:**
   - Branding (logo, description, focus areas)
@@ -216,6 +237,7 @@ This role-based approach solves the core UX problem: **each user sees exactly wh
   - Public transparency dashboard
 
 ### B. Committee Discovery & Marketplace
+
 - **Browse Committees:** Public directory of all grant committees
 - **Committee Comparison:** Side-by-side comparison of focus areas, funding amounts, approval rates
 - **Search & Filter:** By technology stack, funding range, geographic focus
@@ -223,6 +245,7 @@ This role-based approach solves the core UX problem: **each user sees exactly wh
 - **Application Requirements:** Clear view of what each committee expects
 
 ### C. Submission Flow (Grantee)
+
 - **Committee Selection:** Browse marketplace and select target committee(s)
 - **GitHub Auth:** Users authenticate via GitHub OAuth (using existing auth system)
 - **Committee-Specific Application Form:**
@@ -239,6 +262,7 @@ This role-based approach solves the core UX problem: **each user sees exactly wh
   - All communication happens within the webapp
 
 ### D. Review & Curation (Committee-Specific)
+
 - **Committee Dashboard:** All submissions for their committee with discussion threads
 - **Committee Workflow:** Custom voting thresholds and approval processes
 - **Filter & Search:** By status, label, project type within committee scope
@@ -249,6 +273,7 @@ This role-based approach solves the core UX problem: **each user sees exactly wh
 - **Committee Payout:** Trigger payouts via committee's configured multi-sig wallet
 
 ### E. Milestone Tracking (Committee-Specific) ✅ ENHANCED
+
 - **Committee Milestone Workflow:** Each committee configures their milestone requirements
 - **Milestone Submission:** Forms tailored to committee's milestone structure
 - **Progress Tracking:** Committee-specific status tracking with discussion threads
@@ -261,7 +286,9 @@ This role-based approach solves the core UX problem: **each user sees exactly wh
 - **Committee Payouts:** Release funds based on committee's approval workflow and multi-sig setup
 
 ### F. Enhanced Milestone Submission Flow ✅ ENHANCED
+
 When submitting milestone completion review requests:
+
 - **Exact Commit Tracking:** Specific commits and pull requests must be linked to each milestone
 - **AI-Assisted Code Analysis:** Pre-query GitHub to analyze changes since previous milestone
 - **File Change Overview:** System automatically detects and highlights:
@@ -274,14 +301,15 @@ When submitting milestone completion review requests:
 - **✅ First Milestone Support:** Enhanced `getCommitsSince()` function now handles first milestone case by fetching all commits when no previous commit SHA is provided, eliminating the need for fallback logic
 
 ### G. Platform Analytics & Transparency
+
 - **Cross-Committee Metrics:** Compare committee performance, approval rates, funding amounts
 - **Public Transparency:** All committee decisions and discussions are publicly viewable
 - **Grantee Portfolio:** Track team history across multiple committees and grants
 - **Committee Reputation:** Public scoring based on payout speed, feedback quality, success rates
 - **Market Insights:** Analytics on funding trends, popular project types, success patterns
 
-
 ### D. Discussion & Communication System (✅ COMPLETED & ENHANCED)
+
 - [x] Design discussion thread data model
 - [x] Build real-time chat components
 - [x] Implement message threading per submission and milestones
@@ -292,6 +320,7 @@ When submitting milestone completion review requests:
 - [x] **Enhanced: Multi-view curator interface**
 
 ### E. Dashboard & Review System (✅ COMPLETED & ENHANCED)
+
 - [x] Simple dashboard: List user's submissions
 - [x] Curator dashboard: list/filter submissions with discussion access
 - [x] Submission detail view with integrated discussion
@@ -306,12 +335,14 @@ When submitting milestone completion review requests:
 - [x] **Enhanced: Real-time activity tracking across submission and milestones**
 
 ### F. Milestone & Payout Management (Future Phase)
+
 - [ ] Milestone submission forms with GitHub links
 - [ ] Progress tracking interface with discussion per milestone
 - [ ] Payout approval workflow (Stripe features temporarily disabled)
 - [ ] On-chain integration (contracts TBD)
 
 ### G. Public Transparency Features (Future Phase)
+
 - [ ] Public submission status pages with discussion history
 - [ ] Curator voting history
 - [ ] Analytics dashboard
@@ -322,6 +353,7 @@ When submitting milestone completion review requests:
 ## 2. Tech Stack
 
 ### Frontend
+
 - **Next.js 14** (App Router)
 - **React** with TypeScript
 - **TailwindCSS** + **shadcn/ui**
@@ -330,6 +362,7 @@ When submitting milestone completion review requests:
 - **React Hook Form** for forms
 
 ### Backend
+
 - **Next.js API Routes** + **Server Actions**
 - **Drizzle ORM** with PostgreSQL
 - **Real-time Infrastructure:** WebSocket/Server-Sent Events for live chat
@@ -338,11 +371,13 @@ When submitting milestone completion review requests:
 - **Vercel AI SDK** for LLM features
 
 ### Database
+
 - **PostgreSQL** (Supabase-hosted)
 - **Drizzle ORM** with TypeScript-first schema
 - **Push model** for migrations (no migration files)
 
 ### External Integrations
+
 - **📄 GitHub REST API** for repo/PR/commit verification (simplified, read-only)
   - **No authentication required** for public repositories
   - **Optional Personal Access Token** for better rate limits (5K/hour vs 60/hour)
@@ -352,6 +387,7 @@ When submitting milestone completion review requests:
 - **Web3 Infrastructure** for committee wallet connections and payout automation
 
 ### Notifications & Real-time Features
+
 - **Server-Sent Events (SSE)** for real-time notifications
   - In-app notification delivery
   - Connection status indicators
@@ -367,12 +403,12 @@ When submitting milestone completion review requests:
   - Status change alerts
   - Submission updates
 
-
 ---
 
 ## 3. Database Schema
 
 ### Core Entities
+
 ```typescript
 // Users (extend existing)
 users: {
@@ -385,7 +421,7 @@ users: {
 committees: {
   id, name, description, logoUrl,
   focusAreas, websiteUrl, githubOrg,
-  walletAddress, isActive, 
+  walletAddress, isActive,
   votingThreshold, approvalWorkflow,
   createdAt, updatedAt
 }
@@ -399,7 +435,7 @@ committeeCurators: {
 // Grant programs (per committee)
 grantPrograms: {
   id, committeeId, name, description,
-  fundingAmount, requirements, 
+  fundingAmount, requirements,
   applicationTemplate, milestoneStructure,
   isActive, createdAt, updatedAt
 }
@@ -440,7 +476,7 @@ milestones: {
 
 // Committee curator reviews
 reviews: {
-  id, submissionId, milestoneId?, committeeId, curatorId, 
+  id, submissionId, milestoneId?, committeeId, curatorId,
   vote, feedback, discussionId, reviewType,
   weight, isBinding, createdAt, updatedAt
 }
@@ -456,7 +492,7 @@ payouts: {
 
 // Notifications (committee-aware)
 notifications: {
-  id, userId, committeeId?, type, 
+  id, userId, committeeId?, type,
   submissionId?, discussionId?, milestoneId?,
   read, content, priority,
   createdAt, readAt
@@ -485,6 +521,7 @@ platformMetrics: {
 ## 4. Next Steps
 
 ### A. Project Setup ✅
+
 - [x] Set up project structure with Next.js + Drizzle
 - [x] Define Drizzle ORM schema for all entities
 - [x] Set up GitHub OAuth (extend existing auth)
@@ -492,11 +529,13 @@ platformMetrics: {
 - [x] ✅ **SIMPLIFIED:** GitHub REST API integration (replaced complex Octokit)
 
 ### B. Auth & User Management ✅
+
 - [x] Extend existing auth to store GitHub profile info
 - [x] Sync GitHub-authenticated users to Drizzle users table
 - [x] Add role-based access (grantee, curator, admin)
 
 ### C. Submission Form & Flow ✅
+
 - [x] Build structured submission form UI
 - [x] Implement draft mode with local storage
 - [x] Create submission backend (server actions)
@@ -504,6 +543,7 @@ platformMetrics: {
 - [x] Remove GitHub PR creation (keep as reference links only)
 
 ### D. Discussion & Communication System (✅ COMPLETED)
+
 - [x] Design discussion thread data model
 - [x] Build real-time chat components
 - [x] Implement message threading per submission
@@ -512,6 +552,7 @@ platformMetrics: {
 - [x] Integrate with submission detail pages
 
 ### E. Dashboard & Review System (✅ COMPLETED)
+
 - [x] Simple dashboard: List user's submissions
 - [x] Curator dashboard: list/filter submissions with discussion access
 - [x] Submission detail view with integrated discussion
@@ -520,6 +561,7 @@ platformMetrics: {
 - [x] Role-based access control for curators
 
 ### F. Committee Onboarding & Management 🆕
+
 - [ ] Committee registration and profile creation
 - [ ] Grant program setup and configuration
 - [ ] Curator team management and permissions
@@ -527,20 +569,23 @@ platformMetrics: {
 - [ ] Committee workflow customization
 
 ### G. Marketplace & Discovery Features 🆕
+
 - [ ] Committee browsing and comparison interface
 - [ ] Advanced search and filtering by focus areas
 - [ ] Committee detail pages with analytics
 - [ ] Public committee reputation scoring
 - [ ] Cross-committee application tracking
 
-### H. Enhanced Milestone & Payout Management 
+### H. Enhanced Milestone & Payout Management
+
 - [ ] Committee-specific milestone workflows
 - [ ] AI-assisted GitHub code analysis
 - [ ] Automated file change detection
 - [ ] Committee-configured payout triggers
 - [ ] Multi-committee milestone comparison
 
-### I. Platform Analytics & Transparency 
+### I. Platform Analytics & Transparency
+
 - [ ] Cross-committee performance metrics
 - [ ] Public transparency dashboard
 - [ ] Committee and grantee reputation systems
@@ -552,12 +597,14 @@ platformMetrics: {
 ## 5. MVP Priorities
 
 ### Phase 1 ✅ COMPLETED
+
 1. ✅ **Auth Extension:** GitHub profile sync
 2. ✅ **Basic Submission Form:** Core fields with validation
 3. ✅ **Simple Dashboard:** List submissions with stats
 4. ✅ **GitHub Integration:** Basic GitHub API setup
 
 ### Phase 2 ✅ COMPLETED (In-App Communication)
+
 1. ✅ **Discussion System:** Real-time chat per submission/milestone
 2. ✅ **Review System:** Curator voting within discussion threads
 3. ✅ **Curator Dashboard:** Unified review interface with filtering
@@ -565,10 +612,12 @@ platformMetrics: {
 5. ✅ **Role-Based Access:** Curator permissions and voting restrictions
 
 ### Phase 3 ✅ COMPLETED (SSE Notifications)
+
 1. ✅ **Real-time Updates:** Live discussion updates with WebSocket/SSE
 2. ✅ **Notification System:** Real-time alerts for discussion activity with proper auth handling
 
 ### Phase 4 ✅ IN PROGRESS (Committee Marketplace Platform)
+
 1. **✅ Committee Database Architecture:** Enhanced queries for marketplace features
 2. **✅ Milestone Completion System:** Multisig transaction verification for payments
 3. **✅ Comprehensive Test Data:** Full database seeding with realistic scenarios
@@ -579,13 +628,15 @@ platformMetrics: {
 8. **Wallet Integration:** Committee multi-sig setup for automated payouts
 
 ### Phase 5 (Enhanced Platform Features)
+
 1. **Advanced Analytics:** Cross-committee metrics and reputation scoring
 2. **AI Integration:** GitHub code analysis and review assistance
 3. **Enhanced Milestone Tracking:** Automated change detection and verification
 4. **Public Transparency:** Platform-wide visibility and accountability
-5. **Market Intelligence:** Funding trends and success pattern analysis 
+5. **Market Intelligence:** Funding trends and success pattern analysis
 
 ### Notifications System (✅ COMPLETED - Jan 2025)
+
 - **SSE Authentication Fix:** Fixed 401 errors on unauthenticated pages
   - NotificationProvider now only connects for authenticated users
   - Added conditional SSE connection based on user authentication status
@@ -599,6 +650,7 @@ platformMetrics: {
   - Pure SSE-based real-time communication
 
 ### Comprehensive Test Database (✅ COMPLETED - January 2025)
+
 - **Multi-Committee Environment:** 5 distinct committees with different focus areas
   - Infrastructure Development Foundation (Core dev tools, $100K-$50K grants)
   - Research & Education Grant Committee (Academic work, $75K-$25K grants)
@@ -625,6 +677,7 @@ platformMetrics: {
   - Transaction hashes and block explorer integration
 
 ### Marketplace Architecture Transformation (🚀 PLANNED - 2025)
+
 - **Multi-Committee Support:** Platform evolution from single to multi-committee
   - Committee registration and profile management system
   - Independent committee workflows and configurations
@@ -637,13 +690,14 @@ platformMetrics: {
   - Committee entities with curator management
   - Grant programs per committee with custom templates
   - Committee-specific discussions, reviews, and payouts
-  - Platform-wide analytics and metrics tracking 
+  - Platform-wide analytics and metrics tracking
 
 ---
 
 ## 6. Technical Updates & Migrations
 
 ### ✅ Next.js 15 Migration (Completed - Jan 2025)
+
 - **Upgraded Framework:** Next.js 15.4.0-canary.47 → 15.4.1 (stable)
 - **Dependencies Updated:** React 19.1.0, TypeScript types updated
 - **Async APIs Compatibility:** All cookies(), headers(), params usage properly awaited
@@ -655,6 +709,7 @@ platformMetrics: {
 - **Build Verified:** All builds passing, no breaking changes detected
 
 ### Key Benefits from Next.js 15:
+
 - **React 19 Support:** Latest React features and improvements
 - **Performance:** Better hydration and optimization
 - **Developer Experience:** Improved error messages and debugging
@@ -663,4 +718,5 @@ platformMetrics: {
 ---
 
 ### Phase 4 (Mobile PWA)
+
 1. **PWA Install prompt** Modal that shows install prompt to user using [pwa-install](https://github.com/khmyznikov/pwa-install)

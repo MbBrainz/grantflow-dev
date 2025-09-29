@@ -1,9 +1,9 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export default function ActivityPageSkeleton() {
   return (
     <section className="flex-1 p-4 lg:p-8">
-      <h1 className="text-lg lg:text-2xl font-medium text-gray-900 mb-6">
+      <h1 className="mb-6 text-lg font-medium text-gray-900 lg:text-2xl">
         Activity Log
       </h1>
       <Card>
@@ -13,5 +13,5 @@ export default function ActivityPageSkeleton() {
         <CardContent className="min-h-[88px]" />
       </Card>
     </section>
-  );
+  )
 }

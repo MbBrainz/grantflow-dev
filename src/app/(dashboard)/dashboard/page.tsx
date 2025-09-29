@@ -1,23 +1,36 @@
-'use client';
+'use client'
 
-import { Button } from '@/components/ui/button';
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
-  CardFooter
-} from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import useSWR from 'swr';
-import { Suspense, useEffect, useState } from 'react';
-import { Loader2, PlusCircle, FileText, Users, Target, TrendingUp, Activity, Clock, CheckCircle, AlertCircle, MessageSquare, Gavel } from 'lucide-react';
-import Link from 'next/link';
+  CardFooter,
+} from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import useSWR from 'swr'
+import { Suspense, useEffect, useState } from 'react'
+import {
+  Loader2,
+  PlusCircle,
+  FileText,
+  Users,
+  Target,
+  TrendingUp,
+  Activity,
+  Clock,
+  CheckCircle,
+  AlertCircle,
+  MessageSquare,
+  Gavel,
+} from 'lucide-react'
+import Link from 'next/link'
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json());
+const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 function UserProfile() {
-  const { data: user, error } = useSWR('/api/user', fetcher);
+  const { data: user, error } = useSWR('/api/user', fetcher)
 
   if (error) {
     return (
@@ -26,7 +39,7 @@ function UserProfile() {
           <p className="text-red-600">Failed to load user data</p>
         </CardContent>
       </Card>
-    );
+    )
   }
 
   if (!user) {
@@ -34,34 +47,39 @@ function UserProfile() {
       <Card>
         <CardContent className="p-6">
           <div className="flex items-center space-x-4">
-            <div className="animate-pulse bg-gray-200 rounded-full h-12 w-12"></div>
+            <div className="h-12 w-12 animate-pulse rounded-full bg-gray-200"></div>
             <div className="space-y-2">
-              <div className="animate-pulse bg-gray-200 h-4 w-32 rounded"></div>
-              <div className="animate-pulse bg-gray-200 h-3 w-48 rounded"></div>
+              <div className="h-4 w-32 animate-pulse rounded bg-gray-200"></div>
+              <div className="h-3 w-48 animate-pulse rounded bg-gray-200"></div>
             </div>
           </div>
         </CardContent>
       </Card>
-    );
+    )
   }
 
-  const userInitials = user.name
-    ?.split(' ')
-    .map((n: string) => n[0])
-    .join('')
-    .toUpperCase() || user.email?.[0]?.toUpperCase() || 'U';
+  const userInitials =
+    user.name
+      ?.split(' ')
+      .map((n: string) => n[0])
+      .join('')
+      .toUpperCase() ||
+    user.email?.[0]?.toUpperCase() ||
+    'U'
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center space-x-3">
-          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100">
             <span className="text-lg font-semibold text-blue-600">
               {userInitials}
             </span>
           </div>
           <div>
-            <h2 className="text-lg font-semibold">{user.name || 'Anonymous'}</h2>
+            <h2 className="text-lg font-semibold">
+              {user.name || 'Anonymous'}
+            </h2>
             <p className="text-sm text-gray-600">{user.email}</p>
             <Badge variant="outline" className="mt-1 capitalize">
               {user.role}
@@ -70,7 +88,7 @@ function UserProfile() {
         </CardTitle>
       </CardHeader>
     </Card>
-  );
+  )
 }
 
 function DashboardStats() {
@@ -78,10 +96,14 @@ function DashboardStats() {
     submissions: { total: 0, pending: 0, approved: 0, inReview: 0 },
     milestones: { total: 0, completed: 0, inProgress: 0, pending: 0 },
     committees: { active: 0, isReviewer: false },
-    recentActivity: [] as Array<{ type: string; project: string; time: string; }>
-  });
-  const [loading, setLoading] = useState(true);
-  const { data: user } = useSWR('/api/user', fetcher);
+    recentActivity: [] as Array<{
+      type: string
+      project: string
+      time: string
+    }>,
+  })
+  const [loading, setLoading] = useState(true)
+  const { data: user } = useSWR('/api/user', fetcher)
 
   useEffect(() => {
     async function loadStats() {
@@ -91,59 +113,76 @@ function DashboardStats() {
         const mockStats = {
           submissions: { total: 2, pending: 1, approved: 1, inReview: 0 },
           milestones: { total: 8, completed: 2, inProgress: 3, pending: 3 },
-          committees: { active: 3, isReviewer: user?.role === 'committee' || user?.role === 'admin' },
+          committees: {
+            active: 3,
+            isReviewer: user?.role === 'committee' || user?.role === 'admin',
+          },
           recentActivity: [
-            { type: 'milestone_completed', project: 'Next-Gen SDK', time: '2 hours ago' },
-            { type: 'vote_cast', project: 'Blockchain Course', time: '1 day ago' },
-            { type: 'submission_approved', project: 'DeFi Protocol', time: '3 days ago' }
-          ]
-        };
-        setStats(mockStats);
+            {
+              type: 'milestone_completed',
+              project: 'Next-Gen SDK',
+              time: '2 hours ago',
+            },
+            {
+              type: 'vote_cast',
+              project: 'Blockchain Course',
+              time: '1 day ago',
+            },
+            {
+              type: 'submission_approved',
+              project: 'DeFi Protocol',
+              time: '3 days ago',
+            },
+          ],
+        }
+        setStats(mockStats)
       } catch (error) {
-        console.error('Error loading dashboard stats:', error);
+        console.error('Error loading dashboard stats:', error)
       } finally {
-        setLoading(false);
+        setLoading(false)
       }
     }
 
     if (user) {
-      loadStats();
+      loadStats()
     }
-  }, [user]);
+  }, [user])
 
   if (loading || !user) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
           <Card key={i}>
             <CardContent className="p-6">
               <div className="animate-pulse space-y-2">
-                <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                <div className="h-8 bg-gray-200 rounded w-1/2"></div>
-                <div className="h-3 bg-gray-200 rounded w-full"></div>
+                <div className="h-4 w-3/4 rounded bg-gray-200"></div>
+                <div className="h-8 w-1/2 rounded bg-gray-200"></div>
+                <div className="h-3 w-full rounded bg-gray-200"></div>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
-    );
+    )
   }
 
-  const isReviewer = user.role === 'committee' || user.role === 'admin';
+  const isReviewer = user.role === 'committee' || user.role === 'admin'
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">
             {isReviewer ? 'Review Queue' : 'Your Submissions'}
           </CardTitle>
-          <FileText className="h-4 w-4 text-muted-foreground" />
+          <FileText className="text-muted-foreground h-4 w-4" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.submissions.total}</div>
-          <p className="text-xs text-muted-foreground">
-            {isReviewer ? `${stats.submissions.pending} pending review` : `${stats.submissions.approved} approved`}
+          <p className="text-muted-foreground text-xs">
+            {isReviewer
+              ? `${stats.submissions.pending} pending review`
+              : `${stats.submissions.approved} approved`}
           </p>
         </CardContent>
       </Card>
@@ -153,11 +192,13 @@ function DashboardStats() {
           <CardTitle className="text-sm font-medium">
             Active Milestones
           </CardTitle>
-          <Target className="h-4 w-4 text-muted-foreground" />
+          <Target className="text-muted-foreground h-4 w-4" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{stats.milestones.inProgress}</div>
-          <p className="text-xs text-muted-foreground">
+          <div className="text-2xl font-bold">
+            {stats.milestones.inProgress}
+          </div>
+          <p className="text-muted-foreground text-xs">
             {stats.milestones.completed} completed
           </p>
         </CardContent>
@@ -165,14 +206,12 @@ function DashboardStats() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Committees
-          </CardTitle>
-          <Users className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Committees</CardTitle>
+          <Users className="text-muted-foreground h-4 w-4" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">{stats.committees.active}</div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {isReviewer ? 'Reviewer access' : 'Available to apply'}
           </p>
         </CardContent>
@@ -180,23 +219,23 @@ function DashboardStats() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Success Rate
-          </CardTitle>
-          <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+          <TrendingUp className="text-muted-foreground h-4 w-4" />
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {stats.submissions.total > 0 ? 
-              Math.round((stats.submissions.approved / stats.submissions.total) * 100) : 0}%
+            {stats.submissions.total > 0
+              ? Math.round(
+                  (stats.submissions.approved / stats.submissions.total) * 100
+                )
+              : 0}
+            %
           </div>
-          <p className="text-xs text-muted-foreground">
-            Approval rate
-          </p>
+          <p className="text-muted-foreground text-xs">Approval rate</p>
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }
 
 function RecentActivity() {
@@ -208,7 +247,7 @@ function RecentActivity() {
       description: 'Architecture Design milestone for Next-Gen SDK',
       time: '2 hours ago',
       icon: CheckCircle,
-      color: 'text-green-600'
+      color: 'text-green-600',
     },
     {
       id: 2,
@@ -217,7 +256,7 @@ function RecentActivity() {
       description: 'Approved submission for Blockchain Educational Course',
       time: '1 day ago',
       icon: MessageSquare,
-      color: 'text-blue-600'
+      color: 'text-blue-600',
     },
     {
       id: 3,
@@ -226,7 +265,7 @@ function RecentActivity() {
       description: 'DeFi Protocol submission approved by committee',
       time: '3 days ago',
       icon: CheckCircle,
-      color: 'text-green-600'
+      color: 'text-green-600',
     },
     {
       id: 4,
@@ -235,9 +274,9 @@ function RecentActivity() {
       description: 'Update posted on Infrastructure Tools project',
       time: '1 week ago',
       icon: Activity,
-      color: 'text-orange-600'
-    }
-  ]);
+      color: 'text-orange-600',
+    },
+  ])
 
   return (
     <Card>
@@ -249,23 +288,27 @@ function RecentActivity() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {activities.map((activity) => {
-            const Icon = activity.icon;
+          {activities.map(activity => {
+            const Icon = activity.icon
             return (
               <div key={activity.id} className="flex items-start gap-3">
-                <div className={`p-2 rounded-full bg-gray-100 ${activity.color}`}>
+                <div
+                  className={`rounded-full bg-gray-100 p-2 ${activity.color}`}
+                >
                   <Icon className="h-4 w-4" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-sm">{activity.title}</p>
-                  <p className="text-sm text-gray-600 truncate">{activity.description}</p>
-                  <p className="text-xs text-gray-500 mt-1">{activity.time}</p>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium">{activity.title}</p>
+                  <p className="truncate text-sm text-gray-600">
+                    {activity.description}
+                  </p>
+                  <p className="mt-1 text-xs text-gray-500">{activity.time}</p>
                 </div>
               </div>
-            );
+            )
           })}
         </div>
-        <div className="mt-4 pt-4 border-t">
+        <div className="mt-4 border-t pt-4">
           <Link href="/dashboard/activity">
             <Button variant="outline" className="w-full" size="sm">
               View All Activity
@@ -274,12 +317,12 @@ function RecentActivity() {
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function QuickActions() {
-  const { data: user } = useSWR('/api/user', fetcher);
-  const isReviewer = user?.role === 'committee' || user?.role === 'admin';
+  const { data: user } = useSWR('/api/user', fetcher)
+  const isReviewer = user?.role === 'committee' || user?.role === 'admin'
 
   return (
     <Card>
@@ -287,26 +330,31 @@ function QuickActions() {
         <CardTitle>Quick Actions</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {!isReviewer && (
             <Link href="/dashboard/submissions/new">
-              <Button className="w-full h-16 flex flex-col items-center justify-center space-y-2">
+              <Button className="flex h-16 w-full flex-col items-center justify-center space-y-2">
                 <PlusCircle className="h-6 w-6" />
                 <span>New Submission</span>
               </Button>
             </Link>
           )}
-          
+
           <Link href="/dashboard/submissions">
-            <Button variant="outline" className="w-full h-16 flex flex-col items-center justify-center space-y-2">
+            <Button
+              variant="outline"
+              className="flex h-16 w-full flex-col items-center justify-center space-y-2"
+            >
               <FileText className="h-6 w-6" />
-              <span>{isReviewer ? 'Review Submissions' : 'View Submissions'}</span>
+              <span>
+                {isReviewer ? 'Review Submissions' : 'View Submissions'}
+              </span>
             </Button>
           </Link>
 
           {isReviewer && (
             <Link href="/dashboard/review">
-              <Button className="w-full h-16 flex flex-col items-center justify-center space-y-2">
+              <Button className="flex h-16 w-full flex-col items-center justify-center space-y-2">
                 <Gavel className="h-6 w-6" />
                 <span>Reviewer Dashboard</span>
               </Button>
@@ -314,7 +362,10 @@ function QuickActions() {
           )}
 
           <Link href="/dashboard/activity">
-            <Button variant="outline" className="w-full h-16 flex flex-col items-center justify-center space-y-2">
+            <Button
+              variant="outline"
+              className="flex h-16 w-full flex-col items-center justify-center space-y-2"
+            >
               <Activity className="h-6 w-6" />
               <span>Activity Feed</span>
             </Button>
@@ -322,7 +373,7 @@ function QuickActions() {
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 function UpcomingDeadlines() {
@@ -333,7 +384,7 @@ function UpcomingDeadlines() {
       project: 'Next-Gen SDK',
       dueDate: 'Due in 3 days',
       status: 'in_progress',
-      urgent: true
+      urgent: true,
     },
     {
       id: 2,
@@ -341,7 +392,7 @@ function UpcomingDeadlines() {
       project: 'Educational Platform',
       dueDate: 'Due in 1 week',
       status: 'pending',
-      urgent: false
+      urgent: false,
     },
     {
       id: 3,
@@ -349,9 +400,9 @@ function UpcomingDeadlines() {
       project: 'DeFi Protocol',
       dueDate: 'Due in 2 weeks',
       status: 'pending',
-      urgent: false
-    }
-  ];
+      urgent: false,
+    },
+  ]
 
   return (
     <Card>
@@ -363,20 +414,29 @@ function UpcomingDeadlines() {
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {deadlines.map((deadline) => (
-            <div key={deadline.id} className={`p-3 rounded-lg border ${
-              deadline.urgent ? 'border-orange-200 bg-orange-50' : 'border-gray-200 bg-gray-50'
-            }`}>
-              <div className="flex items-center justify-between mb-1">
-                <p className="font-medium text-sm">{deadline.title}</p>
+          {deadlines.map(deadline => (
+            <div
+              key={deadline.id}
+              className={`rounded-lg border p-3 ${
+                deadline.urgent
+                  ? 'border-orange-200 bg-orange-50'
+                  : 'border-gray-200 bg-gray-50'
+              }`}
+            >
+              <div className="mb-1 flex items-center justify-between">
+                <p className="text-sm font-medium">{deadline.title}</p>
                 {deadline.urgent && (
                   <AlertCircle className="h-4 w-4 text-orange-600" />
                 )}
               </div>
               <p className="text-xs text-gray-600">{deadline.project}</p>
-              <p className={`text-xs mt-1 ${
-                deadline.urgent ? 'text-orange-600 font-medium' : 'text-gray-500'
-              }`}>
+              <p
+                className={`mt-1 text-xs ${
+                  deadline.urgent
+                    ? 'font-medium text-orange-600'
+                    : 'text-gray-500'
+                }`}
+              >
                 {deadline.dueDate}
               </p>
             </div>
@@ -384,12 +444,12 @@ function UpcomingDeadlines() {
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 export default function DashboardPage() {
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-8">
+    <div className="mx-auto max-w-7xl space-y-8 p-6">
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Grant Dashboard</h1>
         <p className="text-muted-foreground">
@@ -397,11 +457,11 @@ export default function DashboardPage() {
         </p>
       </div>
 
-      <Suspense 
+      <Suspense
         fallback={
           <Card>
             <CardContent className="p-6">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto" />
+              <Loader2 className="mx-auto h-8 w-8 animate-spin" />
             </CardContent>
           </Card>
         }
@@ -411,7 +471,7 @@ export default function DashboardPage() {
 
       <DashboardStats />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-6">
           <QuickActions />
           <UpcomingDeadlines />
@@ -419,5 +479,5 @@ export default function DashboardPage() {
         <RecentActivity />
       </div>
     </div>
-  );
+  )
 }

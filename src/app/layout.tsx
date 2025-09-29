@@ -1,29 +1,30 @@
-import './globals.css';
-import type { Metadata, Viewport } from 'next';
-import { Manrope } from 'next/font/google';
-import { SWRConfig } from 'swr';
-import { NotificationProvider } from '@/components/providers/notification-provider';
+import './globals.css'
+import type { Metadata, Viewport } from 'next'
+import { Manrope } from 'next/font/google'
+import { SWRConfig } from 'swr'
+import { NotificationProvider } from '@/components/providers/notification-provider'
 
 export const metadata: Metadata = {
   title: 'GrantFlow - Grant Management Platform',
-  description: 'Streamlined grant application and review platform for committees and grantees.'
-};
+  description:
+    'Streamlined grant application and review platform for committees and grantees.',
+}
 
 export const viewport: Viewport = {
-  maximumScale: 1
-};
+  maximumScale: 1,
+}
 
-const manrope = Manrope({ subsets: ['latin'] });
+const manrope = Manrope({ subsets: ['latin'] })
 
 export default function RootLayout({
-  children
+  children,
 }: {
-  children: React.ReactNode;
+  children: React.ReactNode
 }) {
   return (
     <html lang="en">
       <body className={manrope.className}>
-        <SWRConfig 
+        <SWRConfig
           value={{
             refreshInterval: 0,
             revalidateOnFocus: false,
@@ -32,11 +33,9 @@ export default function RootLayout({
             errorRetryInterval: 5000,
           }}
         >
-          <NotificationProvider>
-            {children}
-          </NotificationProvider>
+          <NotificationProvider>{children}</NotificationProvider>
         </SWRConfig>
       </body>
     </html>
-  );
+  )
 }

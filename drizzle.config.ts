@@ -1,4 +1,4 @@
-import type { Config } from 'drizzle-kit';
+import type { Config } from 'drizzle-kit'
 
 export default {
   schema: './src/lib/db/schema.ts',
@@ -8,4 +8,4 @@ export default {
   dbCredentials: {
     url: process.env.POSTGRES_URL!,
   },
-} satisfies Config;
+} satisfies Config

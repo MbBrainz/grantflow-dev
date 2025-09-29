@@ -1,14 +1,14 @@
-import { notFound } from 'next/navigation';
-import { eq } from 'drizzle-orm';
-import { db } from '@/lib/db/drizzle';
-import { submissions, milestones } from '@/lib/db/schema';
-import { getUser } from '@/lib/db/queries';
-import { SubmissionDetailView } from './submission-detail-view';
+import { notFound } from 'next/navigation'
+import { eq } from 'drizzle-orm'
+import { db } from '@/lib/db/drizzle'
+import { submissions, milestones } from '@/lib/db/schema'
+import { getUser } from '@/lib/db/queries'
+import { SubmissionDetailView } from './submission-detail-view'
 
 interface SubmissionDetailPageProps {
   params: Promise<{
-    id: string;
-  }>;
+    id: string
+  }>
 }
 
 async function getSubmissionWithMilestones(id: number) {
@@ -17,17 +17,17 @@ async function getSubmissionWithMilestones(id: number) {
       .select()
       .from(submissions)
       .where(eq(submissions.id, id))
-      .limit(1);
+      .limit(1)
 
     if (submission.length === 0) {
-      return null;
+      return null
     }
 
     const submissionMilestones = await db
       .select()
       .from(milestones)
       .where(eq(milestones.submissionId, id))
-      .orderBy(milestones.createdAt);
+      .orderBy(milestones.createdAt)
 
     return {
       ...submission[0],
@@ -39,36 +39,38 @@ async function getSubmissionWithMilestones(id: number) {
         executiveSummary: submission[0].executiveSummary,
         postGrantPlan: submission[0].postGrantPlan,
       }),
-    };
+    }
   } catch (error) {
-    console.error('[getSubmissionWithMilestones]: Error fetching submission', error);
-    return null;
+    console.error(
+      '[getSubmissionWithMilestones]: Error fetching submission',
+      error
+    )
+    return null
   }
 }
 
-export default async function SubmissionDetailPage({ params }: SubmissionDetailPageProps) {
-  const { id } = await params;
-  const submissionId = parseInt(id);
-  
+export default async function SubmissionDetailPage({
+  params,
+}: SubmissionDetailPageProps) {
+  const { id } = await params
+  const submissionId = parseInt(id)
+
   if (isNaN(submissionId)) {
-    notFound();
+    notFound()
   }
 
   const [submission, currentUser] = await Promise.all([
     getSubmissionWithMilestones(submissionId),
     getUser(),
-  ]);
+  ])
 
   if (!submission) {
-    notFound();
+    notFound()
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <SubmissionDetailView 
-        submission={submission} 
-        currentUser={currentUser}
-      />
+      <SubmissionDetailView submission={submission} currentUser={currentUser} />
     </div>
-  );
-} 
+  )
+}

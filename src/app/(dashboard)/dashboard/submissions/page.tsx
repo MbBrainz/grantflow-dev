@@ -1,10 +1,16 @@
-import { Suspense } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import Link from 'next/link';
-import { getUserSubmissions } from './actions';
-import { CommitteeBadge } from '@/components/submissions/committee-badge';
-import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge';
+import { Suspense } from 'react'
+import { Button } from '@/components/ui/button'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
+import Link from 'next/link'
+import { getUserSubmissions } from './actions'
+import { CommitteeBadge } from '@/components/submissions/committee-badge'
+import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge'
 
 function StatusBadge({ status }: { status: string }) {
   const colors = {
@@ -13,32 +19,34 @@ function StatusBadge({ status }: { status: string }) {
     under_review: 'bg-yellow-100 text-yellow-800',
     approved: 'bg-green-100 text-green-800',
     rejected: 'bg-red-100 text-red-800',
-  };
+  }
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-      colors[status as keyof typeof colors] || colors.draft
-    }`}>
+    <span
+      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+        colors[status as keyof typeof colors] || colors.draft
+      }`}
+    >
       {status.replace('_', ' ').toUpperCase()}
     </span>
-  );
+  )
 }
 
 function SubmissionCard({ submission }: { submission: any }) {
   // Parse the stored JSON data
-  let formData = null;
+  let formData = null
   try {
-    formData = JSON.parse(submission.formData || '{}');
+    formData = JSON.parse(submission.formData || '{}')
   } catch (error) {
-    console.error('Error parsing submission form data:', error);
+    console.error('Error parsing submission form data:', error)
   }
 
-  const labels = JSON.parse(submission.labels || '[]');
+  const labels = JSON.parse(submission.labels || '[]')
 
   return (
-    <Card className="hover:shadow-md transition-shadow">
+    <Card className="transition-shadow hover:shadow-md">
       <CardHeader>
-        <div className="flex justify-between items-start">
+        <div className="flex items-start justify-between">
           <div className="space-y-2">
             <CardTitle className="text-lg">
               {formData?.title || 'Untitled Submission'}
@@ -46,17 +54,17 @@ function SubmissionCard({ submission }: { submission: any }) {
             <CardDescription className="line-clamp-2">
               {formData?.description || 'No description available'}
             </CardDescription>
-            
+
             {/* Committee Badge */}
             {submission.committee && (
-              <CommitteeBadge 
-                committee={submission.committee} 
+              <CommitteeBadge
+                committee={submission.committee}
                 variant="compact"
               />
             )}
-            
+
             {/* Milestone Progress for Approved Submissions */}
-            <MilestoneProgressBadge 
+            <MilestoneProgressBadge
               milestones={submission.milestones || []}
               submissionStatus={submission.status}
               variant="compact"
@@ -73,13 +81,13 @@ function SubmissionCard({ submission }: { submission: any }) {
               {labels.slice(0, 3).map((label: string) => (
                 <span
                   key={label}
-                  className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700"
+                  className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700"
                 >
                   {label}
                 </span>
               ))}
               {labels.length > 3 && (
-                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-700">
+                <span className="inline-flex items-center rounded-md bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700">
                   +{labels.length - 3} more
                 </span>
               )}
@@ -88,14 +96,16 @@ function SubmissionCard({ submission }: { submission: any }) {
 
           {/* Funding Amount */}
           {formData?.totalAmount && (
-            <div className="text-sm text-muted-foreground">
-              <strong>Funding:</strong> ${parseFloat(formData.totalAmount).toLocaleString()}
+            <div className="text-muted-foreground text-sm">
+              <strong>Funding:</strong> $
+              {parseFloat(formData.totalAmount).toLocaleString()}
             </div>
           )}
 
           {/* Submission Date */}
-          <div className="text-sm text-muted-foreground">
-            <strong>Submitted:</strong> {new Date(submission.createdAt).toLocaleDateString()}
+          <div className="text-muted-foreground text-sm">
+            <strong>Submitted:</strong>{' '}
+            {new Date(submission.createdAt).toLocaleDateString()}
           </div>
 
           {/* GitHub PR Link */}
@@ -105,7 +115,7 @@ function SubmissionCard({ submission }: { submission: any }) {
                 href={formData?.githubPrUrl || '#'}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-800 underline"
+                className="text-blue-600 underline hover:text-blue-800"
               >
                 View GitHub PR #{submission.githubPrId}
               </a>
@@ -123,25 +133,27 @@ function SubmissionCard({ submission }: { submission: any }) {
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }
 
 export default async function SubmissionsPage() {
-  const submissions = await getUserSubmissions();
+  const submissions = await getUserSubmissions()
 
   // Calculate stats
   const stats = {
     total: submissions.length,
-    underReview: submissions.filter(s => s.status === 'submitted' || s.status === 'under_review').length,
+    underReview: submissions.filter(
+      s => s.status === 'submitted' || s.status === 'under_review'
+    ).length,
     approved: submissions.filter(s => s.status === 'approved').length,
     totalFunding: submissions.reduce((sum, s) => {
-      return sum + (s.totalAmount || 0);
+      return sum + (s.totalAmount || 0)
     }, 0),
-  };
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Grant Submissions</h1>
           <p className="text-muted-foreground">
@@ -149,9 +161,7 @@ export default async function SubmissionsPage() {
           </p>
         </div>
         <Link href="/dashboard/submissions/new">
-          <Button>
-            New Submission
-          </Button>
+          <Button>New Submission</Button>
         </Link>
       </div>
 
@@ -166,7 +176,7 @@ export default async function SubmissionsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {stats.total === 0 ? 'No submissions yet' : 'All time'}
               </p>
             </CardContent>
@@ -179,20 +189,18 @@ export default async function SubmissionsPage() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.underReview}</div>
-              <p className="text-xs text-muted-foreground">
-                                  Pending reviewer approval
+              <p className="text-muted-foreground text-xs">
+                Pending reviewer approval
               </p>
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Approved
-              </CardTitle>
+              <CardTitle className="text-sm font-medium">Approved</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.approved}</div>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Ready for milestones
               </p>
             </CardContent>
@@ -207,9 +215,7 @@ export default async function SubmissionsPage() {
               <div className="text-2xl font-bold">
                 ${stats.totalFunding.toLocaleString()}
               </div>
-              <p className="text-xs text-muted-foreground">
-                Requested amount
-              </p>
+              <p className="text-muted-foreground text-xs">Requested amount</p>
             </CardContent>
           </Card>
         </div>
@@ -224,19 +230,17 @@ export default async function SubmissionsPage() {
           </CardHeader>
           <CardContent>
             {submissions.length === 0 ? (
-              <div className="text-center py-12">
+              <div className="py-12 text-center">
                 <p className="text-muted-foreground mb-4">
                   You haven't submitted any grant proposals yet.
                 </p>
                 <Link href="/dashboard/submissions/new">
-                  <Button>
-                    Create Your First Submission
-                  </Button>
+                  <Button>Create Your First Submission</Button>
                 </Link>
               </div>
             ) : (
               <div className="grid gap-4">
-                {submissions.map((submission) => (
+                {submissions.map(submission => (
                   <SubmissionCard key={submission.id} submission={submission} />
                 ))}
               </div>
@@ -245,5 +249,5 @@ export default async function SubmissionsPage() {
         </Card>
       </div>
     </div>
-  );
-} 
+  )
+}

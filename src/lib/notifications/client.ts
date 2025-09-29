@@ -1,26 +1,26 @@
-'use client';
+'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { toast } from '@/lib/hooks/use-toast';
-import type { NotificationData } from './server';
+import { useEffect, useRef, useState, useCallback } from 'react'
+import { toast } from '@/lib/hooks/use-toast'
+import type { NotificationData } from './server'
 
 export interface RealtimeNotification extends NotificationData {
-  id: number;
-  userId: number;
-  timestamp: string;
+  id: number
+  userId: number
+  timestamp: string
 }
 
 interface SSEMessage {
-  type: 'connection' | 'heartbeat' | 'notification';
-  timestamp: string;
-  [key: string]: any;
+  type: 'connection' | 'heartbeat' | 'notification'
+  timestamp: string
+  [key: string]: any
 }
 
 interface NotificationConnectionState {
-  isConnected: boolean;
-  isConnecting: boolean;
-  error: string | null;
-  lastHeartbeat: Date | null;
+  isConnected: boolean
+  isConnecting: boolean
+  error: string | null
+  lastHeartbeat: Date | null
 }
 
 // Hook for managing SSE connection and receiving real-time notifications
@@ -30,122 +30,142 @@ export function useNotificationStream(shouldConnect: boolean = true) {
     isConnecting: false,
     error: null,
     lastHeartbeat: null,
-  });
+  })
 
-  const eventSourceRef = useRef<EventSource | null>(null);
-  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const reconnectAttempts = useRef(0);
-  const maxReconnectAttempts = 5;
+  const eventSourceRef = useRef<EventSource | null>(null)
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const reconnectAttempts = useRef(0)
+  const maxReconnectAttempts = 5
 
   const connect = useCallback(() => {
     // Don't connect if shouldConnect is false
     if (!shouldConnect) {
-      console.log('[notifications-client]: Connection disabled, skipping SSE');
-      return;
+      console.log('[notifications-client]: Connection disabled, skipping SSE')
+      return
     }
 
     if (eventSourceRef.current) {
-      console.log('[notifications-client]: Already connected or connecting');
-      return;
+      console.log('[notifications-client]: Already connected or connecting')
+      return
     }
 
-    console.log('[notifications-client]: Establishing SSE connection');
-    setState(prev => ({ ...prev, isConnecting: true, error: null }));
+    console.log('[notifications-client]: Establishing SSE connection')
+    setState(prev => ({ ...prev, isConnecting: true, error: null }))
 
     try {
       const eventSource = new EventSource('/api/notifications/stream', {
-        withCredentials: true
-      });
-      eventSourceRef.current = eventSource;
+        withCredentials: true,
+      })
+      eventSourceRef.current = eventSource
 
       eventSource.onopen = () => {
-        console.log('[notifications-client]: SSE connection opened');
+        console.log('[notifications-client]: SSE connection opened')
         setState(prev => ({
           ...prev,
           isConnected: true,
           isConnecting: false,
-          error: null
-        }));
-        reconnectAttempts.current = 0;
-      };
+          error: null,
+        }))
+        reconnectAttempts.current = 0
+      }
 
-      eventSource.onmessage = (event) => {
+      eventSource.onmessage = event => {
         try {
-          const message: SSEMessage = JSON.parse(event.data);
-          console.log('[notifications-client]: Received SSE message', message);
+          const message: SSEMessage = JSON.parse(event.data)
+          console.log('[notifications-client]: Received SSE message', message)
 
           switch (message.type) {
             case 'connection':
-              console.log('[notifications-client]: Connection confirmed');
-              break;
+              console.log('[notifications-client]: Connection confirmed')
+              break
 
             case 'heartbeat':
               setState(prev => ({
                 ...prev,
-                lastHeartbeat: new Date(message.timestamp)
-              }));
-              break;
+                lastHeartbeat: new Date(message.timestamp),
+              }))
+              break
 
             case 'notification':
-              handleRealtimeNotification(message as unknown as RealtimeNotification);
-              break;
+              handleRealtimeNotification(
+                message as unknown as RealtimeNotification
+              )
+              break
 
             default:
-              console.log('[notifications-client]: Unknown message type', message.type);
+              console.log(
+                '[notifications-client]: Unknown message type',
+                message.type
+              )
           }
         } catch (error) {
-          console.error('[notifications-client]: Failed to parse SSE message', error);
+          console.error(
+            '[notifications-client]: Failed to parse SSE message',
+            error
+          )
         }
-      };
+      }
 
-      eventSource.onerror = (error) => {
-        console.error('[notifications-client]: SSE connection error', error);
+      eventSource.onerror = error => {
+        console.error('[notifications-client]: SSE connection error', error)
         setState(prev => ({
           ...prev,
           isConnected: false,
           isConnecting: false,
-          error: 'Connection lost'
-        }));
+          error: 'Connection lost',
+        }))
 
         // Attempt to reconnect with exponential backoff (only if shouldConnect is true)
         if (shouldConnect && reconnectAttempts.current < maxReconnectAttempts) {
-          const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-          reconnectAttempts.current++;
-          
-          console.log(`[notifications-client]: Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`);
-          
-          reconnectTimeoutRef.current = setTimeout(() => {
-            eventSource.close();
-            eventSourceRef.current = null;
-            connect();
-          }, delay);
-        } else {
-          console.error('[notifications-client]: Max reconnection attempts reached or connection disabled');
-          setState(prev => ({ ...prev, error: shouldConnect ? 'Unable to connect to notifications' : null }));
-        }
-      };
+          const delay = Math.min(
+            1000 * Math.pow(2, reconnectAttempts.current),
+            30000
+          )
+          reconnectAttempts.current++
 
+          console.log(
+            `[notifications-client]: Reconnecting in ${delay}ms (attempt ${reconnectAttempts.current})`
+          )
+
+          reconnectTimeoutRef.current = setTimeout(() => {
+            eventSource.close()
+            eventSourceRef.current = null
+            connect()
+          }, delay)
+        } else {
+          console.error(
+            '[notifications-client]: Max reconnection attempts reached or connection disabled'
+          )
+          setState(prev => ({
+            ...prev,
+            error: shouldConnect ? 'Unable to connect to notifications' : null,
+          }))
+        }
+      }
     } catch (error) {
-      console.error('[notifications-client]: Failed to establish SSE connection', error);
+      console.error(
+        '[notifications-client]: Failed to establish SSE connection',
+        error
+      )
       setState(prev => ({
         ...prev,
         isConnecting: false,
-        error: 'Failed to connect'
-      }));
+        error: 'Failed to connect',
+      }))
     }
-  }, [shouldConnect]);
+  }, [shouldConnect])
 
   const disconnect = useCallback(() => {
-    console.log('[notifications-client]: Disconnecting SSE');
-    
+    console.log('[notifications-client]: Disconnecting SSE')
+
     if (reconnectTimeoutRef.current) {
-      clearTimeout(reconnectTimeoutRef.current);
-      reconnectTimeoutRef.current = null;
+      clearTimeout(reconnectTimeoutRef.current)
+      reconnectTimeoutRef.current = null
     }
 
     if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
+      eventSourceRef.current.close()
+      eventSourceRef.current = null
     }
 
     setState({
@@ -153,18 +173,18 @@ export function useNotificationStream(shouldConnect: boolean = true) {
       isConnecting: false,
       error: null,
       lastHeartbeat: null,
-    });
-  }, []);
+    })
+  }, [])
 
   // Auto-connect on mount when shouldConnect is true, disconnect on unmount or when shouldConnect becomes false
   useEffect(() => {
     if (shouldConnect) {
-      connect();
+      connect()
     } else {
-      disconnect();
+      disconnect()
     }
-    return disconnect;
-  }, [connect, disconnect, shouldConnect]);
+    return disconnect
+  }, [connect, disconnect, shouldConnect])
 
   return {
     ...state,
@@ -172,75 +192,75 @@ export function useNotificationStream(shouldConnect: boolean = true) {
     disconnect,
     reconnect: () => {
       if (shouldConnect) {
-        disconnect();
-        setTimeout(connect, 1000);
+        disconnect()
+        setTimeout(connect, 1000)
       }
-    }
-  };
+    },
+  }
 }
 
 // Hook for displaying notifications with specific submission context
 export function useSubmissionNotifications(submissionId?: number) {
-  const notificationStream = useNotificationStream();
-  const [notifications, setNotifications] = useState<RealtimeNotification[]>([]);
+  const notificationStream = useNotificationStream()
+  const [notifications, setNotifications] = useState<RealtimeNotification[]>([])
 
   useEffect(() => {
     const handleNotification = (notification: RealtimeNotification) => {
       // Only show notifications related to current submission if specified
       if (submissionId && notification.submissionId !== submissionId) {
-        return;
+        return
       }
 
-      setNotifications(prev => [notification, ...prev].slice(0, 50)); // Keep last 50
-    };
+      setNotifications(prev => [notification, ...prev].slice(0, 50)) // Keep last 50
+    }
 
     // Set up global notification handler
-    const originalHandler = (window as any).handleRealtimeNotification;
-    (window as any).handleRealtimeNotification = handleNotification;
+    const originalHandler = (window as any).handleRealtimeNotification
+    ;(window as any).handleRealtimeNotification = handleNotification
 
     return () => {
-      (window as any).handleRealtimeNotification = originalHandler;
-    };
-  }, [submissionId]);
+      ;(window as any).handleRealtimeNotification = originalHandler
+    }
+  }, [submissionId])
 
   return {
     ...notificationStream,
     notifications,
-    clearNotifications: () => setNotifications([])
-  };
+    clearNotifications: () => setNotifications([]),
+  }
 }
 
 // Global notification handler function
 function handleRealtimeNotification(notification: RealtimeNotification) {
-  console.log('[notifications-client]: Processing notification', notification);
+  console.log('[notifications-client]: Processing notification', notification)
 
   // Show toast notification based on type
   toast({
     title: notification.title,
     description: notification.message,
-    duration: getNotificationDuration(notification.type)
-  });
+    duration: getNotificationDuration(notification.type),
+  })
 
   // Trigger any registered handlers
   if ((window as any).handleRealtimeNotification) {
-    (window as any).handleRealtimeNotification(notification);
+    ;(window as any).handleRealtimeNotification(notification)
   }
 
   // Update page data if needed
-  updatePageData(notification);
+  updatePageData(notification)
 }
 
 // Get toast duration based on notification type
 function getNotificationDuration(type: string): number {
   switch (type) {
     case 'new_message':
-      return 5000;
+      return 5000
     case 'vote_cast':
-      return 4000;
+      return 4000
     case 'status_change':
-      return 6000;
+      return 6000
     default:
-      return 4000;
+      return 4000
   }
 }
 
@@ -249,31 +269,34 @@ function updatePageData(notification: RealtimeNotification) {
   // Trigger page refresh for certain notification types
   if (notification.type === 'new_message' && notification.submissionId) {
     // Check if we're on the submission page
-    const currentPath = window.location.pathname;
+    const currentPath = window.location.pathname
     if (currentPath.includes(`/submissions/${notification.submissionId}`)) {
       // Refresh the discussion data (this could be improved with more specific updates)
-      console.log('[notifications-client]: Refreshing submission data due to new message');
-      window.location.reload();
+      console.log(
+        '[notifications-client]: Refreshing submission data due to new message'
+      )
+      window.location.reload()
     }
   }
 }
 
 // Connection status component data
 export interface ConnectionStatus {
-  isConnected: boolean;
-  isConnecting: boolean;
-  error: string | null;
-  lastHeartbeat: Date | null;
+  isConnected: boolean
+  isConnecting: boolean
+  error: string | null
+  lastHeartbeat: Date | null
 }
 
 // Hook for displaying connection status
 export function useConnectionStatus(): ConnectionStatus {
-  const { isConnected, isConnecting, error, lastHeartbeat } = useNotificationStream();
-  
+  const { isConnected, isConnecting, error, lastHeartbeat } =
+    useNotificationStream()
+
   return {
     isConnected,
-    isConnecting, 
+    isConnecting,
     error,
-    lastHeartbeat
-  };
-} 
+    lastHeartbeat,
+  }
+}

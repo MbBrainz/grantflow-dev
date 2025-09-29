@@ -1,48 +1,48 @@
-'use client';
+'use client'
 
-import { Button } from '@/components/ui/button';
-import { ArrowRight, Loader2 } from 'lucide-react';
-import { useFormStatus } from 'react-dom';
-import { useToast } from '@/lib/hooks/use-toast';
-import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button'
+import { ArrowRight, Loader2 } from 'lucide-react'
+import { useFormStatus } from 'react-dom'
+import { useToast } from '@/lib/hooks/use-toast'
+import { useRouter } from 'next/navigation'
 
 interface SubmitButtonProps {
-  onSuccess?: () => void;
-  successMessage?: string;
-  redirectTo?: string;
-  children?: React.ReactNode;
+  onSuccess?: () => void
+  successMessage?: string
+  redirectTo?: string
+  children?: React.ReactNode
 }
 
-export function SubmitButton({ 
-  onSuccess, 
-  successMessage = "Success!",
+export function SubmitButton({
+  onSuccess,
+  successMessage = 'Success!',
   redirectTo,
-  children 
+  children,
 }: SubmitButtonProps) {
-  const { pending } = useFormStatus();
-  const { toast } = useToast();
-  const router = useRouter();
+  const { pending } = useFormStatus()
+  const { toast } = useToast()
+  const router = useRouter()
 
   const handleSuccess = () => {
     // Show success toast
     toast({
-      title: "Success!",
+      title: 'Success!',
       description: successMessage,
-      variant: "success",
-    });
+      variant: 'success',
+    })
 
     // Call custom success handler if provided
     if (onSuccess) {
-      onSuccess();
+      onSuccess()
     }
 
     // Redirect if specified
     if (redirectTo) {
       setTimeout(() => {
-        router.push(redirectTo);
-      }, 1000);
+        router.push(redirectTo)
+      }, 1000)
     }
-  };
+  }
 
   return (
     <Button
@@ -53,7 +53,7 @@ export function SubmitButton({
     >
       {pending ? (
         <>
-          <Loader2 className="animate-spin mr-2 h-4 w-4" />
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
           Loading...
         </>
       ) : (
@@ -65,5 +65,5 @@ export function SubmitButton({
         )
       )}
     </Button>
-  );
+  )
 }

@@ -45,6 +45,7 @@ GitHub Apps provide better security, higher rate limits, and fine-grained permis
 #### Configure the GitHub App
 
 After creation, you'll get:
+
 - **App ID** (found on the app's General tab)
 - **Private Key** (generate and download from the app's General tab)
 
@@ -77,6 +78,7 @@ GITHUB_TARGET_REPO="grant-submissions"
 ```
 
 **Important Notes:**
+
 - Store the private key securely and never commit it to version control
 - The private key can be stored as a single-line string in the environment variable (newlines will be handled automatically)
 - For production deployment, use your hosting provider's secret management system
@@ -91,6 +93,7 @@ GITHUB_TARGET_REPO="submissions"
 ```
 
 For example:
+
 - `GITHUB_TARGET_OWNER="grantflow-dev"`
 - `GITHUB_TARGET_REPO="grant-submissions"`
 
@@ -165,4 +168,4 @@ For production:
 3. Implement token refresh logic
 4. Use organization-owned repositories
 5. Set up proper branch protection rules
-6. Configure automated testing on PRs 
+6. Configure automated testing on PRs

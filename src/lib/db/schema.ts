@@ -7,10 +7,10 @@ import {
   integer,
   bigint,
   boolean,
-} from 'drizzle-orm/pg-core';
-import { relations } from 'drizzle-orm';
-import type { One, Many } from 'drizzle-orm';
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod';
+} from 'drizzle-orm/pg-core'
+import { relations } from 'drizzle-orm'
+import type { One, Many } from 'drizzle-orm'
+import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
@@ -20,11 +20,13 @@ export const users = pgTable('users', {
   githubId: varchar('github_id', { length: 64 }),
   walletAddress: varchar('wallet_address', { length: 64 }),
   primaryGroupId: integer('primary_group_id'), // Will reference groups.id
-  primaryRole: varchar('primary_role', { length: 20 }).notNull().default('team'), // 'committee' | 'team'
+  primaryRole: varchar('primary_role', { length: 20 })
+    .notNull()
+    .default('team'), // 'committee' | 'team'
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
   deletedAt: timestamp('deleted_at'),
-});
+})
 
 // Unified groups table for both committees and teams
 export const groups = pgTable('groups', {
@@ -41,7 +43,7 @@ export const groups = pgTable('groups', {
   settings: text('settings'), // JSON configuration (voting thresholds, approval workflows, etc.)
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+})
 
 // Unified memberships for all groups (committees and teams)
 export const groupMemberships = pgTable('group_memberships', {
@@ -56,7 +58,7 @@ export const groupMemberships = pgTable('group_memberships', {
   permissions: text('permissions'), // JSON array of permissions
   joinedAt: timestamp('joined_at').notNull().defaultNow(),
   isActive: boolean('is_active').notNull().default(true),
-});
+})
 
 export const grantPrograms = pgTable('grant_programs', {
   id: serial('id').primaryKey(),
@@ -72,7 +74,7 @@ export const grantPrograms = pgTable('grant_programs', {
   isActive: boolean('is_active').notNull().default(true),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+})
 
 export const submissions = pgTable('submissions', {
   id: serial('id').primaryKey(),
@@ -85,7 +87,9 @@ export const submissions = pgTable('submissions', {
   reviewerGroupId: integer('reviewer_group_id')
     .notNull()
     .references(() => groups.id), // committee reviewing
-  submitterId: integer('submitter_id').notNull().references(() => users.id), // individual who submitted
+  submitterId: integer('submitter_id')
+    .notNull()
+    .references(() => users.id), // individual who submitted
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
   executiveSummary: text('executive_summary'),
@@ -99,7 +103,7 @@ export const submissions = pgTable('submissions', {
   appliedAt: timestamp('applied_at').notNull().defaultNow(),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+})
 
 export const discussions = pgTable('discussions', {
   id: serial('id').primaryKey(),
@@ -112,22 +116,30 @@ export const discussions = pgTable('discussions', {
   isPublic: boolean('is_public').notNull().default(true), // Public transparency
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+})
 
 export const messages = pgTable('messages', {
   id: serial('id').primaryKey(),
-  discussionId: integer('discussion_id').notNull().references(() => discussions.id),
-  authorId: integer('author_id').notNull().references(() => users.id),
+  discussionId: integer('discussion_id')
+    .notNull()
+    .references(() => discussions.id),
+  authorId: integer('author_id')
+    .notNull()
+    .references(() => users.id),
   content: text('content').notNull(),
-  messageType: varchar('message_type', { length: 30 }).notNull().default('comment'), // 'comment' | 'status_change' | 'vote' | 'group_decision'
+  messageType: varchar('message_type', { length: 30 })
+    .notNull()
+    .default('comment'), // 'comment' | 'status_change' | 'vote' | 'group_decision'
   metadata: text('metadata'), // JSON for structured data like votes, group decisions
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+})
 
 export const milestones = pgTable('milestones', {
   id: serial('id').primaryKey(),
-  submissionId: integer('submission_id').notNull().references(() => submissions.id),
+  submissionId: integer('submission_id')
+    .notNull()
+    .references(() => submissions.id),
   groupId: integer('group_id')
     .notNull()
     .references(() => groups.id),
@@ -146,7 +158,7 @@ export const milestones = pgTable('milestones', {
   reviewedAt: timestamp('reviewed_at'),
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+})
 
 // Group reviews (committee members reviewing submissions/milestones)
 export const reviews = pgTable('reviews', {
@@ -156,16 +168,20 @@ export const reviews = pgTable('reviews', {
   groupId: integer('group_id')
     .notNull()
     .references(() => groups.id),
-  reviewerId: integer('reviewer_id').notNull().references(() => users.id),
+  reviewerId: integer('reviewer_id')
+    .notNull()
+    .references(() => users.id),
   discussionId: integer('discussion_id').references(() => discussions.id),
   vote: varchar('vote', { length: 16 }), // approve, reject, abstain
   feedback: text('feedback'),
-  reviewType: varchar('review_type', { length: 20 }).notNull().default('standard'), // 'standard' | 'final' | 'milestone'
+  reviewType: varchar('review_type', { length: 20 })
+    .notNull()
+    .default('standard'), // 'standard' | 'final' | 'milestone'
   weight: integer('weight').notNull().default(1), // voting weight for this reviewer
   isBinding: boolean('is_binding').notNull().default(false), // whether this review is binding
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+})
 
 export const payouts = pgTable('payouts', {
   id: serial('id').primaryKey(),
@@ -184,11 +200,13 @@ export const payouts = pgTable('payouts', {
   walletTo: varchar('wallet_to', { length: 64 }), // recipient wallet
   createdAt: timestamp('created_at').notNull().defaultNow(),
   processedAt: timestamp('processed_at'),
-});
+})
 
 export const notifications = pgTable('notifications', {
   id: serial('id').primaryKey(),
-  userId: integer('user_id').notNull().references(() => users.id),
+  userId: integer('user_id')
+    .notNull()
+    .references(() => users.id),
   groupId: integer('group_id').references(() => groups.id), // group-specific notifications
   type: varchar('type', { length: 32 }).notNull(),
   submissionId: integer('submission_id').references(() => submissions.id),
@@ -199,7 +217,7 @@ export const notifications = pgTable('notifications', {
   priority: varchar('priority', { length: 16 }).notNull().default('normal'), // 'low' | 'normal' | 'high' | 'urgent'
   createdAt: timestamp('created_at').notNull().defaultNow(),
   readAt: timestamp('read_at'),
-});
+})
 
 // Analytics tables
 export const groupAnalytics = pgTable('group_analytics', {
@@ -210,26 +228,30 @@ export const groupAnalytics = pgTable('group_analytics', {
   period: varchar('period', { length: 20 }).notNull(), // 'monthly' | 'quarterly' | 'yearly'
   totalSubmissions: integer('total_submissions').notNull().default(0),
   approvedSubmissions: integer('approved_submissions').notNull().default(0),
-  totalFunding: bigint('total_funding', { mode: 'number' }).notNull().default(0),
+  totalFunding: bigint('total_funding', { mode: 'number' })
+    .notNull()
+    .default(0),
   averageApprovalTime: integer('average_approval_time'), // in hours
   memberActivity: text('member_activity'), // JSON member activity data
   publicRating: integer('public_rating').default(0), // 1-5 rating
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+})
 
 export const platformMetrics = pgTable('platform_metrics', {
   id: serial('id').primaryKey(),
   period: varchar('period', { length: 20 }).notNull(), // 'monthly' | 'quarterly' | 'yearly'
   totalGroups: integer('total_groups').notNull().default(0),
   totalSubmissions: integer('total_submissions').notNull().default(0),
-  totalFunding: bigint('total_funding', { mode: 'number' }).notNull().default(0),
+  totalFunding: bigint('total_funding', { mode: 'number' })
+    .notNull()
+    .default(0),
   averageSuccessRate: integer('average_success_rate').default(0), // percentage
   popularTags: text('popular_tags'), // JSON array of popular project tags
   trendingGroups: text('trending_groups'), // JSON array of group IDs
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
-});
+})
 
 // Relations
 export const usersRelations = relations(users, ({ one, many }) => ({
@@ -242,7 +264,7 @@ export const usersRelations = relations(users, ({ one, many }) => ({
   discussionMessages: many(messages),
   reviews: many(reviews),
   notifications: many(notifications),
-}));
+}))
 
 export const groupsRelations = relations(groups, ({ many }) => ({
   grantPrograms: many(grantPrograms),
@@ -255,26 +277,32 @@ export const groupsRelations = relations(groups, ({ many }) => ({
   payouts: many(payouts),
   analytics: many(groupAnalytics),
   primaryUsers: many(users),
-}));
+}))
 
-export const groupMembershipsRelations = relations(groupMemberships, ({ one }) => ({
-  group: one(groups, {
-    fields: [groupMemberships.groupId],
-    references: [groups.id],
-  }),
-  user: one(users, {
-    fields: [groupMemberships.userId],
-    references: [users.id],
-  }),
-}));
+export const groupMembershipsRelations = relations(
+  groupMemberships,
+  ({ one }) => ({
+    group: one(groups, {
+      fields: [groupMemberships.groupId],
+      references: [groups.id],
+    }),
+    user: one(users, {
+      fields: [groupMemberships.userId],
+      references: [users.id],
+    }),
+  })
+)
 
-export const grantProgramsRelations = relations(grantPrograms, ({ one, many }) => ({
-  group: one(groups, {
-    fields: [grantPrograms.groupId],
-    references: [groups.id],
-  }),
-  submissions: many(submissions),
-}));
+export const grantProgramsRelations = relations(
+  grantPrograms,
+  ({ one, many }) => ({
+    group: one(groups, {
+      fields: [grantPrograms.groupId],
+      references: [groups.id],
+    }),
+    submissions: many(submissions),
+  })
+)
 
 export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   grantProgram: one(grantPrograms, {
@@ -300,7 +328,7 @@ export const submissionsRelations = relations(submissions, ({ one, many }) => ({
   reviews: many(reviews),
   payouts: many(payouts),
   notifications: many(notifications),
-}));
+}))
 
 export const discussionsRelations = relations(discussions, ({ one, many }) => ({
   submission: one(submissions, {
@@ -316,7 +344,7 @@ export const discussionsRelations = relations(discussions, ({ one, many }) => ({
     references: [groups.id],
   }),
   messages: many(messages),
-}));
+}))
 
 export const messagesRelations = relations(messages, ({ one }) => ({
   discussion: one(discussions, {
@@ -327,7 +355,7 @@ export const messagesRelations = relations(messages, ({ one }) => ({
     fields: [messages.authorId],
     references: [users.id],
   }),
-}));
+}))
 
 export const milestonesRelations = relations(milestones, ({ one, many }) => ({
   submission: one(submissions, {
@@ -342,7 +370,7 @@ export const milestonesRelations = relations(milestones, ({ one, many }) => ({
   discussions: many(discussions),
   reviews: many(reviews),
   payouts: many(payouts),
-}));
+}))
 
 export const reviewsRelations = relations(reviews, ({ one }) => ({
   submission: one(submissions, {
@@ -365,7 +393,7 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
     fields: [reviews.discussionId],
     references: [discussions.id],
   }),
-}));
+}))
 
 export const payoutsRelations = relations(payouts, ({ one }) => ({
   submission: one(submissions, {
@@ -388,7 +416,7 @@ export const payoutsRelations = relations(payouts, ({ one }) => ({
     fields: [payouts.approvedBy],
     references: [users.id],
   }),
-}));
+}))
 
 export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
@@ -411,75 +439,75 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
     fields: [notifications.milestoneId],
     references: [milestones.id],
   }),
-}));
+}))
 
 export const groupAnalyticsRelations = relations(groupAnalytics, ({ one }) => ({
   group: one(groups, {
     fields: [groupAnalytics.groupId],
     references: [groups.id],
   }),
-}));
+}))
 
 // Zod schemas for validation
-export const insertUserSchema = createInsertSchema(users);
-export const selectUserSchema = createSelectSchema(users);
-export const insertGroupSchema = createInsertSchema(groups);
-export const selectGroupSchema = createSelectSchema(groups);
-export const insertGroupMembershipSchema = createInsertSchema(groupMemberships);
-export const selectGroupMembershipSchema = createSelectSchema(groupMemberships);
-export const insertGrantProgramSchema = createInsertSchema(grantPrograms);
-export const selectGrantProgramSchema = createSelectSchema(grantPrograms);
-export const insertSubmissionSchema = createInsertSchema(submissions);
-export const selectSubmissionSchema = createSelectSchema(submissions);
-export const insertDiscussionSchema = createInsertSchema(discussions);
-export const selectDiscussionSchema = createSelectSchema(discussions);
-export const insertMessageSchema = createInsertSchema(messages);
-export const selectMessageSchema = createSelectSchema(messages);
-export const insertMilestoneSchema = createInsertSchema(milestones);
-export const selectMilestoneSchema = createSelectSchema(milestones);
-export const insertReviewSchema = createInsertSchema(reviews);
-export const selectReviewSchema = createSelectSchema(reviews);
-export const insertPayoutSchema = createInsertSchema(payouts);
-export const selectPayoutSchema = createSelectSchema(payouts);
-export const insertNotificationSchema = createInsertSchema(notifications);
-export const selectNotificationSchema = createSelectSchema(notifications);
+export const insertUserSchema = createInsertSchema(users)
+export const selectUserSchema = createSelectSchema(users)
+export const insertGroupSchema = createInsertSchema(groups)
+export const selectGroupSchema = createSelectSchema(groups)
+export const insertGroupMembershipSchema = createInsertSchema(groupMemberships)
+export const selectGroupMembershipSchema = createSelectSchema(groupMemberships)
+export const insertGrantProgramSchema = createInsertSchema(grantPrograms)
+export const selectGrantProgramSchema = createSelectSchema(grantPrograms)
+export const insertSubmissionSchema = createInsertSchema(submissions)
+export const selectSubmissionSchema = createSelectSchema(submissions)
+export const insertDiscussionSchema = createInsertSchema(discussions)
+export const selectDiscussionSchema = createSelectSchema(discussions)
+export const insertMessageSchema = createInsertSchema(messages)
+export const selectMessageSchema = createSelectSchema(messages)
+export const insertMilestoneSchema = createInsertSchema(milestones)
+export const selectMilestoneSchema = createSelectSchema(milestones)
+export const insertReviewSchema = createInsertSchema(reviews)
+export const selectReviewSchema = createSelectSchema(reviews)
+export const insertPayoutSchema = createInsertSchema(payouts)
+export const selectPayoutSchema = createSelectSchema(payouts)
+export const insertNotificationSchema = createInsertSchema(notifications)
+export const selectNotificationSchema = createSelectSchema(notifications)
 
 // TypeScript types
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
-export type Group = typeof groups.$inferSelect;
-export type NewGroup = typeof groups.$inferInsert;
-export type GroupMembership = typeof groupMemberships.$inferSelect;
-export type NewGroupMembership = typeof groupMemberships.$inferInsert;
-export type GrantProgram = typeof grantPrograms.$inferSelect;
-export type NewGrantProgram = typeof grantPrograms.$inferInsert;
-export type Submission = typeof submissions.$inferSelect;
-export type NewSubmission = typeof submissions.$inferInsert;
-export type Discussion = typeof discussions.$inferSelect;
-export type NewDiscussion = typeof discussions.$inferInsert;
-export type Message = typeof messages.$inferSelect;
-export type NewMessage = typeof messages.$inferInsert;
-export type Milestone = typeof milestones.$inferSelect;
-export type NewMilestone = typeof milestones.$inferInsert;
-export type Review = typeof reviews.$inferSelect;
-export type NewReview = typeof reviews.$inferInsert;
-export type Payout = typeof payouts.$inferSelect;
-export type NewPayout = typeof payouts.$inferInsert;
-export type Notification = typeof notifications.$inferSelect;
-export type NewNotification = typeof notifications.$inferInsert;
-export type GroupAnalytics = typeof groupAnalytics.$inferSelect;
-export type NewGroupAnalytics = typeof groupAnalytics.$inferInsert;
-export type PlatformMetrics = typeof platformMetrics.$inferSelect;
-export type NewPlatformMetrics = typeof platformMetrics.$inferInsert;
+export type User = typeof users.$inferSelect
+export type NewUser = typeof users.$inferInsert
+export type Group = typeof groups.$inferSelect
+export type NewGroup = typeof groups.$inferInsert
+export type GroupMembership = typeof groupMemberships.$inferSelect
+export type NewGroupMembership = typeof groupMemberships.$inferInsert
+export type GrantProgram = typeof grantPrograms.$inferSelect
+export type NewGrantProgram = typeof grantPrograms.$inferInsert
+export type Submission = typeof submissions.$inferSelect
+export type NewSubmission = typeof submissions.$inferInsert
+export type Discussion = typeof discussions.$inferSelect
+export type NewDiscussion = typeof discussions.$inferInsert
+export type Message = typeof messages.$inferSelect
+export type NewMessage = typeof messages.$inferInsert
+export type Milestone = typeof milestones.$inferSelect
+export type NewMilestone = typeof milestones.$inferInsert
+export type Review = typeof reviews.$inferSelect
+export type NewReview = typeof reviews.$inferInsert
+export type Payout = typeof payouts.$inferSelect
+export type NewPayout = typeof payouts.$inferInsert
+export type Notification = typeof notifications.$inferSelect
+export type NewNotification = typeof notifications.$inferInsert
+export type GroupAnalytics = typeof groupAnalytics.$inferSelect
+export type NewGroupAnalytics = typeof groupAnalytics.$inferInsert
+export type PlatformMetrics = typeof platformMetrics.$inferSelect
+export type NewPlatformMetrics = typeof platformMetrics.$inferInsert
 
 // Submission with related data
 export type SubmissionWithMilestones = Submission & {
-  milestones: Milestone[];
-  submitter: User;
-  submitterGroup: Group;
-  reviewerGroup: Group;
-  grantProgram: GrantProgram;
-};
+  milestones: Milestone[]
+  submitter: User
+  submitterGroup: Group
+  reviewerGroup: Group
+  grantProgram: GrantProgram
+}
 
 // Activity types for logging
 export enum ActivityType {

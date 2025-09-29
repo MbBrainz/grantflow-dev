@@ -67,12 +67,8 @@
           "name": "discussions_submission_id_submissions_id_fk",
           "tableFrom": "discussions",
           "tableTo": "submissions",
-          "columnsFrom": [
-            "submission_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["submission_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -80,12 +76,8 @@
           "name": "discussions_milestone_id_milestones_id_fk",
           "tableFrom": "discussions",
           "tableTo": "milestones",
-          "columnsFrom": [
-            "milestone_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["milestone_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -93,12 +85,8 @@
           "name": "discussions_group_id_groups_id_fk",
           "tableFrom": "discussions",
           "tableTo": "groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -189,12 +177,8 @@
           "name": "grant_programs_group_id_groups_id_fk",
           "tableFrom": "grant_programs",
           "tableTo": "groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -288,12 +272,8 @@
           "name": "group_analytics_group_id_groups_id_fk",
           "tableFrom": "group_analytics",
           "tableTo": "groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -360,12 +340,8 @@
           "name": "group_memberships_group_id_groups_id_fk",
           "tableFrom": "group_memberships",
           "tableTo": "groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -373,12 +349,8 @@
           "name": "group_memberships_user_id_users_id_fk",
           "tableFrom": "group_memberships",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -545,12 +517,8 @@
           "name": "messages_discussion_id_discussions_id_fk",
           "tableFrom": "messages",
           "tableTo": "discussions",
-          "columnsFrom": [
-            "discussion_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["discussion_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -558,12 +526,8 @@
           "name": "messages_author_id_users_id_fk",
           "tableFrom": "messages",
           "tableTo": "users",
-          "columnsFrom": [
-            "author_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["author_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -696,12 +660,8 @@
           "name": "milestones_submission_id_submissions_id_fk",
           "tableFrom": "milestones",
           "tableTo": "submissions",
-          "columnsFrom": [
-            "submission_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["submission_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -709,12 +669,8 @@
           "name": "milestones_group_id_groups_id_fk",
           "tableFrom": "milestones",
           "tableTo": "groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -811,12 +767,8 @@
           "name": "notifications_user_id_users_id_fk",
           "tableFrom": "notifications",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -824,12 +776,8 @@
           "name": "notifications_group_id_groups_id_fk",
           "tableFrom": "notifications",
           "tableTo": "groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -837,12 +785,8 @@
           "name": "notifications_submission_id_submissions_id_fk",
           "tableFrom": "notifications",
           "tableTo": "submissions",
-          "columnsFrom": [
-            "submission_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["submission_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -850,12 +794,8 @@
           "name": "notifications_discussion_id_discussions_id_fk",
           "tableFrom": "notifications",
           "tableTo": "discussions",
-          "columnsFrom": [
-            "discussion_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["discussion_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -863,12 +803,8 @@
           "name": "notifications_milestone_id_milestones_id_fk",
           "tableFrom": "notifications",
           "tableTo": "milestones",
-          "columnsFrom": [
-            "milestone_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["milestone_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -976,12 +912,8 @@
           "name": "payouts_submission_id_submissions_id_fk",
           "tableFrom": "payouts",
           "tableTo": "submissions",
-          "columnsFrom": [
-            "submission_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["submission_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -989,12 +921,8 @@
           "name": "payouts_milestone_id_milestones_id_fk",
           "tableFrom": "payouts",
           "tableTo": "milestones",
-          "columnsFrom": [
-            "milestone_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["milestone_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1002,12 +930,8 @@
           "name": "payouts_group_id_groups_id_fk",
           "tableFrom": "payouts",
           "tableTo": "groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1015,12 +939,8 @@
           "name": "payouts_triggered_by_users_id_fk",
           "tableFrom": "payouts",
           "tableTo": "users",
-          "columnsFrom": [
-            "triggered_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["triggered_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1028,12 +948,8 @@
           "name": "payouts_approved_by_users_id_fk",
           "tableFrom": "payouts",
           "tableTo": "users",
-          "columnsFrom": [
-            "approved_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["approved_by"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1217,12 +1133,8 @@
           "name": "reviews_submission_id_submissions_id_fk",
           "tableFrom": "reviews",
           "tableTo": "submissions",
-          "columnsFrom": [
-            "submission_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["submission_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1230,12 +1142,8 @@
           "name": "reviews_milestone_id_milestones_id_fk",
           "tableFrom": "reviews",
           "tableTo": "milestones",
-          "columnsFrom": [
-            "milestone_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["milestone_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1243,12 +1151,8 @@
           "name": "reviews_group_id_groups_id_fk",
           "tableFrom": "reviews",
           "tableTo": "groups",
-          "columnsFrom": [
-            "group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["group_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1256,12 +1160,8 @@
           "name": "reviews_reviewer_id_users_id_fk",
           "tableFrom": "reviews",
           "tableTo": "users",
-          "columnsFrom": [
-            "reviewer_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reviewer_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1269,12 +1169,8 @@
           "name": "reviews_discussion_id_discussions_id_fk",
           "tableFrom": "reviews",
           "tableTo": "discussions",
-          "columnsFrom": [
-            "discussion_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["discussion_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1408,12 +1304,8 @@
           "name": "submissions_grant_program_id_grant_programs_id_fk",
           "tableFrom": "submissions",
           "tableTo": "grant_programs",
-          "columnsFrom": [
-            "grant_program_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["grant_program_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1421,12 +1313,8 @@
           "name": "submissions_submitter_group_id_groups_id_fk",
           "tableFrom": "submissions",
           "tableTo": "groups",
-          "columnsFrom": [
-            "submitter_group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["submitter_group_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1434,12 +1322,8 @@
           "name": "submissions_reviewer_group_id_groups_id_fk",
           "tableFrom": "submissions",
           "tableTo": "groups",
-          "columnsFrom": [
-            "reviewer_group_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reviewer_group_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1447,12 +1331,8 @@
           "name": "submissions_submitter_id_users_id_fk",
           "tableFrom": "submissions",
           "tableTo": "users",
-          "columnsFrom": [
-            "submitter_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["submitter_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1544,9 +1424,7 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         }
       },
       "policies": {},
