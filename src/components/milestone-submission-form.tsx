@@ -25,16 +25,26 @@ import {
   FileText,
 } from 'lucide-react'
 import type { GitHubCommit } from '@/lib/github/simple-client'
-import {
-  getCommitsSince,
-} from '@/lib/github/simple-client'
+import { getCommitsSince } from '@/lib/github/simple-client'
 import type { Milestone } from '@/lib/db/schema'
 
 // Use GitHubCommit type from simple-client
 type Commit = GitHubCommit
 
 interface MilestoneSubmissionFormProps {
-  milestone: Pick<Milestone, 'id' | 'title' | 'description' | 'requirements' | 'amount' | 'dueDate' | 'status' | 'deliverables' | 'githubRepoUrl' | 'githubCommitHash'>
+  milestone: Pick<
+    Milestone,
+    | 'id'
+    | 'title'
+    | 'description'
+    | 'requirements'
+    | 'amount'
+    | 'dueDate'
+    | 'status'
+    | 'deliverables'
+    | 'githubRepoUrl'
+    | 'githubCommitHash'
+  >
   submissionRepoUrl: string | null
   previousMilestoneCommitSha?: string | null // Last approved milestone commit
   onSubmit: (data: {
@@ -60,7 +70,9 @@ export function MilestoneSubmissionForm({
   const [error, setError] = useState<string | null>(null)
 
   // Parse requirements from milestone
-  const requirements = milestone.requirements ?? ['Complete milestone objectives']
+  const requirements = milestone.requirements ?? [
+    'Complete milestone objectives',
+  ]
 
   useEffect(() => {
     async function fetchCommits() {

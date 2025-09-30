@@ -18,15 +18,17 @@ import {
   XCircle,
   AlertCircle,
 } from 'lucide-react'
-import { PendingActionsPanel, type PendingAction } from '@/components/review/pending-actions-panel'
+import {
+  PendingActionsPanel,
+  type PendingAction,
+} from '@/components/review/pending-actions-panel'
 import { CommitteeBadge } from '@/components/submissions/committee-badge'
 import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge'
-import type { Committee, Milestone, GrantProgram} from '@/lib/db/schema'
+import type { Committee, Milestone, GrantProgram } from '@/lib/db/schema'
 
 interface Submitter {
   name: string | null
 }
-
 
 interface Submission {
   id: number
@@ -38,7 +40,10 @@ interface Submission {
   labels: string | null
   totalAmount?: number
   submitter?: Submitter
-  committee?: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'>
+  committee?: Pick<
+    Committee,
+    'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'
+  >
   grantProgram?: Pick<GrantProgram, 'id' | 'name' | 'fundingAmount'>
   milestones?: Milestone[]
 }

@@ -5,9 +5,11 @@ import { Building2 } from 'lucide-react'
 import type { Committee } from '@/lib/db/schema'
 import Image from 'next/image'
 
-
 interface CommitteeBadgeProps {
-  committee: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'>
+  committee: Pick<
+    Committee,
+    'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'
+  >
   className?: string
   showIcon?: boolean
   variant?: 'default' | 'outline' | 'compact'

@@ -146,8 +146,8 @@ export function ReviewerSubmissionView({
                 reviewer: {
                   id: r.reviewer.id,
                   name: r.reviewer.name,
-                  role: r.reviewer.primaryRole ?? 'reviewer'
-                }
+                  role: r.reviewer.primaryRole ?? 'reviewer',
+                },
               }))}
               onVoteSubmitted={() => onVoteSubmitted()}
               isOpen={true}
@@ -238,7 +238,13 @@ export function ReviewerSubmissionView({
                 <h3 className="text-lg font-semibold">Milestones</h3>
                 <div className="space-y-2">
                   {submission.milestones?.map(
-                    (milestone: Pick<Milestone, 'id' | 'status' | 'title' | 'amount'>, index: number) => (
+                    (
+                      milestone: Pick<
+                        Milestone,
+                        'id' | 'status' | 'title' | 'amount'
+                      >,
+                      index: number
+                    ) => (
                       <div key={milestone.id} className="rounded border p-3">
                         <div className="flex items-center justify-between">
                           <span className="font-medium">

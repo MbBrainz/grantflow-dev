@@ -2,9 +2,7 @@
 
 import type { ReactNode } from 'react'
 import { useEffect, createContext, useContext, useState } from 'react'
-import {
-  useNotificationStream,
-} from '@/lib/notifications/client'
+import { useNotificationStream } from '@/lib/notifications/client'
 import { Toaster } from '@/components/ui/toaster'
 import useSWR from 'swr'
 import type { User } from '@/lib/db/schema'
@@ -36,7 +34,10 @@ const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 export function NotificationProvider({ children }: NotificationProviderProps) {
   // Check if user is authenticated before initializing notifications
-  const { data: user, error: userError } = useSWR<User>('/api/user', fetcher) as { data: User | undefined, error: Error | undefined }
+  const { data: user, error: userError } = useSWR<User>(
+    '/api/user',
+    fetcher
+  ) as { data: User | undefined; error: Error | undefined }
   const [shouldConnect, setShouldConnect] = useState<boolean>(false)
 
   // Only attempt to connect if user is authenticated
@@ -60,11 +61,13 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   // Auto-reconnect on connection failures (only if should connect)
   useEffect(() => {
     if (
-      !(shouldConnect &&
-    notificationStream.error &&
-    !notificationStream.isConnecting)
+      !(
+        shouldConnect &&
+        notificationStream.error &&
+        !notificationStream.isConnecting
+      )
     ) {
-      return;
+      return
     }
 
     console.log(
@@ -77,7 +80,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     }, 5000)
 
     return () => clearTimeout(reconnectTimer)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     shouldConnect,
     notificationStream.error,
@@ -111,8 +114,13 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     isConnecting: shouldConnect ? notificationStream.isConnecting : false,
     error: shouldConnect ? notificationStream.error : null,
     reconnect: shouldConnect
-      ? notificationStream.reconnect ?? (() => { return })
-      : () => { return },
+      ? (notificationStream.reconnect ??
+        (() => {
+          return
+        }))
+      : () => {
+          return
+        },
   }
 
   return (

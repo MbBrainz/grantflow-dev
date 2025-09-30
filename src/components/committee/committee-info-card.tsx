@@ -18,7 +18,18 @@ import type { Committee } from '@/lib/db/schema'
 import Image from 'next/image'
 
 interface CommitteeInfoCardProps {
-  committee: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'websiteUrl' | 'githubOrg' | 'walletAddress' | 'isActive'> & {
+  committee: Pick<
+    Committee,
+    | 'id'
+    | 'name'
+    | 'description'
+    | 'logoUrl'
+    | 'focusAreas'
+    | 'websiteUrl'
+    | 'githubOrg'
+    | 'walletAddress'
+    | 'isActive'
+  > & {
     votingThreshold?: number
   }
   userRole?: 'admin' | 'reviewer' | null

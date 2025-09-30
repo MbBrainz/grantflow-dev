@@ -91,20 +91,16 @@ export function AsyncButton({
       variant={variant}
       className={className}
     >
-      {pending ? (
-        loadingContent ?? (
-          <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            Loading...
-          </>
-        )
-      ) : (
-        children
-      )}
+      {pending
+        ? (loadingContent ?? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Loading...
+            </>
+          ))
+        : children}
     </Button>
   )
 }
 
 export default AsyncButton
-
-

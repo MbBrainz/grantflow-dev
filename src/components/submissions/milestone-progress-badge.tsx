@@ -4,7 +4,6 @@ import { Badge } from '@/components/ui/badge'
 import { Target, CheckCircle, Clock } from 'lucide-react'
 import type { Milestone } from '@/lib/db/schema'
 
-
 interface MilestoneProgressBadgeProps {
   milestones: Pick<Milestone, 'id' | 'status' | 'title' | 'amount'>[]
   submissionStatus: string

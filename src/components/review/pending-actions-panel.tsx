@@ -32,7 +32,10 @@ export interface PendingAction {
     name: string | null
     email: string | null
   }
-  committee?: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'>
+  committee?: Pick<
+    Committee,
+    'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'
+  >
   grantProgram?: {
     id: number
     name: string
@@ -48,7 +51,10 @@ export interface PendingAction {
       name: string | null
       email: string | null
     }
-    committee?: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas'>
+    committee?: Pick<
+      Committee,
+      'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas'
+    >
   }
 }
 
@@ -125,7 +131,7 @@ function ActionCard({ action }: { action: PendingAction }) {
         </div>
 
         {/* Committee Badge */}
-        {(action.committee ) && (
+        {action.committee && (
           <CommitteeBadge
             committee={action.committee}
             variant="compact"

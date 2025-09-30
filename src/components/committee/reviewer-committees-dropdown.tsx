@@ -17,7 +17,10 @@ import {
 import type { Committee, User } from '@/lib/db/schema'
 
 interface CommitteeMembership {
-  committee: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'>
+  committee: Pick<
+    Committee,
+    'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'
+  >
   role: 'admin' | 'reviewer'
   permissions?: string[]
   joinedAt: string
@@ -27,7 +30,12 @@ interface CommitteeMembership {
 interface ReviewerCommitteesDropdownProps {
   currentUser: Pick<User, 'id'> | null
   currentCommitteeId?: number
-  onCommitteeSelect?: (committee: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'>) => void
+  onCommitteeSelect?: (
+    committee: Pick<
+      Committee,
+      'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'
+    >
+  ) => void
   className?: string
 }
 
@@ -44,11 +52,14 @@ export function ReviewerCommitteesDropdown({
 
   useEffect(() => {
     loadUserCommittees().catch(error => {
-      console.error('[ReviewerCommitteesDropdown]: Error loading committees', error)
+      console.error(
+        '[ReviewerCommitteesDropdown]: Error loading committees',
+        error
+      )
       setError('Failed to load committee memberships')
       setMemberships([])
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id])
 
   const loadUserCommittees = async () => {
@@ -71,7 +82,9 @@ export function ReviewerCommitteesDropdown({
         throw new Error('Failed to load committees')
       }
 
-      const data = await response.json() as { memberships: CommitteeMembership[] }
+      const data = (await response.json()) as {
+        memberships: CommitteeMembership[]
+      }
       setMemberships(data.memberships ?? [])
     } catch (error) {
       console.error(

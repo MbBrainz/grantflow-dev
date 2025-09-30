@@ -351,7 +351,7 @@ export function PublicSubmissionView({
 
         {publicMessages.length > 0 ? (
           <div className="space-y-3">
-            {publicMessages.slice(0, 5).map((message) => (
+            {publicMessages.slice(0, 5).map(message => (
               <div key={message.id} className="rounded-lg border p-3">
                 <div className="mb-2 flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">

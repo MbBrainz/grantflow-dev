@@ -46,9 +46,19 @@ export function GranteeSubmissionView({
   const [activeTab, setActiveTab] = useState<
     'status' | 'feedback' | 'milestones'
   >('status')
-  const [submittingMilestone, setSubmittingMilestone] = useState<Pick<Milestone, 'id' | 'title' | 'description' | 'requirements' | 'amount' | 'dueDate' | 'status' | 'deliverables' | 'githubRepoUrl' | 'githubCommitHash'> | null>(
-    null
-  )
+  const [submittingMilestone, setSubmittingMilestone] = useState<Pick<
+    Milestone,
+    | 'id'
+    | 'title'
+    | 'description'
+    | 'requirements'
+    | 'amount'
+    | 'dueDate'
+    | 'status'
+    | 'deliverables'
+    | 'githubRepoUrl'
+    | 'githubCommitHash'
+  > | null>(null)
 
   // Determine current stage and required actions
   const getApplicationStage = () => {
@@ -169,7 +179,9 @@ export function GranteeSubmissionView({
     }
   }
 
-  const canSubmitMilestone = (milestone: Pick<Milestone, 'id' | 'status' | 'createdAt'>) => {
+  const canSubmitMilestone = (
+    milestone: Pick<Milestone, 'id' | 'status' | 'createdAt'>
+  ) => {
     // Check basic requirements
     if (
       !['pending', 'in_progress'].includes(milestone.status) ||
@@ -185,9 +197,7 @@ export function GranteeSubmissionView({
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       )
 
-      const targetIndex = sortedMilestones.findIndex(
-        (m) => m.id === milestone.id
-      )
+      const targetIndex = sortedMilestones.findIndex(m => m.id === milestone.id)
 
       // Check all previous milestones are completed
       for (let i = 0; i < targetIndex; i++) {
@@ -375,8 +385,7 @@ export function GranteeSubmissionView({
                     <p className="text-2xl font-bold text-red-600">
                       {
                         reviews.filter(
-                          r =>
-                            r.vote === 'reject' || r.vote === 'abstain'
+                          r => r.vote === 'reject' || r.vote === 'abstain'
                         ).length
                       }
                     </p>
@@ -397,7 +406,7 @@ export function GranteeSubmissionView({
                   Reviewer Feedback
                 </h3>
                 <div className="space-y-3">
-                  {reviews.map((review) => (
+                  {reviews.map(review => (
                     <div key={review.id} className="rounded-lg border p-4">
                       <div className="mb-2 flex items-center gap-2">
                         <Badge
@@ -446,7 +455,7 @@ export function GranteeSubmissionView({
                 submissionRepoUrl={submission.githubRepoUrl}
                 previousMilestoneCommitSha={getPreviousMilestoneCommitSha(
                   submission.milestones?.findIndex(
-                    (m) => m.id === submittingMilestone.id
+                    m => m.id === submittingMilestone.id
                   ) ?? 0
                 )}
                 onSubmit={handleMilestoneSubmission}
@@ -471,151 +480,165 @@ export function GranteeSubmissionView({
 
                 {submission.milestones?.length > 0 ? (
                   <div className="space-y-4">
-                    {submission.milestones.map(
-                      (milestone, index: number) => (
-                        <div
-                          key={milestone.id}
-                          className="rounded-lg border p-4"
-                        >
-                          <div className="mb-3 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div
-                                className={`flex h-8 w-8 items-center justify-center rounded-full font-bold text-white ${
-                                  milestone.status === 'completed'
-                                    ? 'bg-green-500'
-                                    : milestone.status === 'in-review'
-                                      ? 'bg-yellow-500'
-                                      : milestone.status === 'in-progress'
-                                        ? 'bg-orange-500'
-                                        : milestone.status === 'pending'
-                                          ? 'bg-gray-400'
+                    {submission.milestones.map((milestone, index: number) => (
+                      <div key={milestone.id} className="rounded-lg border p-4">
+                        <div className="mb-3 flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`flex h-8 w-8 items-center justify-center rounded-full font-bold text-white ${
+                                milestone.status === 'completed'
+                                  ? 'bg-green-500'
+                                  : milestone.status === 'in-review'
+                                    ? 'bg-yellow-500'
+                                    : milestone.status === 'in-progress'
+                                      ? 'bg-orange-500'
+                                      : milestone.status === 'pending'
+                                        ? 'bg-gray-400'
                                         : 'bg-gray-400'
-                                }`}
-                              >
-                                {index + 1}
-                              </div>
-                              <div>
-                                <h4 className="font-medium">
-                                  {milestone.title}
-                                </h4>
-                                <p className="text-sm text-gray-600">
-                                  {milestone.description}
-                                </p>
-                              </div>
+                              }`}
+                            >
+                              {index + 1}
                             </div>
-                            <div className="text-right">
-                              <div className="flex items-center gap-2">
-                                <Badge
-                                  className={
-                                    milestone.status === 'completed'
-                                      ? 'bg-green-100 text-green-800'
-                                      : milestone.status === 'in-review'
-                                        ? 'bg-yellow-100 text-yellow-800'
-                                        : milestone.status === 'in-progress'
-                                          ? 'bg-orange-100 text-orange-800'
-                                          : milestone.status === 'pending'
-                                            ? 'bg-blue-100 text-blue-800'
-                                            : 'bg-gray-100 text-gray-800'
-                                  }
-                                >
-                                  {milestone.status?.replace('_', ' ')}
-                                </Badge>
-                                {(() => {
-                                  const { canSubmit, reason } =
-                                    canSubmitMilestone(milestone)
-                                  return canSubmit ? (
-                                    <Button
-                                      variant="outline"
-                                      size="sm"
-                                      onClick={() =>
-                                        setSubmittingMilestone(milestone)
-                                      }
-                                      disabled={!submission.githubRepoUrl}
-                                      className="flex items-center gap-1"
-                                    >
-                                      <GitBranch className="h-3 w-3" />
-                                      Submit
-                                    </Button>
-                                  ) : (
-                                    <div className="text-right">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        disabled
-                                        className="flex items-center gap-1 opacity-60"
-                                      >
-                                        <Lock className="h-3 w-3" />
-                                        Blocked
-                                      </Button>
-                                      {reason && (
-                                        <p className="mt-1 max-w-32 text-xs text-gray-500">
-                                          {reason}
-                                        </p>
-                                      )}
-                                    </div>
-                                  )
-                                })()}
-                              </div>
-                              <p className="mt-1 text-sm font-medium">
-                                ${milestone.amount?.toLocaleString() ?? 0}
+                            <div>
+                              <h4 className="font-medium">{milestone.title}</h4>
+                              <p className="text-sm text-gray-600">
+                                {milestone.description}
                               </p>
                             </div>
                           </div>
-
-                          {milestone.requirements && (
-                            <div className="mt-3 rounded bg-gray-50 p-3">
-                              <p className="mb-1 text-sm font-medium text-gray-700">
-                                Requirements:
-                              </p>
-                              <div className="text-sm text-gray-600">
-                                {typeof milestone.requirements === 'string'
-                                  ? milestone.requirements
-                                  : milestone.requirements.map((req: string, i: number) => (
-                                    <div key={i}>• {req}</div>
-                                  ))}
-                              </div>
-                            </div>
-                          )}
-
-                          {milestone.dueDate && (
-                            <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
-                              <Calendar className="h-4 w-4" />
-                              Due:{' '}
-                              {new Date(milestone.dueDate).toLocaleDateString()}
-                            </div>
-                          )}
-
-                          {milestone.status === 'in-review' &&
-                            milestone.deliverables && (
-                              <div className="mt-3 rounded border border-blue-200 bg-blue-50 p-3">
-                                <p className="mb-1 text-sm font-medium text-blue-700">
-                                  Submitted Deliverables:
-                                </p>
-                                <div className="text-sm text-blue-600">
-                                  {(() => {
-                                    const items = Array.isArray(milestone.deliverables)
-                                      ? milestone.deliverables
-                                      : [milestone.deliverables as unknown as Record<string, unknown>]
-
-                                    const latest = items[items.length - 1] as {
-                                      description?: string
-                                      commits?: { shortSha: string; url: string }[]
+                          <div className="text-right">
+                            <div className="flex items-center gap-2">
+                              <Badge
+                                className={
+                                  milestone.status === 'completed'
+                                    ? 'bg-green-100 text-green-800'
+                                    : milestone.status === 'in-review'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : milestone.status === 'in-progress'
+                                        ? 'bg-orange-100 text-orange-800'
+                                        : milestone.status === 'pending'
+                                          ? 'bg-blue-100 text-blue-800'
+                                          : 'bg-gray-100 text-gray-800'
+                                }
+                              >
+                                {milestone.status?.replace('_', ' ')}
+                              </Badge>
+                              {(() => {
+                                const { canSubmit, reason } =
+                                  canSubmitMilestone(milestone)
+                                return canSubmit ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      setSubmittingMilestone(milestone)
                                     }
+                                    disabled={!submission.githubRepoUrl}
+                                    className="flex items-center gap-1"
+                                  >
+                                    <GitBranch className="h-3 w-3" />
+                                    Submit
+                                  </Button>
+                                ) : (
+                                  <div className="text-right">
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      disabled
+                                      className="flex items-center gap-1 opacity-60"
+                                    >
+                                      <Lock className="h-3 w-3" />
+                                      Blocked
+                                    </Button>
+                                    {reason && (
+                                      <p className="mt-1 max-w-32 text-xs text-gray-500">
+                                        {reason}
+                                      </p>
+                                    )}
+                                  </div>
+                                )
+                              })()}
+                            </div>
+                            <p className="mt-1 text-sm font-medium">
+                              ${milestone.amount?.toLocaleString() ?? 0}
+                            </p>
+                          </div>
+                        </div>
 
-                                    if (!latest) return null
+                        {milestone.requirements && (
+                          <div className="mt-3 rounded bg-gray-50 p-3">
+                            <p className="mb-1 text-sm font-medium text-gray-700">
+                              Requirements:
+                            </p>
+                            <div className="text-sm text-gray-600">
+                              {typeof milestone.requirements === 'string'
+                                ? milestone.requirements
+                                : milestone.requirements.map(
+                                    (req: string, i: number) => (
+                                      <div key={i}>• {req}</div>
+                                    )
+                                  )}
+                            </div>
+                          </div>
+                        )}
 
-                                    return (
-                                      <div>
-                                        {latest.description && (
-                                          <p className="mb-2">{latest.description}</p>
-                                        )}
-                                        {latest.commits && latest.commits.length > 0 && (
+                        {milestone.dueDate && (
+                          <div className="mt-2 flex items-center gap-2 text-sm text-gray-600">
+                            <Calendar className="h-4 w-4" />
+                            Due:{' '}
+                            {new Date(milestone.dueDate).toLocaleDateString()}
+                          </div>
+                        )}
+
+                        {milestone.status === 'in-review' &&
+                          milestone.deliverables && (
+                            <div className="mt-3 rounded border border-blue-200 bg-blue-50 p-3">
+                              <p className="mb-1 text-sm font-medium text-blue-700">
+                                Submitted Deliverables:
+                              </p>
+                              <div className="text-sm text-blue-600">
+                                {(() => {
+                                  const items = Array.isArray(
+                                    milestone.deliverables
+                                  )
+                                    ? milestone.deliverables
+                                    : [
+                                        milestone.deliverables as unknown as Record<
+                                          string,
+                                          unknown
+                                        >,
+                                      ]
+
+                                  const latest = items[items.length - 1] as {
+                                    description?: string
+                                    commits?: {
+                                      shortSha: string
+                                      url: string
+                                    }[]
+                                  }
+
+                                  if (!latest) return null
+
+                                  return (
+                                    <div>
+                                      {latest.description && (
+                                        <p className="mb-2">
+                                          {latest.description}
+                                        </p>
+                                      )}
+                                      {latest.commits &&
+                                        latest.commits.length > 0 && (
                                           <div>
-                                            <p className="mb-1 font-medium">Commits included:</p>
+                                            <p className="mb-1 font-medium">
+                                              Commits included:
+                                            </p>
                                             <div className="space-y-1">
                                               {latest.commits.map(
                                                 (commit, i: number) => (
-                                                  <div key={i} className="flex items-center gap-2">
+                                                  <div
+                                                    key={i}
+                                                    className="flex items-center gap-2"
+                                                  >
                                                     <code className="rounded bg-blue-100 px-2 py-1 text-xs">
                                                       {commit.shortSha}
                                                     </code>
@@ -633,26 +656,24 @@ export function GranteeSubmissionView({
                                             </div>
                                           </div>
                                         )}
-                                      </div>
-                                    )
-                                  })()}
-                                </div>
+                                    </div>
+                                  )
+                                })()}
                               </div>
-                            )}
+                            </div>
+                          )}
 
-                          {!submission.githubRepoUrl &&
-                            canSubmitMilestone(milestone) && (
-                              <div className="mt-3 rounded border border-yellow-200 bg-yellow-50 p-3">
-                                <p className="text-sm text-yellow-700">
-                                  <AlertTriangle className="mr-1 inline h-4 w-4" />
-                                  GitHub repository required to submit
-                                  milestones
-                                </p>
-                              </div>
-                            )}
-                        </div>
-                      )
-                    )}
+                        {!submission.githubRepoUrl &&
+                          canSubmitMilestone(milestone) && (
+                            <div className="mt-3 rounded border border-yellow-200 bg-yellow-50 p-3">
+                              <p className="text-sm text-yellow-700">
+                                <AlertTriangle className="mr-1 inline h-4 w-4" />
+                                GitHub repository required to submit milestones
+                              </p>
+                            </div>
+                          )}
+                      </div>
+                    ))}
                   </div>
                 ) : (
                   <div className="py-8 text-center">

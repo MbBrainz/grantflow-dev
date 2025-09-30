@@ -72,10 +72,10 @@ function AccountFormWithData({ state }: { state: AccountFormState }) {
 }
 
 export default function GeneralPage() {
-  const [state, formAction, isPending] = useActionState<AccountFormState, FormData>(
-    updateAccount,
-    {}
-  )
+  const [state, formAction, isPending] = useActionState<
+    AccountFormState,
+    FormData
+  >(updateAccount, {})
 
   return (
     <section className="flex-1 p-4 lg:p-8">

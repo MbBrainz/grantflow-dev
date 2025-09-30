@@ -38,7 +38,6 @@ export function SubmissionDetailView({
 }: SubmissionDetailViewProps) {
   const router = useRouter()
 
-
   // Simple context - just determines view type
   const context = useSubmissionContext(submission, currentUser)
 

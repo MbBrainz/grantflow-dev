@@ -17,10 +17,11 @@ import {
 import type { User as UserType, DiscussionWithMessages } from '@/lib/db/schema'
 import type {
   RealtimeNotification,
-  WindowWithNotificationHandler} from '@/lib/notifications/client';
+  WindowWithNotificationHandler,
+} from '@/lib/notifications/client'
 import {
   useSubmissionNotifications,
-  useConnectionStatus
+  useConnectionStatus,
 } from '@/lib/notifications/client'
 
 // Type alias for backwards compatibility
@@ -92,11 +93,13 @@ export function DiscussionThread({
     }
 
     // Set up listener for new messages in this submission
-     
+
     const windowWithHandler = window as WindowWithNotificationHandler
     if (submissionId && windowWithHandler.handleRealtimeNotification) {
       const originalHandler = windowWithHandler.handleRealtimeNotification
-      windowWithHandler.handleRealtimeNotification = (notification: NotificationWithSubmission) => {
+      windowWithHandler.handleRealtimeNotification = (
+        notification: NotificationWithSubmission
+      ) => {
         originalHandler?.(notification)
         if (
           notification.type === 'new_message' &&

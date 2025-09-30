@@ -24,7 +24,20 @@ import type { Milestone, Submission } from '@/lib/db/schema'
 
 interface MilestoneStatusOverviewProps {
   submission: Pick<Submission, 'id' | 'title' | 'status'> & {
-    milestones: Pick<Milestone, 'id' | 'title' | 'description' | 'status' | 'amount' | 'dueDate' | 'deliverables' | 'githubRepoUrl' | 'submittedAt' | 'reviewedAt' | 'createdAt'>[]
+    milestones: Pick<
+      Milestone,
+      | 'id'
+      | 'title'
+      | 'description'
+      | 'status'
+      | 'amount'
+      | 'dueDate'
+      | 'deliverables'
+      | 'githubRepoUrl'
+      | 'submittedAt'
+      | 'reviewedAt'
+      | 'createdAt'
+    >[]
   }
   className?: string
 }
@@ -82,7 +95,22 @@ function getMilestoneStatusInfo(milestone: Pick<Milestone, 'status'>) {
   }
 }
 
-function getCurrentActiveStep(milestones: Pick<Milestone, 'id' | 'title' | 'description' | 'status' | 'amount' | 'dueDate' | 'deliverables' | 'githubRepoUrl' | 'submittedAt' | 'reviewedAt' | 'createdAt'>[]) {
+function getCurrentActiveStep(
+  milestones: Pick<
+    Milestone,
+    | 'id'
+    | 'title'
+    | 'description'
+    | 'status'
+    | 'amount'
+    | 'dueDate'
+    | 'deliverables'
+    | 'githubRepoUrl'
+    | 'submittedAt'
+    | 'reviewedAt'
+    | 'createdAt'
+  >[]
+) {
   // Find the first non-completed milestone
   const activeMilestone = milestones.find(
     m => m.status !== 'completed' && m.status !== 'rejected'
@@ -139,9 +167,7 @@ export function MilestoneStatusOverview({
     m => m.status === 'completed'
   ).length
   const activeMilestones = milestones.filter(
-    m =>
-      m.status === 'in-progress' ||
-      m.status === 'in-review'
+    m => m.status === 'in-progress' || m.status === 'in-review'
   ).length
 
   const progressPercentage = Math.round(

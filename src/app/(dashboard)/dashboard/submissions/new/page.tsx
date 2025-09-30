@@ -180,7 +180,10 @@ export default function NewSubmissionPage() {
           console.log('[new_submission]: Adding milestones as JSON:', value)
           submitFormData.append(key, JSON.stringify(value))
         } else {
-          submitFormData.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value))
+          submitFormData.append(
+            key,
+            typeof value === 'object' ? JSON.stringify(value) : String(value)
+          )
         }
       })
 

@@ -8,8 +8,32 @@ import { MilestoneCompletionForm } from './milestone-completion-form'
 import type { Milestone, Payout, User } from '@/lib/db/schema'
 
 interface MilestoneStatusProps {
-  milestone: Pick<Milestone, 'id' | 'title' | 'description' | 'amount' | 'status' | 'dueDate' | 'submittedAt' | 'reviewedAt' | 'deliverables' | 'githubRepoUrl' | 'githubPrUrl' | 'githubCommitHash'>
-  payouts?: (Pick<Payout, 'id' | 'amount' | 'transactionHash' | 'blockExplorerUrl' | 'status' | 'processedAt' | 'walletFrom' | 'walletTo'> & {
+  milestone: Pick<
+    Milestone,
+    | 'id'
+    | 'title'
+    | 'description'
+    | 'amount'
+    | 'status'
+    | 'dueDate'
+    | 'submittedAt'
+    | 'reviewedAt'
+    | 'deliverables'
+    | 'githubRepoUrl'
+    | 'githubPrUrl'
+    | 'githubCommitHash'
+  >
+  payouts?: (Pick<
+    Payout,
+    | 'id'
+    | 'amount'
+    | 'transactionHash'
+    | 'blockExplorerUrl'
+    | 'status'
+    | 'processedAt'
+    | 'walletFrom'
+    | 'walletTo'
+  > & {
     triggeredByUser?: Pick<User, 'id' | 'name' | 'email'>
   })[]
   committeeId: number
@@ -235,7 +259,7 @@ export function MilestoneStatus({
           <div className="border-t pt-4">
             <h4 className="mb-2 text-sm font-medium">Payment History</h4>
             <div className="space-y-2">
-              {payouts.slice(1).map((payout) => (
+              {payouts.slice(1).map(payout => (
                 <div key={payout.id} className="rounded bg-gray-50 p-2 text-sm">
                   <div className="flex justify-between">
                     <span>{formatAmount(payout.amount)}</span>

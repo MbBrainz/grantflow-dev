@@ -80,7 +80,9 @@ export async function getSubmissionById(
   if (!result) return null
 
   // Calculate user context server-side
-  let userContext: { isSubmissionOwner: boolean; isCommitteeReviewer: boolean } | undefined
+  let userContext:
+    | { isSubmissionOwner: boolean; isCommitteeReviewer: boolean }
+    | undefined
   if (user) {
     const isSubmissionOwner = result.submitterId === user.id
 
