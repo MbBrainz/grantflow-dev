@@ -3,7 +3,6 @@
 import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
 import { CheckCircle, XCircle, MessageSquare, AlertCircle } from 'lucide-react'
 import type { User } from '@/lib/db/schema'
 
@@ -84,7 +83,7 @@ export function ReviewerVoting({
     {} as Record<string, number>
   )
 
-  const handleVoteSubmit = async () => {
+  const handleVoteSubmit = () => {
     if (!selectedVote || !currentUser) return
 
     startTransition(async () => {

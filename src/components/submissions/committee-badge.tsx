@@ -3,6 +3,7 @@
 import { Badge } from '@/components/ui/badge'
 import { Building2 } from 'lucide-react'
 import type { Committee } from '@/lib/db/schema'
+import Image from 'next/image'
 
 
 interface CommitteeBadgeProps {
@@ -32,7 +33,7 @@ export function CommitteeBadge({
       {showIcon && (
         <div className="flex-shrink-0 rounded bg-blue-100 p-1 text-blue-600">
           {committee.logoUrl ? (
-            <img
+            <Image
               src={committee.logoUrl}
               alt={`${committee.name} logo`}
               className="h-4 w-4 rounded object-cover"

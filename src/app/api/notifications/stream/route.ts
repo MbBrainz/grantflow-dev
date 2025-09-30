@@ -43,9 +43,7 @@ export async function GET(request: NextRequest) {
         controller.enqueue(`data: ${JSON.stringify(welcomeMessage)}\n\n`)
 
         // Store controller reference for this user (in production, use Redis)
-        if (!global.notificationStreams) {
-          global.notificationStreams = new Map()
-        }
+        global.notificationStreams ??= new Map()
         global.notificationStreams.set(user.id, controller)
 
         // Keep connection alive with periodic heartbeat

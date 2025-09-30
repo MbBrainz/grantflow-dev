@@ -40,7 +40,7 @@ export function ReviewerSubmissionView({
   const reviews = submission.reviews ?? []
   const approveVotes = reviews.filter(r => r.vote === 'approve').length
   const rejectVotes = reviews.filter(
-    r => r.vote === 'reject' || r.vote === 'request_changes'
+    r => r.vote === 'reject' || r.vote === 'abstain'
   ).length
   const userHasVoted = reviews.some(r => r.reviewerId === currentUser?.id)
   const needsMyVote =

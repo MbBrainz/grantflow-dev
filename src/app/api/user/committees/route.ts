@@ -1,6 +1,5 @@
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { db } from '@/lib/db/drizzle'
 import { getUserCommittees } from '@/lib/db/queries'
 
 export async function GET(request: NextRequest) {

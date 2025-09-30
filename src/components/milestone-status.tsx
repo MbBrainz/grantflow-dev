@@ -103,8 +103,8 @@ export function MilestoneStatus({
         </div>
 
         {/* GitHub Links */}
-        {(milestone.githubRepoUrl ||
-          milestone.githubPrUrl ||
+        {(milestone.githubRepoUrl ??
+          milestone.githubPrUrl ??
           milestone.githubCommitHash) && (
           <div className="rounded-lg bg-gray-50 p-3">
             <h4 className="mb-2 text-sm font-medium">Deliverables</h4>
@@ -223,7 +223,7 @@ export function MilestoneStatus({
               milestoneId={milestone.id}
               committeeId={committeeId}
               milestoneTitle={milestone.title}
-              milestoneAmount={milestone.amount}
+              milestoneAmount={milestone.amount ?? undefined}
               onSuccess={handleCompletionSuccess}
               onCancel={() => setShowCompletionForm(false)}
             />
@@ -235,7 +235,7 @@ export function MilestoneStatus({
           <div className="border-t pt-4">
             <h4 className="mb-2 text-sm font-medium">Payment History</h4>
             <div className="space-y-2">
-              {payouts.slice(1).map((payout, index) => (
+              {payouts.slice(1).map((payout) => (
                 <div key={payout.id} className="rounded bg-gray-50 p-2 text-sm">
                   <div className="flex justify-between">
                     <span>{formatAmount(payout.amount)}</span>

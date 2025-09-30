@@ -4,7 +4,6 @@ import type { ReactNode } from 'react'
 import { useEffect, createContext, useContext, useState } from 'react'
 import {
   useNotificationStream,
-  useConnectionStatus,
 } from '@/lib/notifications/client'
 import { Toaster } from '@/components/ui/toaster'
 import useSWR from 'swr'
@@ -37,8 +36,8 @@ const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 export function NotificationProvider({ children }: NotificationProviderProps) {
   // Check if user is authenticated before initializing notifications
-  const { data: user, error: userError } = useSWR<User>('/api/user', fetcher)
-  const [shouldConnect, setShouldConnect] = useState(false)
+  const { data: user, error: userError } = useSWR<User>('/api/user', fetcher) as { data: User | undefined, error: Error | undefined }
+  const [shouldConnect, setShouldConnect] = useState<boolean>(false)
 
   // Only attempt to connect if user is authenticated
   useEffect(() => {
@@ -61,21 +60,24 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   // Auto-reconnect on connection failures (only if should connect)
   useEffect(() => {
     if (
-      shouldConnect &&
-      notificationStream.error &&
-      !notificationStream.isConnecting
+      !(shouldConnect &&
+    notificationStream.error &&
+    !notificationStream.isConnecting)
     ) {
-      console.log(
-        '[NotificationProvider]: Connection error detected, attempting reconnect in 5 seconds'
-      )
-      const reconnectTimer = setTimeout(() => {
-        if (notificationStream.reconnect) {
-          notificationStream.reconnect()
-        }
-      }, 5000)
-
-      return () => clearTimeout(reconnectTimer)
+      return;
     }
+
+    console.log(
+      '[NotificationProvider]: Connection error detected, attempting reconnect in 5 seconds'
+    )
+    const reconnectTimer = setTimeout(() => {
+      if (notificationStream.reconnect) {
+        notificationStream.reconnect()
+      }
+    }, 5000)
+
+    return () => clearTimeout(reconnectTimer)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     shouldConnect,
     notificationStream.error,
@@ -109,8 +111,8 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     isConnecting: shouldConnect ? notificationStream.isConnecting : false,
     error: shouldConnect ? notificationStream.error : null,
     reconnect: shouldConnect
-      ? notificationStream.reconnect ?? (() => {})
-      : () => {},
+      ? notificationStream.reconnect ?? (() => { return })
+      : () => { return },
   }
 
   return (

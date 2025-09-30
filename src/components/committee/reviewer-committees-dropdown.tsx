@@ -43,7 +43,12 @@ export function ReviewerCommitteesDropdown({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    loadUserCommittees()
+    loadUserCommittees().catch(error => {
+      console.error('[ReviewerCommitteesDropdown]: Error loading committees', error)
+      setError('Failed to load committee memberships')
+      setMemberships([])
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser?.id])
 
   const loadUserCommittees = async () => {
@@ -66,7 +71,7 @@ export function ReviewerCommitteesDropdown({
         throw new Error('Failed to load committees')
       }
 
-      const data = await response.json()
+      const data = await response.json() as { memberships: CommitteeMembership[] }
       setMemberships(data.memberships ?? [])
     } catch (error) {
       console.error(

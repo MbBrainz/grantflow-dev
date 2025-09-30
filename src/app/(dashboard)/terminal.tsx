@@ -23,10 +23,12 @@ export function Terminal() {
     }, 500)
 
     return () => clearTimeout(timer)
-  }, [terminalStep])
+  }, [terminalStep, terminalSteps.length])
 
   const copyToClipboard = () => {
-    navigator.clipboard.writeText(terminalSteps.join('\n'))
+    navigator.clipboard.writeText(terminalSteps.join('\n')).catch(error => {
+      console.error('[Terminal]: Error copying to clipboard', error)
+    })
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
   }

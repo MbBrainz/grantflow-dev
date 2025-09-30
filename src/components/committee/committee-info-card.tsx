@@ -15,6 +15,7 @@ import {
   Shield,
 } from 'lucide-react'
 import type { Committee } from '@/lib/db/schema'
+import Image from 'next/image'
 
 interface CommitteeInfoCardProps {
   committee: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'websiteUrl' | 'githubOrg' | 'walletAddress' | 'isActive'> & {
@@ -33,9 +34,7 @@ export function CommitteeInfoCard({
   className = '',
   showActions = true,
 }: CommitteeInfoCardProps) {
-  const focusAreas: string[] = committee.focusAreas
-    ? JSON.parse(committee.focusAreas)
-    : []
+  const focusAreas: string[] = committee.focusAreas ?? []
 
   const getRoleIcon = () => {
     switch (userRole) {
@@ -73,7 +72,7 @@ export function CommitteeInfoCard({
         {/* Committee Logo/Icon */}
         <div className="flex-shrink-0 rounded-full bg-blue-100 p-3 text-blue-600">
           {committee.logoUrl ? (
-            <img
+            <Image
               src={committee.logoUrl}
               alt={`${committee.name} logo`}
               className="h-8 w-8 rounded-full object-cover"

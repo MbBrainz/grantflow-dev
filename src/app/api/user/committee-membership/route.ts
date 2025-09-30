@@ -9,7 +9,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
     const groupId =
-      searchParams.get('groupId') || searchParams.get('committeeId')
+      searchParams.get('groupId') ?? searchParams.get('committeeId')
 
     if (!userId || !groupId) {
       return NextResponse.json(
@@ -49,9 +49,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({
         isMember: true,
         role: membership.role,
-        permissions: membership.permissions
-          ? JSON.parse(membership.permissions)
-          : [],
+        permissions: membership.permissions ?? [],
         joinedAt: membership.joinedAt,
         group: membership.group,
       })

@@ -13,6 +13,7 @@ import { db } from '@/lib/db/drizzle'
 // Helper function for activity logging (simplified without team context)
 async function logActivity(userId: number, activityType: ActivityType) {
   // For now, just log to console since we removed activityLogs table
+  await Promise.resolve()
   console.log(`[Activity]: User ${userId} performed ${activityType}`)
 }
 
