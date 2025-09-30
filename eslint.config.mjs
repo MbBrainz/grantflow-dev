@@ -1,6 +1,6 @@
 import { FlatCompat } from '@eslint/eslintrc'
 import js from '@eslint/js'
-import prettierConfig from 'eslint-config-prettier'
+// import prettierConfig from 'eslint-config-prettier/index.js'
 import globals from 'globals'
 import tseslint from 'typescript-eslint'
 
@@ -11,6 +11,14 @@ const compat = new FlatCompat({
 const config = tseslint.config(
   {
     ignores: ['.next', 'node_modules', 'out', '.vercel'],
+  },
+  {
+    files: ['eslint.config.mjs', 'postcss.config.mjs'],
+    languageOptions: {
+      parserOptions: {
+        projectService: false,
+      },
+    },
   },
   // Base configurations
   js.configs.recommended,
@@ -55,6 +63,7 @@ const config = tseslint.config(
         'error',
         { fixMixedExportsWithInlineTypeSpecifier: true },
       ],
+      '@typescript-eslint/prefer-nullish-coalescing': ['error'],
 
       // React/Next.js optimizations
       'react/react-in-jsx-scope': 'off',
@@ -66,10 +75,12 @@ const config = tseslint.config(
       'object-shorthand': 'warn',
       'prefer-template': 'warn',
     },
-  },
+  }
 
-  // Prettier integration
-  prettierConfig
+  // Prettier integration (temporarily disabled)
+  // {
+  //   rules: prettierConfig.rules,
+  // },
 )
 
 export default config

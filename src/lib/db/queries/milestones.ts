@@ -1,4 +1,4 @@
-import { eq, desc, and, or, sql } from 'drizzle-orm'
+import { eq, desc } from 'drizzle-orm'
 import { db } from '../drizzle'
 import {
   milestones,
@@ -71,23 +71,20 @@ export async function getSubmissionMilestonesOverview(submissionId: number) {
 
   const summary = {
     total: submissionMilestones.length,
-    completed: submissionMilestones.filter((m: any) => m.status === 'completed')
+    completed: submissionMilestones.filter(m => m.status === 'completed')
       .length,
-    inProgress: submissionMilestones.filter(
-      (m: any) => m.status === 'in_progress'
-    ).length,
-    pending: submissionMilestones.filter((m: any) => m.status === 'pending')
+    inProgress: submissionMilestones.filter(m => m.status === 'in_progress')
       .length,
-    underReview: submissionMilestones.filter(
-      (m: any) => m.status === 'under_review'
-    ).length,
+    pending: submissionMilestones.filter(m => m.status === 'pending').length,
+    underReview: submissionMilestones.filter(m => m.status === 'under_review')
+      .length,
     totalAmount: submissionMilestones.reduce(
-      (sum: number, m: any) => sum + (m.amount || 0),
+      (sum: number, m) => sum + (m.amount ?? 0),
       0
     ),
     paidAmount: submissionMilestones
-      .filter((m: any) => m.status === 'completed')
-      .reduce((sum: number, m: any) => sum + (m.amount || 0), 0),
+      .filter(m => m.status === 'completed')
+      .reduce((sum: number, m) => sum + (m.amount ?? 0), 0),
   }
 
   return {

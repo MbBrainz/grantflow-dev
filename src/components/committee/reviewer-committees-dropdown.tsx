@@ -76,7 +76,7 @@ export function ReviewerCommitteesDropdown({
       }
 
       const data = await response.json()
-      setMemberships(data.memberships || [])
+      setMemberships(data.memberships ?? [])
     } catch (error) {
       console.error(
         '[ReviewerCommitteesDropdown]: Error loading committees',

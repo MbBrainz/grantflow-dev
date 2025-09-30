@@ -1,5 +1,12 @@
 // Helper function to send notification to specific user
-export function sendNotificationToUser(userId: number, notification: any) {
+export function sendNotificationToUser(
+  userId: number,
+  notification: {
+    type: string
+    title: string
+    message: string
+  }
+) {
   if (!global.notificationStreams) {
     console.log('[notifications-stream]: No active streams found')
     return false
@@ -13,8 +20,8 @@ export function sendNotificationToUser(userId: number, notification: any) {
 
   try {
     const message = {
-      type: 'notification',
       ...notification,
+      type: 'notification',
       timestamp: new Date().toISOString(),
     }
 
@@ -35,7 +42,14 @@ export function sendNotificationToUser(userId: number, notification: any) {
 }
 
 // Helper to broadcast to multiple users
-export function broadcastNotification(userIds: number[], notification: any) {
+export function broadcastNotification(
+  userIds: number[],
+  notification: {
+    type: string
+    title: string
+    message: string
+  }
+) {
   let successCount = 0
   userIds.forEach(userId => {
     if (sendNotificationToUser(userId, notification)) {

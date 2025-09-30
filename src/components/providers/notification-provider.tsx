@@ -1,19 +1,14 @@
 'use client'
 
-import {
-  useEffect,
-  createContext,
-  useContext,
-  ReactNode,
-  useState,
-} from 'react'
+import type { ReactNode } from 'react'
+import { useEffect, createContext, useContext, useState } from 'react'
 import {
   useNotificationStream,
   useConnectionStatus,
 } from '@/lib/notifications/client'
 import { Toaster } from '@/components/ui/toaster'
 import useSWR from 'swr'
-import { User } from '@/lib/db/schema'
+import type { User } from '@/lib/db/schema'
 
 interface NotificationContextType {
   isConnected: boolean
@@ -114,7 +109,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     isConnecting: shouldConnect ? notificationStream.isConnecting : false,
     error: shouldConnect ? notificationStream.error : null,
     reconnect: shouldConnect
-      ? notificationStream.reconnect || (() => {})
+      ? notificationStream.reconnect ?? (() => {})
       : () => {},
   }
 

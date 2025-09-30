@@ -141,7 +141,7 @@ export function MilestoneStatusOverview({
   submission,
   className = '',
 }: MilestoneStatusOverviewProps) {
-  const milestones = submission.milestones || []
+  const milestones = submission.milestones ?? []
 
   if (milestones.length === 0) {
     return (

@@ -13,7 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { signOut } from '@/app/(login)/actions'
 import { useRouter } from 'next/navigation'
-import { User } from '@/lib/db/schema'
+import type { User } from '@/lib/db/schema'
 import useSWR, { mutate } from 'swr'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
@@ -49,9 +49,9 @@ function UserMenu() {
     <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
       <DropdownMenuTrigger>
         <Avatar className="size-9 cursor-pointer">
-          <AvatarImage alt={user.name || ''} />
+          <AvatarImage alt={user.name ?? ''} />
           <AvatarFallback>
-            {(user.email || user.name || 'U')
+            {(user.email ?? user.name ?? 'U')
               .split(' ')
               .map(n => n[0])
               .join('')

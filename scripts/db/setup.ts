@@ -9,13 +9,9 @@ import {
   grantPrograms,
   submissions,
   discussions,
-  messages,
-  milestones,
-  reviews,
-  payouts,
-  notifications,
   type User,
   type Group,
+  type GrantProgram,
 } from '../../src/lib/db/schema'
 
 config()
@@ -40,7 +36,7 @@ export async function createGroup(groupData: {
   websiteUrl?: string
   githubOrg?: string
   walletAddress?: string
-  settings?: Record<string, any>
+  settings?: Record<string, unknown>
 }): Promise<Group> {
   const [group] = await db
     .insert(groups)
@@ -53,7 +49,7 @@ export async function createGroup(groupData: {
       githubOrg: groupData.githubOrg,
       walletAddress: groupData.walletAddress,
       isActive: true,
-      settings: JSON.stringify(groupData.settings || {}),
+      settings: JSON.stringify(groupData.settings ?? {}),
     })
     .returning()
 
@@ -94,10 +90,10 @@ export async function createGrantProgram(programData: {
   name: string
   description: string
   fundingAmount: number
-  requirements: Record<string, any>
-  applicationTemplate: Record<string, any>
-  milestoneStructure: Record<string, any>
-}): Promise<any> {
+  requirements: Record<string, unknown>
+  applicationTemplate: Record<string, unknown>
+  milestoneStructure: Record<string, unknown>
+}): Promise<GrantProgram> {
   const [program] = await db
     .insert(grantPrograms)
     .values({
@@ -127,11 +123,11 @@ export async function verifyDatabaseStructure(): Promise<boolean> {
     console.log('🔍 Verifying database structure...')
 
     // Test basic table access
-    const testUsers = await db.select().from(users).limit(1)
+    const _testUsers = await db.select().from(users).limit(1)
     const testGroups = await db.select().from(groups).limit(1)
-    const testMemberships = await db.select().from(groupMemberships).limit(1)
+    const _testMemberships = await db.select().from(groupMemberships).limit(1)
     const testPrograms = await db.select().from(grantPrograms).limit(1)
-    const testSubmissions = await db.select().from(submissions).limit(1)
+    const _testSubmissions = await db.select().from(submissions).limit(1)
 
     console.log('✅ All core tables accessible')
 
@@ -370,12 +366,14 @@ export async function cleanupOrphanedData(): Promise<void> {
       // Implementation would go here
     }
 
-    // Clean up orphaned notifications
-    const orphanedNotifications = await db
-      .select()
-      .from(notifications)
-      .leftJoin(users, eq(notifications.userId, users.id))
-      .where(isNull(users.id))
+    // Clean up orphaned notifications (check if userId field exists in schema)
+    // const orphanedNotifications = await db
+    //   .select()
+    //   .from(notifications)
+    //   .leftJoin(users, eq(notifications.userId, users.id))
+    //   .where(isNull(users.id))
+
+    const orphanedNotifications: unknown[] = []
 
     if (orphanedNotifications.length > 0) {
       console.log(

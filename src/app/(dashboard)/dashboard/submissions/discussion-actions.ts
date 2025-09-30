@@ -10,6 +10,7 @@ import {
   ensureDiscussionForSubmission,
   ensureDiscussionForMilestone,
   getReviewsForSubmission,
+  getMilestoneById,
 } from '@/lib/db/queries'
 import { validatedActionWithUser } from '@/lib/auth/middleware'
 import {
@@ -28,7 +29,7 @@ const messageSchema = z.object({
   metadata: z.string().optional(),
 })
 
-const discussionParamsSchema = z.object({
+const _discussionParamsSchema = z.object({
   submissionId: z.number().optional(),
   milestoneId: z.number().optional(),
 })
@@ -184,7 +185,7 @@ export const postMessageToSubmission = validatedActionWithUser(
         if (data.messageType === 'vote') {
           await notifyVoteCast(
             data.submissionId,
-            user.name || 'Anonymous Reviewer',
+            user.name ?? 'Anonymous Reviewer',
             data.content,
             user.id
           )
@@ -194,7 +195,7 @@ export const postMessageToSubmission = validatedActionWithUser(
           await notifyNewMessage(
             data.submissionId,
             discussion.id,
-            user.name || 'Anonymous User',
+            user.name ?? 'Anonymous User',
             data.content,
             user.id
           )
@@ -294,41 +295,6 @@ export const getSubmissionCurrentState = validatedActionWithUser(
   }
 )
 
-export const getSubmissionMilestonesOverview = validatedActionWithUser(
-  z.object({
-    submissionId: z.coerce.number(),
-  }),
-  async (data, formData, user) => {
-    try {
-      console.log(
-        '[getSubmissionMilestonesOverview]: Fetching milestones overview',
-        {
-          submissionId: data.submissionId,
-          userId: user.id,
-        }
-      )
-
-      const milestonesData = await import('@/lib/db/queries').then(m =>
-        m.getSubmissionMilestonesOverview(data.submissionId)
-      )
-
-      return {
-        success: true,
-        milestonesOverview: milestonesData,
-        currentUser: user,
-      }
-    } catch (error) {
-      console.error(
-        '[getSubmissionMilestonesOverview]: Error fetching milestones overview',
-        error
-      )
-      return {
-        error: 'Failed to load milestones overview. Please try again.',
-      }
-    }
-  }
-)
-
 // Helper function to post a message to a milestone discussion
 export const postMessageToMilestone = validatedActionWithUser(
   z.object({
@@ -341,9 +307,6 @@ export const postMessageToMilestone = validatedActionWithUser(
   async (data, formData, user) => {
     try {
       // Ensure discussion exists for milestone
-      const { ensureDiscussionForMilestone, createMessage } = await import(
-        '@/lib/db/queries'
-      )
       const discussion = await ensureDiscussionForMilestone(data.milestoneId)
 
       // Create the message
@@ -359,7 +322,6 @@ export const postMessageToMilestone = validatedActionWithUser(
       })
 
       // Get milestone to find submission ID for notifications
-      const { getMilestoneById } = await import('@/lib/db/queries')
       const milestone = await getMilestoneById(data.milestoneId)
 
       // Trigger real-time notifications for milestone messages
@@ -367,13 +329,10 @@ export const postMessageToMilestone = validatedActionWithUser(
         // For milestones, we'll reuse the submission notification system
         // but could be enhanced to be milestone-specific
         if (milestone?.submissionId) {
-          const { notifyNewMessage } = await import(
-            '@/lib/notifications/server'
-          )
           await notifyNewMessage(
             milestone.submissionId,
             discussion.id,
-            user.name || 'Anonymous User',
+            user.name ?? 'Anonymous User',
             `Milestone update: ${data.content}`,
             user.id
           )

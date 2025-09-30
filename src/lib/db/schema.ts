@@ -38,6 +38,8 @@ import type { Group } from './schema/groups'
 import type { GrantProgram } from './schema/grant-programs'
 import type { Submission } from './schema/submissions'
 import type { Milestone } from './schema/milestones'
+import type { DiscussionWithMessages } from './schema/discussions'
+import type { Review } from './schema/reviews'
 
 export type SubmissionWithMilestones = Submission & {
   milestones: Milestone[]
@@ -45,4 +47,16 @@ export type SubmissionWithMilestones = Submission & {
   submitterGroup: Group
   reviewerGroup: Group
   grantProgram: GrantProgram
+  discussions?: DiscussionWithMessages[]
+  reviews?: (Review & {
+    reviewer: {
+      id: number
+      name: string
+      primaryRole: string | null
+    }
+  })[]
+  userContext?: {
+    isSubmissionOwner: boolean
+    isCommitteeReviewer: boolean
+  }
 }

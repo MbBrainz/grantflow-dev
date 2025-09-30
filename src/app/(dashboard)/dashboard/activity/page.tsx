@@ -1,61 +1,8 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  Settings,
-  LogOut,
-  UserPlus,
-  Lock,
-  UserCog,
-  AlertCircle,
-  FileText,
-  Edit,
-  Trash2,
-  Users,
-  type LucideIcon,
-} from 'lucide-react'
-import { ActivityType } from '@/lib/db/schema'
+import { AlertCircle } from 'lucide-react'
 
-// Simple activity log type for display
-type ActivityLog = {
-  action: string
-  userName?: string
-  timestamp: string | Date
-}
-
-const iconMap: Record<ActivityType, LucideIcon> = {
-  [ActivityType.SIGN_UP]: UserPlus,
-  [ActivityType.SIGN_IN]: UserCog,
-  [ActivityType.SIGN_OUT]: LogOut,
-  [ActivityType.UPDATE_PASSWORD]: Lock,
-  [ActivityType.DELETE_ACCOUNT]: Trash2,
-  [ActivityType.UPDATE_ACCOUNT]: Settings,
-  [ActivityType.CREATE_SUBMISSION]: FileText,
-  [ActivityType.UPDATE_SUBMISSION]: Edit,
-  [ActivityType.DELETE_SUBMISSION]: Trash2,
-  [ActivityType.ADD_MILESTONE]: FileText,
-  [ActivityType.UPDATE_MILESTONE]: Edit,
-  [ActivityType.SUBMIT_REVIEW]: Edit,
-  [ActivityType.CREATE_GROUP]: Users,
-  [ActivityType.JOIN_GROUP]: UserPlus,
-  [ActivityType.LEAVE_GROUP]: LogOut,
-}
-
-function getRelativeTime(date: Date) {
-  const now = new Date()
-  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
-
-  if (diffInSeconds < 60) return 'just now'
-  if (diffInSeconds < 3600)
-    return `${Math.floor(diffInSeconds / 60)} minutes ago`
-  if (diffInSeconds < 86400)
-    return `${Math.floor(diffInSeconds / 3600)} hours ago`
-  if (diffInSeconds < 604800)
-    return `${Math.floor(diffInSeconds / 86400)} days ago`
-  return date.toLocaleDateString()
-}
-
-export default async function ActivityPage() {
+export default function ActivityPage() {
   // For now, show empty state since activity logs are simplified
-  const activities: ActivityLog[] = []
 
   return (
     <div className="mx-auto max-w-4xl p-6">

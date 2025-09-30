@@ -1,6 +1,6 @@
 import { eq, and } from 'drizzle-orm'
 import { db } from '../drizzle'
-import { users, groupMemberships, groups, type User } from '../schema'
+import { users, groupMemberships, type User } from '../schema'
 import { getSession } from '@/lib/auth/session'
 
 export async function getUser(): Promise<User | null> {

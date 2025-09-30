@@ -1,11 +1,5 @@
-import {
-  createNotification as dbCreateNotification,
-  getUser,
-} from '@/lib/db/queries'
-import {
-  sendNotificationToUser,
-  broadcastNotification,
-} from '@/lib/notifications/utils'
+import { createNotification as dbCreateNotification } from '@/lib/db/queries'
+import { sendNotificationToUser } from '@/lib/notifications/utils'
 
 // Notification types
 export const NOTIFICATION_TYPES = {
@@ -27,7 +21,7 @@ export interface NotificationData {
   submissionId?: number
   discussionId?: number
   actionUrl?: string
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 // Create and store notification in database
@@ -45,8 +39,8 @@ export async function createNotification(
     await dbCreateNotification({
       userId,
       type: data.type,
-      submissionId: data.submissionId || undefined,
-      discussionId: data.discussionId || undefined,
+      submissionId: data.submissionId ?? undefined,
+      discussionId: data.discussionId ?? undefined,
       content: JSON.stringify({
         title: data.title,
         message: data.message,
@@ -189,6 +183,7 @@ export async function notifyStatusChange(
 }
 
 // Helper function to get submission with participants (simplified for now)
+// eslint-disable-next-line @typescript-eslint/require-await
 async function getSubmissionWithParticipants(submissionId: number) {
   // TODO: Implement proper query to get submission with all participants
   // For now, return a basic structure
@@ -202,7 +197,12 @@ async function getSubmissionWithParticipants(submissionId: number) {
 
 // Helper to determine who should receive notifications
 function getNotificationTargets(
-  submission: any,
+  submission: {
+    id: number
+    title: string
+    submitterId: number
+    participants: number[]
+  },
   excludeUserId?: number
 ): number[] {
   const targets = new Set<number>()

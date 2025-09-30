@@ -1,13 +1,7 @@
 'use client'
 
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import useSWR from 'swr'
 import { Suspense, useEffect, useState } from 'react'
@@ -24,13 +18,67 @@ import {
   AlertCircle,
   MessageSquare,
   Gavel,
+  type LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
 
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+interface UserData {
+  id: number
+  name: string | null
+  email: string
+  role: string
+  primaryRole?: string | null
+}
+
+interface DashboardStatsType {
+  submissions: {
+    total: number
+    pending: number
+    approved: number
+    inReview: number
+  }
+  milestones: {
+    total: number
+    completed: number
+    inProgress: number
+    pending: number
+  }
+  committees: { active: number; isReviewer: boolean }
+  recentActivity: {
+    type: string
+    project: string
+    time: string
+  }[]
+}
+
+interface ActivityItem {
+  id: number
+  type: string
+  title: string
+  description: string
+  time: string
+  icon: LucideIcon
+  color: string
+}
+
+interface DeadlineItem {
+  id: number
+  title: string
+  project: string
+  dueDate: string
+  status: string
+  urgent: boolean
+}
+
+const fetcher = async (url: string): Promise<UserData> => {
+  const res = await fetch(url)
+  return res.json() as Promise<UserData>
+}
 
 function UserProfile() {
-  const { data: user, error } = useSWR('/api/user', fetcher)
+  const result = useSWR<UserData>('/api/user', fetcher)
+  const user = result.data
+  const error = result.error as Error | undefined
 
   if (error) {
     return (
@@ -63,8 +111,8 @@ function UserProfile() {
       ?.split(' ')
       .map((n: string) => n[0])
       .join('')
-      .toUpperCase() ||
-    user.email?.[0]?.toUpperCase() ||
+      .toUpperCase() ??
+    user.email?.[0]?.toUpperCase() ??
     'U'
 
   return (
@@ -78,7 +126,7 @@ function UserProfile() {
           </div>
           <div>
             <h2 className="text-lg font-semibold">
-              {user.name || 'Anonymous'}
+              {user.name ?? 'Anonymous'}
             </h2>
             <p className="text-sm text-gray-600">{user.email}</p>
             <Badge variant="outline" className="mt-1 capitalize">
@@ -92,25 +140,22 @@ function UserProfile() {
 }
 
 function DashboardStats() {
-  const [stats, setStats] = useState({
+  const [stats, setStats] = useState<DashboardStatsType>({
     submissions: { total: 0, pending: 0, approved: 0, inReview: 0 },
     milestones: { total: 0, completed: 0, inProgress: 0, pending: 0 },
     committees: { active: 0, isReviewer: false },
-    recentActivity: [] as Array<{
-      type: string
-      project: string
-      time: string
-    }>,
+    recentActivity: [],
   })
   const [loading, setLoading] = useState(true)
-  const { data: user } = useSWR('/api/user', fetcher)
+  const result = useSWR<UserData>('/api/user', fetcher)
+  const user = result.data
 
   useEffect(() => {
-    async function loadStats() {
+    function loadStats() {
       try {
         // This would typically be a real API call to get dashboard stats
         // For now, showing realistic placeholder data structure
-        const mockStats = {
+        const mockStats: DashboardStatsType = {
           submissions: { total: 2, pending: 1, approved: 1, inReview: 0 },
           milestones: { total: 8, completed: 2, inProgress: 3, pending: 3 },
           committees: {
@@ -144,11 +189,11 @@ function DashboardStats() {
     }
 
     if (user) {
-      loadStats()
+      void loadStats()
     }
   }, [user])
 
-  if (loading || !user) {
+  if (loading ?? !user) {
     return (
       <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
         {Array.from({ length: 4 }).map((_, i) => (
@@ -239,7 +284,7 @@ function DashboardStats() {
 }
 
 function RecentActivity() {
-  const [activities, setActivities] = useState([
+  const [_activities] = useState<ActivityItem[]>([
     {
       id: 1,
       type: 'milestone_completed',
@@ -277,6 +322,8 @@ function RecentActivity() {
       color: 'text-orange-600',
     },
   ])
+
+  const activities = _activities
 
   return (
     <Card>
@@ -321,7 +368,8 @@ function RecentActivity() {
 }
 
 function QuickActions() {
-  const { data: user } = useSWR('/api/user', fetcher)
+  const result = useSWR<UserData>('/api/user', fetcher)
+  const user = result.data
   const isReviewer = user?.role === 'committee' || user?.role === 'admin'
 
   return (
@@ -377,7 +425,7 @@ function QuickActions() {
 }
 
 function UpcomingDeadlines() {
-  const deadlines = [
+  const deadlines: DeadlineItem[] = [
     {
       id: 1,
       title: 'Core Development Review',

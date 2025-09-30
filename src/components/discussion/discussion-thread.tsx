@@ -14,23 +14,14 @@ import {
   WifiOff,
   AlertCircle,
 } from 'lucide-react'
-import type { Discussion, Message, User as UserType } from '@/lib/db/schema'
+import type { User as UserType, DiscussionWithMessages } from '@/lib/db/schema'
 import {
   useSubmissionNotifications,
   useConnectionStatus,
 } from '@/lib/notifications/client'
 
-interface DiscussionMessage extends Message {
-  author: {
-    id: number
-    name: string | null
-    role: string
-  }
-}
-
-interface DiscussionData extends Discussion {
-  messages: DiscussionMessage[]
-}
+// Type alias for backwards compatibility
+type DiscussionData = DiscussionWithMessages
 
 interface DiscussionThreadProps {
   discussion: DiscussionData | null
@@ -82,7 +73,7 @@ export function DiscussionThread({
   const [isPending, startTransition] = useTransition()
 
   // Real-time notifications for this submission
-  const notificationStatus = useSubmissionNotifications(submissionId)
+  useSubmissionNotifications(submissionId)
   const connectionStatus = useConnectionStatus()
 
   // Auto-refresh page when new messages arrive for this discussion
@@ -95,10 +86,18 @@ export function DiscussionThread({
       window.location.reload()
     }
 
+    interface NotificationWithSubmission {
+      type: string
+      submissionId?: number
+    }
+
     // Set up listener for new messages in this submission
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     if (submissionId && (window as any).handleRealtimeNotification) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const originalHandler = (window as any).handleRealtimeNotification
-      ;(window as any).handleRealtimeNotification = (notification: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      ;(window as any).handleRealtimeNotification = (notification: NotificationWithSubmission) => {
         originalHandler?.(notification)
         if (
           notification.type === 'new_message' &&
@@ -127,10 +126,10 @@ export function DiscussionThread({
   // Determine if user can post messages based on context
   const canPostMessage =
     currentUser &&
-    (isPublic || // Public discussions allow authenticated users to post
-      submissionContext?.isCommitteeReviewer || // Committee reviewers can always post
+    (isPublic ?? // Public discussions allow authenticated users to post
+      submissionContext?.isCommitteeReviewer ?? // Committee reviewers can always post
       submissionContext?.isSubmissionOwner) // Submission owners can always post
-  const messages = discussion?.messages || []
+  const messages = discussion?.messages ?? []
 
   return (
     <div className="space-y-6">
@@ -196,7 +195,7 @@ export function DiscussionThread({
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-2">
                     <span className="font-medium text-gray-900 dark:text-gray-100">
-                      {message.author.name || 'Anonymous'}
+                      {message.author.name ?? 'Anonymous'}
                     </span>
                     <span
                       className={`rounded-full px-2 py-0.5 text-xs ${getRoleBadgeColor(message.author.role)}`}

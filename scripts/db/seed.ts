@@ -675,7 +675,7 @@ async function seed() {
     })
     .returning()
 
-  const [infraToolsProgram] = await db
+  const [_infraToolsProgram] = await db
     .insert(grantPrograms)
     .values({
       groupId: infraCommittee.id,
@@ -1200,7 +1200,7 @@ async function seed() {
     })
     .returning()
 
-  const [pendingDiscussion] = await db
+  const [_pendingDiscussion] = await db
     .insert(discussions)
     .values({
       submissionId: pendingSubmission.id,
@@ -1220,7 +1220,7 @@ async function seed() {
     })
     .returning()
 
-  const [educationDiscussion] = await db
+  const [_educationDiscussion] = await db
     .insert(discussions)
     .values({
       submissionId: pendingEducationSubmission.id,
@@ -1497,7 +1497,7 @@ async function seed() {
     })
     .returning()
 
-  const [milestone3] = await db
+  const [_milestone3] = await db
     .insert(milestones)
     .values({
       submissionId: approvedSubmission.id,
@@ -1525,7 +1525,7 @@ async function seed() {
     })
     .returning()
 
-  const [milestone4] = await db
+  const [_milestone4] = await db
     .insert(milestones)
     .values({
       submissionId: approvedSubmission.id,
@@ -1816,6 +1816,6 @@ seed()
     console.error(error)
     process.exit(1)
   })
-  .finally(async () => {
-    await client.end()
+  .finally(() => {
+    void client.end()
   })

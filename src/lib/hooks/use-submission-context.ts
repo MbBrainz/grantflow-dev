@@ -1,148 +1,55 @@
-'use client'
-
-import { useEffect, useState } from 'react'
 import type { User } from '@/lib/db/schema'
 
-interface SubmissionUserContext {
-  user: User | null
-  isAuthenticated: boolean
-  role: 'reviewer' | 'grantee' | 'admin' | null
-
-  // Submission-specific permissions
+export interface SubmissionContext {
   isSubmissionOwner: boolean
   isCommitteeReviewer: boolean
-  committeeRole: 'admin' | 'reviewer' | null
-  canVote: boolean
-  canEditSubmission: boolean
-  canViewPrivateDiscussions: boolean
-  canManageWorkflow: boolean
-  canTriggerPayouts: boolean
-
-  // View determination
   viewType: 'reviewer' | 'grantee' | 'public'
-
-  // Loading state
-  isLoading: boolean
 }
 
-interface SubmissionWithMilestones {
-  id: number
+interface SubmissionWithContext {
   submitterId: number
-  committeeId: number
+  reviewerGroupId: number | null
   status: string
-  // ... other fields
+  userContext?: {
+    isSubmissionOwner: boolean
+    isCommitteeReviewer: boolean
+  }
 }
 
+/**
+ * Simple hook to determine view type from submission data
+ * All permission checks should be done server-side
+ */
 export function useSubmissionContext(
-  submission: any | null, // Accept any submission-like object
+  submission: SubmissionWithContext | null,
   currentUser: User | null
-): SubmissionUserContext {
-  const [context, setContext] = useState<SubmissionUserContext>({
-    user: null,
-    isAuthenticated: false,
-    role: null,
-    isSubmissionOwner: false,
-    isCommitteeReviewer: false,
-    committeeRole: null,
-    canVote: false,
-    canEditSubmission: false,
-    canViewPrivateDiscussions: false,
-    canManageWorkflow: false,
-    canTriggerPayouts: false,
-    viewType: 'public',
-    isLoading: true,
-  })
-
-  useEffect(() => {
-    async function determineUserContext() {
-      if (!submission) {
-        setContext(prev => ({ ...prev, isLoading: false }))
-        return
-      }
-
-      const isAuthenticated = !!currentUser
-      const role = currentUser?.primaryRole as 'committee' | 'team' | null
-
-      // Basic ownership and committee checks
-      const isSubmissionOwner = currentUser?.id === submission.submitterId
-
-      // Check if user is reviewer for this submission's committee
-      let isCommitteeReviewer = false
-      let committeeRole: 'admin' | 'reviewer' | null = null
-
-      if (
-        currentUser &&
-        role === 'committee' &&
-        (submission as any).reviewerGroupId
-      ) {
-        try {
-          // Check if user is member of the reviewing committee group
-          const response = await fetch(
-            `/api/user/committee-membership?userId=${currentUser.id}&groupId=${(submission as any).reviewerGroupId}`
-          )
-          if (response.ok) {
-            const membership = await response.json()
-            isCommitteeReviewer = membership.isMember
-            committeeRole = membership.role
-          } else {
-            // Fallback: assume committee role has general access
-            isCommitteeReviewer = role === 'committee'
-          }
-        } catch (error) {
-          console.error(
-            '[useSubmissionContext]: Error checking reviewer status',
-            error
-          )
-          // Fallback: assume committee role has general access
-          isCommitteeReviewer = role === 'committee'
-        }
-      }
-
-      // Determine permissions based on role and relationship
-      const canVote = isCommitteeReviewer && !isSubmissionOwner
-      const canEditSubmission =
-        isSubmissionOwner &&
-        (submission.status === 'draft' ||
-          submission.status === 'changes_requested')
-      const canViewPrivateDiscussions =
-        isCommitteeReviewer || currentUser?.primaryRole === 'committee'
-      const canManageWorkflow =
-        isCommitteeReviewer || currentUser?.primaryRole === 'committee'
-      const canTriggerPayouts =
-        isCommitteeReviewer || currentUser?.primaryRole === 'committee'
-
-      // Determine primary view type
-      let viewType: 'reviewer' | 'grantee' | 'public' = 'public'
-      if (isCommitteeReviewer) {
-        viewType = 'reviewer'
-      } else if (isSubmissionOwner) {
-        viewType = 'grantee'
-      }
-
-      setContext({
-        user: currentUser,
-        isAuthenticated,
-        role:
-          role === 'committee'
-            ? ('reviewer' as const)
-            : role === 'team'
-              ? ('grantee' as const)
-              : null,
-        isSubmissionOwner,
-        isCommitteeReviewer,
-        committeeRole,
-        canVote,
-        canEditSubmission,
-        canViewPrivateDiscussions,
-        canManageWorkflow,
-        canTriggerPayouts,
-        viewType,
-        isLoading: false,
-      })
+): SubmissionContext {
+  if (!submission || !currentUser) {
+    return {
+      isSubmissionOwner: false,
+      isCommitteeReviewer: false,
+      viewType: 'public',
     }
+  }
 
-    determineUserContext()
-  }, [submission, currentUser])
+  // Use server-calculated context if available, otherwise fallback to client calculation
+  const isSubmissionOwner =
+    submission.userContext?.isSubmissionOwner ??
+    submission.submitterId === currentUser.id
+  const isCommitteeReviewer =
+    submission.userContext?.isCommitteeReviewer ?? false
 
-  return context
+  // Determine view type
+  let viewType: 'reviewer' | 'grantee' | 'public' = 'public'
+  if (isCommitteeReviewer) {
+    viewType = 'reviewer'
+  } else if (isSubmissionOwner) {
+    viewType = 'grantee'
+  }
+
+  return {
+    isSubmissionOwner,
+    isCommitteeReviewer,
+    viewType,
+  }
 }

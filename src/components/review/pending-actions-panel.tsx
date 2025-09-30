@@ -20,7 +20,7 @@ import {
 import Link from 'next/link'
 import { CommitteeBadge } from '@/components/submissions/committee-badge'
 
-interface PendingAction {
+export interface PendingAction {
   id: number
   title: string
   actionType: 'submission_vote' | 'milestone_review'
@@ -104,7 +104,7 @@ function ActionCard({ action }: { action: PendingAction }) {
                   ? action.title
                   : `${action.submission?.title} - ${action.title}`}
               </CardTitle>
-              {(isCritical || isUrgent) && (
+              {(isCritical ?? isUrgent) && (
                 <Badge
                   variant={isCritical ? 'destructive' : 'secondary'}
                   className="text-xs"
@@ -118,7 +118,7 @@ function ActionCard({ action }: { action: PendingAction }) {
                 by{' '}
                 {(isSubmissionVote
                   ? action.submitter?.name
-                  : action.submission?.submitter?.name) || 'Anonymous'}
+                  : action.submission?.submitter?.name) ?? 'Anonymous'}
               </span>
               <div className="flex items-center gap-1">
                 <Calendar className="h-3 w-3" />
@@ -135,18 +135,18 @@ function ActionCard({ action }: { action: PendingAction }) {
         </div>
 
         {/* Committee Badge */}
-        {(action.committee || action.submission?.committee) && (
+        {(action.committee ?? action.submission?.committee) && (
           <CommitteeBadge
             committee={{
-              id: (action.committee || action.submission?.committee!).id,
-              name: (action.committee || action.submission?.committee!).name,
+              id: (action.committee ?? action.submission?.committee!).id,
+              name: (action.committee ?? action.submission?.committee!).name,
               description:
-                (action.committee || action.submission?.committee!)
-                  ?.description || undefined,
+                (action.committee ?? action.submission?.committee!)
+                  ?.description ?? undefined,
               logoUrl:
-                (action.committee || action.submission?.committee!)?.logoUrl ||
+                (action.committee ?? action.submission?.committee!)?.logoUrl ||
                 undefined,
-              focusAreas: action.committee?.focusAreas || undefined,
+              focusAreas: action.committee?.focusAreas ?? undefined,
               isActive: true,
             }}
             variant="compact"
@@ -162,7 +162,7 @@ function ActionCard({ action }: { action: PendingAction }) {
               <>
                 <div className="flex items-center gap-1">
                   <Target className="h-4 w-4" />
-                  {action.grantProgram?.name || 'General Program'}
+                  {action.grantProgram?.name ?? 'General Program'}
                 </div>
                 {action.grantProgram?.fundingAmount && (
                   <div className="flex items-center gap-1">

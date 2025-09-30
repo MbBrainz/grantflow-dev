@@ -1,4 +1,3 @@
-import { Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -8,8 +7,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import Link from 'next/link'
-import { getUserSubmissions } from './actions'
-import { CommitteeBadge } from '@/components/submissions/committee-badge'
+import { getUserSubmissions, type UserSubmissions } from './actions'
 import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge'
 
 function StatusBadge({ status }: { status: string }) {
@@ -19,8 +17,8 @@ function StatusBadge({ status }: { status: string }) {
     under_review: 'bg-yellow-100 text-yellow-800',
     approved: 'bg-green-100 text-green-800',
     rejected: 'bg-red-100 text-red-800',
+    pending: 'bg-yellow-100 text-yellow-800',
   }
-
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -32,16 +30,11 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function SubmissionCard({ submission }: { submission: any }) {
-  // Parse the stored JSON data
-  let formData = null
-  try {
-    formData = JSON.parse(submission.formData || '{}')
-  } catch (error) {
-    console.error('Error parsing submission form data:', error)
-  }
+type UserSubmission = UserSubmissions[number]
 
-  const labels = JSON.parse(submission.labels || '[]')
+function SubmissionCard({ submission }: { submission: UserSubmission }) {
+  // Parse labels from JSON
+  const labels = submission.labels ? JSON.parse(submission.labels) : []
 
   return (
     <Card className="transition-shadow hover:shadow-md">
@@ -49,23 +42,22 @@ function SubmissionCard({ submission }: { submission: any }) {
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <CardTitle className="text-lg">
-              {formData?.title || 'Untitled Submission'}
+              {submission.title || 'Untitled Submission'}
             </CardTitle>
             <CardDescription className="line-clamp-2">
-              {formData?.description || 'No description available'}
+              {submission.description || 'No description available'}
             </CardDescription>
 
             {/* Committee Badge */}
-            {submission.committee && (
-              <CommitteeBadge
-                committee={submission.committee}
-                variant="compact"
-              />
+            {submission.reviewerGroup && (
+              <div className="text-xs text-gray-600">
+                Reviewed by: {submission.reviewerGroup.name}
+              </div>
             )}
 
-            {/* Milestone Progress for Approved Submissions */}
+            {/* Milestone Progress */}
             <MilestoneProgressBadge
-              milestones={submission.milestones || []}
+              milestones={(submission.milestones as any) || []}
               submissionStatus={submission.status}
               variant="compact"
             />
@@ -95,10 +87,10 @@ function SubmissionCard({ submission }: { submission: any }) {
           )}
 
           {/* Funding Amount */}
-          {formData?.totalAmount && (
+          {submission.totalAmount && (
             <div className="text-muted-foreground text-sm">
               <strong>Funding:</strong> $
-              {parseFloat(formData.totalAmount).toLocaleString()}
+              {submission.totalAmount.toLocaleString()}
             </div>
           )}
 
@@ -108,16 +100,16 @@ function SubmissionCard({ submission }: { submission: any }) {
             {new Date(submission.createdAt).toLocaleDateString()}
           </div>
 
-          {/* GitHub PR Link */}
-          {submission.githubPrId && (
+          {/* GitHub Repo Link */}
+          {submission.githubRepoUrl && (
             <div className="text-sm">
               <a
-                href={formData?.githubPrUrl || '#'}
+                href={submission.githubRepoUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-blue-600 underline hover:text-blue-800"
               >
-                View GitHub PR #{submission.githubPrId}
+                View Repository
               </a>
             </div>
           )}
@@ -147,7 +139,7 @@ export default async function SubmissionsPage() {
     ).length,
     approved: submissions.filter(s => s.status === 'approved').length,
     totalFunding: submissions.reduce((sum, s) => {
-      return sum + (s.totalAmount || 0)
+      return sum + (s.totalAmount ?? 0)
     }, 0),
   }
 
@@ -232,7 +224,7 @@ export default async function SubmissionsPage() {
             {submissions.length === 0 ? (
               <div className="py-12 text-center">
                 <p className="text-muted-foreground mb-4">
-                  You haven't submitted any grant proposals yet.
+                  You haven&apos;t submitted any grant proposals yet.
                 </p>
                 <Link href="/dashboard/submissions/new">
                   <Button>Create Your First Submission</Button>

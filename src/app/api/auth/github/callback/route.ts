@@ -1,5 +1,5 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { redirect } from 'next/navigation'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 import { db } from '@/lib/db/drizzle'
 import { users } from '@/lib/db/schema'
 import { eq } from 'drizzle-orm'
@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
         body: JSON.stringify({
           client_id: process.env.GITHUB_CLIENT_ID,
           client_secret: process.env.GITHUB_CLIENT_SECRET,
-          code: code,
+          code,
         }),
       }
     )
@@ -44,7 +44,10 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const tokenData = await tokenResponse.json()
+    const tokenData = (await tokenResponse.json()) as {
+      error?: string
+      access_token?: string
+    }
 
     if (tokenData.error) {
       console.error('[GitHub OAuth]: Token exchange error:', tokenData)
@@ -70,7 +73,12 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const githubUser = await userResponse.json()
+    const githubUser = (await userResponse.json()) as {
+      id: number
+      login: string
+      name: string
+      email: string
+    }
     console.log('[GitHub OAuth]: Retrieved GitHub user:', githubUser.login)
 
     // Get user's primary email
@@ -83,9 +91,12 @@ export async function GET(request: NextRequest) {
 
     let email = githubUser.email
     if (!email && emailResponse.ok) {
-      const emails = await emailResponse.json()
-      const primaryEmail = emails.find((e: any) => e.primary)
-      email = primaryEmail?.email || emails[0]?.email
+      const emails = (await emailResponse.json()) as {
+        email: string
+        primary: boolean
+      }[]
+      const primaryEmail = emails.find(e => e.primary)
+      email = primaryEmail?.email ?? emails[0]?.email
     }
 
     if (!email) {
@@ -113,7 +124,7 @@ export async function GET(request: NextRequest) {
         .update(users)
         .set({
           name: githubUser.name || githubUser.login,
-          email: email,
+          email,
           updatedAt: new Date(),
         })
         .where(eq(users.id, user.id))
@@ -122,7 +133,7 @@ export async function GET(request: NextRequest) {
       user = {
         ...user,
         name: githubUser.name || githubUser.login,
-        email: email,
+        email,
       }
     } else {
       // Check if there's an existing user with this email
@@ -160,7 +171,7 @@ export async function GET(request: NextRequest) {
           .insert(users)
           .values({
             name: githubUser.name || githubUser.login,
-            email: email,
+            email,
             githubId: String(githubUser.id),
             primaryRole: 'team', // Default role for new GitHub users
             passwordHash: null, // GitHub OAuth users don't have passwords
@@ -187,7 +198,9 @@ export async function GET(request: NextRequest) {
     let redirectUrl = '/dashboard'
     if (state) {
       try {
-        const stateData = JSON.parse(decodeURIComponent(state))
+        const stateData = JSON.parse(decodeURIComponent(state)) as {
+          redirect?: string
+        }
         if (stateData.redirect) {
           redirectUrl = stateData.redirect
         }

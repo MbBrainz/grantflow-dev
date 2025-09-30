@@ -7,20 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
 import { updateAccount } from '@/app/(login)/actions'
-import { User } from '@/lib/db/schema'
+import type { User } from '@/lib/db/schema'
+import type { ActionState } from '@/lib/auth/middleware'
 import useSWR from 'swr'
 import { Suspense } from 'react'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
-type ActionState = {
+interface AccountFormState extends ActionState {
   name?: string
-  error?: string
-  success?: string
 }
 
-type AccountFormProps = {
-  state: ActionState
+interface AccountFormProps {
+  state: AccountFormState
   nameValue?: string
   emailValue?: string
 }
@@ -40,7 +39,7 @@ function AccountForm({
           id="name"
           name="name"
           placeholder="Enter your name"
-          defaultValue={state.name || nameValue}
+          defaultValue={state.name ?? nameValue}
           required
         />
       </div>
@@ -61,7 +60,7 @@ function AccountForm({
   )
 }
 
-function AccountFormWithData({ state }: { state: ActionState }) {
+function AccountFormWithData({ state }: { state: AccountFormState }) {
   const { data: user } = useSWR<User>('/api/user', fetcher)
   return (
     <AccountForm
@@ -73,7 +72,7 @@ function AccountFormWithData({ state }: { state: ActionState }) {
 }
 
 export default function GeneralPage() {
-  const [state, formAction, isPending] = useActionState<ActionState, FormData>(
+  const [state, formAction, isPending] = useActionState<AccountFormState, FormData>(
     updateAccount,
     {}
   )

@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CircleIcon, Loader2 } from 'lucide-react'
 import { signIn, signUp } from './actions'
-import { ActionState } from '@/lib/auth/middleware'
+import type { ActionState } from '@/lib/auth/middleware'
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams()
@@ -74,9 +74,9 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
         </div>
 
         <form className="mt-6 space-y-6" action={formAction}>
-          <input type="hidden" name="redirect" value={redirect || ''} />
-          <input type="hidden" name="priceId" value={priceId || ''} />
-          <input type="hidden" name="inviteId" value={inviteId || ''} />
+          <input type="hidden" name="redirect" value={redirect ?? ''} />
+          <input type="hidden" name="priceId" value={priceId ?? ''} />
+          <input type="hidden" name="inviteId" value={inviteId ?? ''} />
           <div>
             <Label
               htmlFor="email"
@@ -90,7 +90,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 name="email"
                 type="email"
                 autoComplete="email"
-                defaultValue={state.email}
+                defaultValue={state.email as string | undefined}
                 required
                 maxLength={50}
                 className="relative block w-full appearance-none rounded-full border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-orange-500 focus:ring-orange-500 focus:outline-none sm:text-sm"
@@ -114,7 +114,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 autoComplete={
                   mode === 'signin' ? 'current-password' : 'new-password'
                 }
-                defaultValue={state.password}
+                defaultValue={state.password as string | undefined}
                 required
                 minLength={8}
                 maxLength={100}

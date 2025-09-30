@@ -87,7 +87,7 @@ export async function createMessage(data: {
     .values({
       ...data,
       authorId: user.id,
-      messageType: data.messageType || 'comment',
+      messageType: data.messageType ?? 'comment',
     })
     .returning()
 

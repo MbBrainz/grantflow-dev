@@ -8,9 +8,7 @@ import { DiscussionThread } from '@/components/discussion/discussion-thread'
 import { ReviewerVoting } from '@/components/discussion/reviewer-voting'
 import {
   Vote,
-  AlertTriangle,
   Clock,
-  Users,
   CheckCircle,
   XCircle,
   MessageSquare,
@@ -19,25 +17,18 @@ import {
   Target,
 } from 'lucide-react'
 import { CommitteeInfoCard } from '@/components/committee/committee-info-card'
+import type { SubmissionWithMilestones, User } from '@/lib/db/schema'
 
 interface ReviewerSubmissionViewProps {
-  submission: any
-  currentUser: any
-  currentState: any
-  discussionData: any
-  reviews: any[]
-  submissionContext?: any
+  submission: SubmissionWithMilestones
+  currentUser: User | null
   onPostMessage: (content: string, type?: string) => Promise<void>
-  onVoteSubmitted: () => Promise<void>
+  onVoteSubmitted: () => void
 }
 
 export function ReviewerSubmissionView({
   submission,
   currentUser,
-  currentState,
-  discussionData,
-  reviews,
-  submissionContext,
   onPostMessage,
   onVoteSubmitted,
 }: ReviewerSubmissionViewProps) {
@@ -45,22 +36,24 @@ export function ReviewerSubmissionView({
     'review' | 'technical' | 'analytics'
   >('review')
 
-  // Calculate voting status - fix field names to match actual data structure
-  const approveVotes = reviews?.filter(r => r.vote === 'approve').length || 0
-  const rejectVotes =
-    reviews?.filter(r => r.vote === 'reject' || r.vote === 'request_changes')
-      .length || 0
-  const userHasVoted = reviews?.some(r => r.reviewerId === currentUser?.id)
-  const needsMyVote = !userHasVoted && submissionContext?.isCommitteeReviewer
+  // Calculate voting status from server data
+  const reviews = submission.reviews || []
+  const approveVotes = reviews.filter(r => r.vote === 'approve').length
+  const rejectVotes = reviews.filter(
+    r => r.vote === 'reject' || r.vote === 'request_changes'
+  ).length
+  const userHasVoted = reviews.some(r => r.reviewerId === currentUser?.id)
+  const needsMyVote =
+    !userHasVoted && submission.userContext?.isCommitteeReviewer
 
   return (
     <div className="space-y-6">
-      {/* Committee Context - Just show this submission's committee */}
-      {submission.committee && (
+      {/* Committee Context */}
+      {submission.reviewerGroup && (
         <CommitteeInfoCard
-          committee={submission.committee}
-          userRole={submissionContext?.committeeRole}
-          isUserMember={submissionContext?.isCommitteeReviewer}
+          committee={submission.reviewerGroup as any}
+          userRole={null}
+          isUserMember={submission.userContext?.isCommitteeReviewer ?? false}
           className="border-l-4 border-l-blue-500"
         />
       )}
@@ -129,7 +122,7 @@ export function ReviewerSubmissionView({
               <span className="font-medium">Funding</span>
             </div>
             <p className="text-sm font-medium">
-              ${submission.totalAmount?.toLocaleString() || 'TBD'}
+              ${submission.totalAmount?.toLocaleString() ?? 'TBD'}
             </p>
           </div>
         </div>
@@ -144,8 +137,19 @@ export function ReviewerSubmissionView({
             <ReviewerVoting
               submissionId={submission.id}
               currentUser={currentUser}
-              existingVotes={reviews}
-              onVoteSubmitted={onVoteSubmitted}
+              existingVotes={reviews.map(r => ({
+                id: r.id,
+                reviewerId: r.reviewerId,
+                vote: r.vote ?? '',
+                feedback: r.feedback,
+                createdAt: r.createdAt.toISOString(),
+                reviewer: {
+                  id: r.reviewer.id,
+                  name: r.reviewer.name,
+                  role: r.reviewer.primaryRole ?? 'reviewer'
+                }
+              }))}
+              onVoteSubmitted={() => onVoteSubmitted()}
               isOpen={true}
             />
           </div>
@@ -187,17 +191,16 @@ export function ReviewerSubmissionView({
         {/* Review Tab */}
         {activeTab === 'review' && (
           <div className="space-y-6">
-            {/* Public Discussion */}
+            {/* Discussion */}
             <div>
-              <h3 className="mb-4 text-lg font-semibold">Public Discussion</h3>
+              <h3 className="mb-4 text-lg font-semibold">Discussion</h3>
               <DiscussionThread
-                discussion={discussionData?.discussion}
+                discussion={submission.discussions?.[0] || null}
                 submissionId={submission.id}
                 currentUser={currentUser}
                 onPostMessage={onPostMessage}
                 title={submission.title}
                 isPublic={true}
-                submissionContext={submissionContext}
               />
             </div>
           </div>
@@ -247,11 +250,11 @@ export function ReviewerSubmissionView({
                           {milestone.title}
                         </p>
                         <p className="text-sm font-medium">
-                          ${milestone.amount?.toLocaleString() || 0}
+                          ${milestone.amount?.toLocaleString() ?? 0}
                         </p>
                       </div>
                     )
-                  ) || (
+                  ) ?? (
                     <p className="text-gray-500 italic">
                       No milestones defined
                     </p>

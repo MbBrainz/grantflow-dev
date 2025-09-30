@@ -182,7 +182,7 @@ export const updatePassword = validatedActionWithUser(
 
     await logActivity(user.id, ActivityType.UPDATE_PASSWORD)
 
-    return { success: 'Password updated successfully.' }
+    return { success: true, message: 'Password updated successfully.' }
   }
 )
 
@@ -263,6 +263,6 @@ export const updateAccount = validatedActionWithUser(
 
     await logActivity(user.id, ActivityType.UPDATE_ACCOUNT)
 
-    return { success: 'Account updated successfully.' }
+    return { success: true, message: 'Account updated successfully.' }
   }
 )

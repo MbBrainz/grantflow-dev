@@ -16,29 +16,25 @@ import {
   MessageSquare,
 } from 'lucide-react'
 
+import type { SubmissionWithMilestones } from '@/lib/db/schema'
+
 interface PublicSubmissionViewProps {
-  submission: any
-  currentState: any
-  discussionData: any
-  reviews: any[]
+  submission: SubmissionWithMilestones
 }
 
 export function PublicSubmissionView({
   submission,
-  currentState,
-  discussionData,
-  reviews,
 }: PublicSubmissionViewProps) {
-  // Calculate public metrics
-  const approveVotes =
-    reviews?.filter(r => r.decision === 'approve').length || 0
-  const totalVotes = reviews?.length || 0
+  // Calculate public metrics from server data
+  const reviews = submission.reviews || []
+  const approveVotes = reviews.filter(r => r.vote === 'approve').length
+  const totalVotes = reviews.length
   const completedMilestones =
-    submission.milestones?.filter((m: any) => m.status === 'completed')
-      .length || 0
-  const totalMilestones = submission.milestones?.length || 0
-  const publicMessages =
-    discussionData?.discussion?.messages?.filter((m: any) => !m.isPrivate) || []
+    submission.milestones?.filter(m => m.status === 'completed').length ?? 0
+  const totalMilestones = submission.milestones?.length ?? 0
+  // Only show messages from public discussions
+  const publicDiscussion = submission.discussions?.find(d => d.isPublic)
+  const publicMessages = publicDiscussion?.messages ?? []
 
   return (
     <div className="space-y-6">
@@ -83,7 +79,7 @@ export function PublicSubmissionView({
               <span className="font-medium">Funding</span>
             </div>
             <p className="text-lg font-bold">
-              ${submission.totalAmount?.toLocaleString() || 'TBD'}
+              ${submission.totalAmount?.toLocaleString() ?? 'TBD'}
             </p>
             <p className="text-xs text-gray-600">Requested</p>
           </div>
@@ -321,7 +317,7 @@ export function PublicSubmissionView({
                       {milestone.status.replace('_', ' ')}
                     </Badge>
                     <p className="mt-1 text-sm font-medium">
-                      ${milestone.amount?.toLocaleString() || 0}
+                      ${milestone.amount?.toLocaleString() ?? 0}
                     </p>
                   </div>
                 </div>
@@ -360,14 +356,14 @@ export function PublicSubmissionView({
                 <div className="mb-2 flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
                     <span className="text-xs font-medium text-blue-600">
-                      {message.author?.name?.[0] || 'U'}
+                      {message.author?.name?.[0] ?? 'U'}
                     </span>
                   </div>
                   <span className="text-sm font-medium">
-                    {message.author?.name || 'Anonymous'}
+                    {message.author?.name ?? 'Anonymous'}
                   </span>
                   <Badge variant="outline" className="text-xs">
-                    {message.author?.role || 'user'}
+                    {message.author?.role ?? 'user'}
                   </Badge>
                   <span className="ml-auto text-xs text-gray-500">
                     {new Date(message.createdAt).toLocaleDateString()}

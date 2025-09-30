@@ -36,7 +36,7 @@ export async function isUserGroupMember(
   groupId?: number,
   role?: 'admin' | 'member'
 ): Promise<boolean> {
-  let whereConditions = [
+  const whereConditions = [
     eq(groupMemberships.userId, userId),
     eq(groupMemberships.isActive, true),
   ]
@@ -61,7 +61,7 @@ export async function isUserReviewer(
   userId: number,
   groupId?: number
 ): Promise<boolean> {
-  let whereConditions = [
+  const whereConditions = [
     eq(groupMemberships.userId, userId),
     eq(groupMemberships.isActive, true),
     eq(groups.type, 'committee'),

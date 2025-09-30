@@ -1,7 +1,7 @@
 import { compare, hash } from 'bcryptjs'
-import { SignJWT, jwtVerify } from 'jose'
+import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
 import { cookies } from 'next/headers'
-import { NewUser } from '@/lib/db/schema'
+import type { NewUser } from '@/lib/db/schema'
 
 const key = new TextEncoder().encode(process.env.AUTH_SECRET)
 const SALT_ROUNDS = 10
@@ -17,7 +17,7 @@ export async function comparePasswords(
   return compare(plainTextPassword, hashedPassword)
 }
 
-type SessionData = {
+interface SessionData extends JWTPayload {
   user: { id: number }
   expires: string
 }

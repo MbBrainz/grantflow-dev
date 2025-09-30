@@ -1,6 +1,6 @@
 import { eq, desc } from 'drizzle-orm'
 import { db } from '../drizzle'
-import { payouts, milestones, submissions } from '../schema'
+import { payouts } from '../schema'
 import { getMilestoneById } from './milestones'
 
 // Payout queries

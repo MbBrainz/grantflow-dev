@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { CheckCircle, XCircle, MessageSquare, AlertCircle } from 'lucide-react'
-import { User } from '@/lib/db/schema'
+import type { User } from '@/lib/db/schema'
 
 interface Vote {
   id: number
@@ -78,7 +78,7 @@ export function ReviewerVoting({
   // Calculate vote summary
   const voteSummary = existingVotes.reduce(
     (acc, vote) => {
-      acc[vote.vote] = (acc[vote.vote] || 0) + 1
+      acc[vote.vote] = (acc[vote.vote] ?? 0) + 1
       return acc
     },
     {} as Record<string, number>

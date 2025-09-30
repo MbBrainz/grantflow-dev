@@ -24,9 +24,6 @@ export * from './payouts'
 // Notification queries
 export * from './notifications'
 
-// Legacy queries
-export * from './legacy'
-
 // Re-export write functions for convenience
 export {
   createGroup,

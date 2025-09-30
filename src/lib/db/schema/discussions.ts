@@ -47,3 +47,15 @@ export const selectDiscussionSchema = createSelectSchema(discussions)
 
 export type Discussion = typeof discussions.$inferSelect
 export type NewDiscussion = typeof discussions.$inferInsert
+
+// Discussion with relations
+import type { Message } from './messages'
+export type DiscussionWithMessages = Discussion & {
+  messages: (Message & {
+    author: {
+      id: number
+      name: string
+      role: string
+    }
+  })[]
+}

@@ -14,12 +14,10 @@ import {
   ensureDiscussionForSubmission,
   ensureDiscussionForMilestone,
 } from '@/lib/db/queries'
-import { validatedActionWithUser } from '@/lib/auth/middleware'
-import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 
-// Validation schemas
-const milestoneSchema = z.object({
+// Validation schemas (prefixed with _ to indicate unused but kept for future use)
+const _milestoneSchema = z.object({
   title: z.string().min(1, 'Milestone title is required').max(200),
   description: z.string().min(1, 'Milestone description is required'),
   requirements: z.string().min(1, 'Acceptance criteria is required'), // Will be stored in description
@@ -64,7 +62,16 @@ const createSubmissionSchema = z.object({
     .min(1, 'At least one milestone is required'),
 })
 
-export const createSubmission = async (prevState: any, formData: FormData) => {
+interface SubmissionActionState {
+  error?: string
+  success?: boolean
+  submissionId?: number
+}
+
+export const createSubmission = async (
+  _prevState: SubmissionActionState | null,
+  formData: FormData
+): Promise<SubmissionActionState> => {
   console.log('[createSubmission]: Starting submission creation')
 
   // Get authenticated user
@@ -89,17 +96,17 @@ export const createSubmission = async (prevState: any, formData: FormData) => {
     })
 
     // Parse JSON fields
-    let parsedData
+    let parsedData: Record<string, unknown>
     try {
       parsedData = {
         ...rawData,
         labels:
           typeof rawData.labels === 'string'
-            ? JSON.parse(rawData.labels)
+            ? (JSON.parse(rawData.labels) as unknown)
             : rawData.labels,
         milestones:
           typeof rawData.milestones === 'string'
-            ? JSON.parse(rawData.milestones)
+            ? (JSON.parse(rawData.milestones) as unknown)
             : rawData.milestones,
       }
       console.log('[createSubmission]: Parsed data:', {
@@ -108,10 +115,10 @@ export const createSubmission = async (prevState: any, formData: FormData) => {
         labelsType: typeof parsedData.labels,
         labelsIsArray: Array.isArray(parsedData.labels),
         labelsLength: Array.isArray(parsedData.labels)
-          ? parsedData.labels.length
+          ? (parsedData.labels as unknown[]).length
           : 'not array',
         milestones: Array.isArray(parsedData.milestones)
-          ? parsedData.milestones.length + ' milestones'
+          ? `${(parsedData.milestones as unknown[]).length} milestones`
           : 'not array',
         milestonesType: typeof parsedData.milestones,
       })
@@ -159,17 +166,11 @@ export const createSubmission = async (prevState: any, formData: FormData) => {
       return { error: 'Milestones total cannot exceed total funding amount' }
     }
 
-    // Store complete form data as JSON
-    const completeFormData = {
-      ...data,
-      totalAmount: totalAmount,
-    }
-
     // Create submission record with proper committee/grant program selection
     const newSubmission: NewSubmission = {
       grantProgramId: data.grantProgramId,
-      submitterGroupId: user.primaryGroupId || 1, // Use user's primary group
-      reviewerGroupId: data.committeeId || 1, // Committee becomes reviewerGroupId
+      submitterGroupId: user.primaryGroupId ?? 1, // Use user's primary group
+      reviewerGroupId: data.committeeId ?? 1, // Committee becomes reviewerGroupId
       submitterId: user.id, // Updated field name from userId
       title: data.title,
       description: data.description,
@@ -177,7 +178,7 @@ export const createSubmission = async (prevState: any, formData: FormData) => {
       milestones: JSON.stringify(data.milestones), // Store milestones as JSON in submission
       postGrantPlan: data.postGrantPlan,
       labels: JSON.stringify(data.labels),
-      githubRepoUrl: data.githubRepoUrl || null,
+      githubRepoUrl: data.githubRepoUrl ?? null,
       walletAddress: null, // TODO: Add wallet address field to form
       status: 'pending', // Start as pending for committee review
       totalAmount: Number(data.totalAmount.replace(/,/g, '')),
@@ -198,12 +199,12 @@ export const createSubmission = async (prevState: any, formData: FormData) => {
     })
 
     // Create milestone records (combine description and requirements)
-    const milestonePromises = data.milestones.map(async (milestone, index) => {
+    const milestonePromises = data.milestones.map(async milestone => {
       const combinedDescription = `${milestone.description}\n\n**Acceptance Criteria:**\n${milestone.requirements}`
 
       const newMilestone: NewMilestone = {
         submissionId: createdSubmission.id,
-        groupId: user.primaryGroupId || 1, // Use user's primary group
+        groupId: user.primaryGroupId ?? 1, // Use user's primary group
         title: milestone.title,
         description: combinedDescription, // Include requirements in description
         requirements: milestone.requirements,
@@ -296,3 +297,5 @@ export async function getUserSubmissions() {
     return []
   }
 }
+
+export type UserSubmissions = Awaited<ReturnType<typeof getUserSubmissions>>

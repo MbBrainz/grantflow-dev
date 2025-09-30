@@ -1,76 +1,20 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { DiscussionThread } from '@/components/discussion/discussion-thread'
-import { ReviewerVoting } from '@/components/discussion/reviewer-voting'
-import {
-  ArrowLeft,
-  Calendar,
-  Github,
-  DollarSign,
-  Target,
-  MessageSquare,
-  Activity,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  FileText,
-  TrendingUp,
-} from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import {
-  getSubmissionDiscussion,
-  getSubmissionReviews,
-  postMessageToSubmission,
-  getSubmissionCurrentState,
-  getSubmissionMilestonesOverview,
-  getSubmissionForReviewerReviewAction,
-  postMessageToMilestone,
-} from '../discussion-actions'
-import type {
-  Submission,
-  Milestone,
-  User,
-  SubmissionWithMilestones,
-} from '@/lib/db/schema'
+import { postMessageToSubmission } from '../discussion-actions'
+import type { SubmissionWithMilestones } from '@/lib/db/schema'
+import type { User } from '@/lib/db/schema'
 import { useSubmissionContext } from '@/lib/hooks/use-submission-context'
 import { ReviewerSubmissionView } from '@/components/submissions/reviewer-submission-view'
 import { GranteeSubmissionView } from '@/components/submissions/grantee-submission-view'
 import { PublicSubmissionView } from '@/components/submissions/public-submission-view'
-import { MilestoneStatusOverview } from '@/components/submissions/milestone-status-overview'
-import { CommitteeBadge } from '@/components/submissions/committee-badge'
-
-// Flexible type that handles actual database query results
-type ExtendedSubmissionWithMilestones = {
-  id: number
-  grantProgramId: number
-  reviewerGroupId?: number
-  submitterId: number
-  title: string
-  description?: string | null
-  milestones: any[] // Can be either milestone objects or JSON string
-  formData?: string | null
-  committeeId?: number // For backwards compatibility
-  [key: string]: any // Allow any additional properties
-}
 
 interface SubmissionDetailViewProps {
-  submission: ExtendedSubmissionWithMilestones
+  submission: SubmissionWithMilestones
   currentUser: User | null
-}
-
-type ViewMode = 'current' | 'milestones' | 'overview'
-
-function parseFormData(formDataString: string | null) {
-  if (!formDataString) return null
-  try {
-    return JSON.parse(formDataString)
-  } catch {
-    return null
-  }
 }
 
 function getStatusColor(status: string): string {
@@ -88,507 +32,46 @@ function getStatusColor(status: string): string {
   }
 }
 
-function getMilestoneStatusColor(status: string): string {
-  switch (status) {
-    case 'completed':
-      return 'bg-green-100 text-green-800'
-    case 'in_progress':
-      return 'bg-blue-100 text-blue-800'
-    case 'under_review':
-      return 'bg-yellow-100 text-yellow-800'
-    case 'pending':
-      return 'bg-gray-100 text-gray-800'
-    default:
-      return 'bg-gray-100 text-gray-800'
-  }
-}
-
-// Current State View Component - Replaced with MilestoneStatusOverview
-function CurrentStateView({
-  submission,
-  currentUser,
-}: {
-  submission: SubmissionWithMilestones
-  currentUser: User | null
-}) {
-  return <MilestoneStatusOverview submission={submission} />
-}
-
-// Milestones Overview Component
-function MilestonesOverview({
-  submission,
-  currentUser,
-}: {
-  submission: SubmissionWithMilestones
-  currentUser: User | null
-}) {
-  const [milestonesData, setMilestonesData] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
-  const [expandedMilestone, setExpandedMilestone] = useState<number | null>(
-    null
-  )
-
-  useEffect(() => {
-    async function loadMilestonesOverview() {
-      try {
-        const formData = new FormData()
-        formData.append('submissionId', String(submission.id))
-        const result = await getSubmissionMilestonesOverview({}, formData)
-
-        if (!result.error && 'milestonesOverview' in result) {
-          setMilestonesData(result.milestonesOverview)
-        }
-      } catch (error) {
-        console.error('[MilestonesOverview]: Error loading milestones', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadMilestonesOverview()
-  }, [submission.id])
-
-  const handlePostMilestoneMessage = async (
-    milestoneId: number,
-    content: string
-  ) => {
-    try {
-      const formData = new FormData()
-      formData.append('content', content)
-      formData.append('milestoneId', String(milestoneId))
-      formData.append('messageType', 'comment')
-
-      const result = await postMessageToMilestone({}, formData)
-
-      if (result.error) {
-        throw new Error(result.error)
-      }
-
-      // Reload milestones data
-      const reloadFormData = new FormData()
-      reloadFormData.append('submissionId', String(submission.id))
-      const reloadResult = await getSubmissionMilestonesOverview(
-        {},
-        reloadFormData
-      )
-
-      if (!reloadResult.error && 'milestonesOverview' in reloadResult) {
-        setMilestonesData(reloadResult.milestonesOverview)
-      }
-    } catch (error) {
-      console.error(
-        '[MilestonesOverview]: Error posting milestone message',
-        error
-      )
-      throw error
-    }
-  }
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
-      </div>
-    )
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Summary Stats */}
-      <Card className="p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-semibold">Milestones Summary</h3>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {milestonesData?.summary?.total || 0}
-            </div>
-            <div className="text-sm text-gray-600">Total</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {milestonesData?.summary?.completed || 0}
-            </div>
-            <div className="text-sm text-gray-600">Completed</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-yellow-600">
-              {milestonesData?.summary?.inProgress || 0}
-            </div>
-            <div className="text-sm text-gray-600">In Progress</div>
-          </div>
-          <div className="text-center">
-            <div className="text-2xl font-bold text-gray-600">
-              {milestonesData?.summary?.pending || 0}
-            </div>
-            <div className="text-sm text-gray-600">Pending</div>
-          </div>
-        </div>
-
-        <div className="mt-4 border-t pt-4">
-          <div className="flex justify-between text-sm">
-            <span>
-              Progress: $
-              {milestonesData?.summary?.paidAmount?.toLocaleString() || 0} paid
-            </span>
-            <span>
-              Total: $
-              {milestonesData?.summary?.totalAmount?.toLocaleString() || 0}
-            </span>
-          </div>
-          <div className="mt-2 h-2 w-full rounded-full bg-gray-200">
-            <div
-              className="h-2 rounded-full bg-green-600"
-              style={{
-                width: `${
-                  milestonesData?.summary?.totalAmount > 0
-                    ? (milestonesData.summary.paidAmount /
-                        milestonesData.summary.totalAmount) *
-                      100
-                    : 0
-                }%`,
-              }}
-            ></div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Milestones List */}
-      <div className="space-y-4">
-        {milestonesData?.milestones?.map((milestone: any, index: number) => (
-          <Card key={milestone.id} className="overflow-hidden">
-            <div className="p-4">
-              <div className="mb-2 flex items-center justify-between">
-                <h4 className="font-medium">
-                  Milestone {index + 1}: {milestone.title}
-                </h4>
-                <div className="flex items-center gap-2">
-                  <Badge className={getMilestoneStatusColor(milestone.status)}>
-                    {milestone.status.replace('_', ' ')}
-                  </Badge>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setExpandedMilestone(
-                        expandedMilestone === milestone.id ? null : milestone.id
-                      )
-                    }
-                  >
-                    {expandedMilestone === milestone.id ? 'Collapse' : 'Expand'}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="mb-3 grid grid-cols-1 gap-4 text-sm text-gray-600 md:grid-cols-3">
-                <div>Amount: ${milestone.amount?.toLocaleString() || 0}</div>
-                <div>
-                  Due:{' '}
-                  {milestone.dueDate
-                    ? new Date(milestone.dueDate).toLocaleDateString()
-                    : 'No date set'}
-                </div>
-                <div>
-                  Messages: {milestone.discussions?.[0]?.messages?.length || 0}
-                </div>
-              </div>
-
-              <p className="text-sm text-gray-700">{milestone.description}</p>
-            </div>
-
-            {expandedMilestone === milestone.id && (
-              <div className="border-t bg-gray-50 p-4">
-                <DiscussionThread
-                  discussion={milestone.discussions?.[0]}
-                  submissionId={submission.id}
-                  milestoneId={milestone.id}
-                  currentUser={currentUser}
-                  onPostMessage={content =>
-                    handlePostMilestoneMessage(milestone.id, content)
-                  }
-                  title={`${milestone.title} Discussion`}
-                  isPublic={true}
-                />
-              </div>
-            )}
-          </Card>
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// Project Overview Component
-function ProjectOverview({
-  submission,
-  currentUser,
-}: {
-  submission: ExtendedSubmissionWithMilestones
-  currentUser: User | null
-}) {
-  const formData = parseFormData(submission.formData || null)
-  const labels = submission.labels ? JSON.parse(submission.labels) : []
-
-  return (
-    <div className="space-y-6">
-      {/* Project Details */}
-      <Card className="p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <FileText className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-semibold">Project Details</h3>
-        </div>
-
-        <div className="space-y-4">
-          <div>
-            <h4 className="mb-2 font-medium">Executive Summary</h4>
-            <p className="text-gray-700">
-              {submission.executiveSummary || formData?.executiveSummary}
-            </p>
-          </div>
-
-          <div>
-            <h4 className="mb-2 font-medium">Description</h4>
-            <p className="text-gray-700">
-              {submission.description || formData?.description}
-            </p>
-          </div>
-
-          <div>
-            <h4 className="mb-2 font-medium">Post-Grant Plan</h4>
-            <p className="text-gray-700">
-              {submission.postGrantPlan || formData?.postGrantPlan}
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Project Metadata */}
-      <Card className="p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-semibold">Project Information</h3>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div>
-            <span className="font-medium">Total Amount:</span>
-            <span className="ml-2">
-              ${submission.totalAmount?.toLocaleString() || 'TBD'}
-            </span>
-          </div>
-          <div>
-            <span className="font-medium">Applied:</span>
-            <span className="ml-2">
-              {submission.appliedAt
-                ? new Date(submission.appliedAt).toLocaleDateString()
-                : 'Unknown'}
-            </span>
-          </div>
-          <div>
-            <span className="font-medium">Status:</span>
-            <Badge className={`ml-2 ${getStatusColor(submission.status)}`}>
-              {submission.status.replace('_', ' ').toUpperCase()}
-            </Badge>
-          </div>
-          <div>
-            <span className="font-medium">Milestones:</span>
-            <span className="ml-2">
-              {submission.milestones?.length || 0} total
-            </span>
-          </div>
-        </div>
-
-        {labels.length > 0 && (
-          <div className="mt-4">
-            <span className="font-medium">Labels:</span>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {labels.map((label: string, index: number) => (
-                <Badge key={index} variant="outline">
-                  {label}
-                </Badge>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {submission.githubRepoUrl && (
-          <div className="mt-4">
-            <span className="font-medium">GitHub Repository:</span>
-            <a
-              href={submission.githubRepoUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="ml-2 flex items-center gap-1 text-blue-600 hover:underline"
-            >
-              <Github className="h-4 w-4" />
-              {submission.githubRepoUrl}
-            </a>
-          </div>
-        )}
-      </Card>
-
-      {/* Timeline View */}
-      <Card className="p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <Clock className="h-5 w-5 text-blue-600" />
-          <h3 className="text-lg font-semibold">Timeline</h3>
-        </div>
-
-        <div className="space-y-4">
-          <div className="flex items-start gap-3">
-            <div className="mt-2 h-3 w-3 rounded-full bg-blue-600"></div>
-            <div>
-              <div className="font-medium">Application Submitted</div>
-              <div className="text-sm text-gray-600">
-                {submission.appliedAt
-                  ? new Date(submission.appliedAt).toLocaleDateString()
-                  : 'Unknown'}
-              </div>
-            </div>
-          </div>
-
-          {submission.milestones?.map((milestone, index) => (
-            <div key={milestone.id} className="flex items-start gap-3">
-              <div
-                className={`mt-2 h-3 w-3 rounded-full ${
-                  milestone.status === 'completed'
-                    ? 'bg-green-600'
-                    : milestone.status === 'in_progress'
-                      ? 'bg-blue-600'
-                      : milestone.status === 'under_review'
-                        ? 'bg-yellow-600'
-                        : 'bg-gray-400'
-                }`}
-              ></div>
-              <div>
-                <div className="font-medium">{milestone.title}</div>
-                <div className="text-sm text-gray-600">
-                  Due:{' '}
-                  {milestone.dueDate
-                    ? new Date(milestone.dueDate).toLocaleDateString()
-                    : 'No date set'}
-                </div>
-                <Badge
-                  className={`mt-1 ${getMilestoneStatusColor(milestone.status)}`}
-                >
-                  {milestone.status.replace('_', ' ')}
-                </Badge>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  )
-}
-
 export function SubmissionDetailView({
   submission,
   currentUser,
 }: SubmissionDetailViewProps) {
   const router = useRouter()
-  const [discussionData, setDiscussionData] = useState<any>(null)
-  const [reviews, setReviews] = useState<any[]>([])
-  const [currentState, setCurrentState] = useState<any>(null)
-  const [loading, setLoading] = useState(true)
 
-  // Get user context and permissions for this submission
-  const submissionContext = useSubmissionContext(submission as any, currentUser)
 
-  const formData = parseFormData(submission.formData || null)
-
-  useEffect(() => {
-    async function loadAllData() {
-      try {
-        const [discussionData, reviewsData, currentStateData] =
-          await Promise.all([
-            getSubmissionDiscussion(submission.id),
-            getSubmissionReviews(submission.id),
-            (async () => {
-              const formData = new FormData()
-              formData.append('submissionId', String(submission.id))
-              return await getSubmissionCurrentState({}, formData)
-            })(),
-          ])
-
-        setDiscussionData(discussionData)
-        setReviews(reviewsData.reviews)
-        setCurrentState(currentStateData)
-      } catch (error) {
-        console.error('[SubmissionDetailView]: Error loading data', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    loadAllData()
-  }, [submission.id])
+  // Simple context - just determines view type
+  const context = useSubmissionContext(submission, currentUser)
 
   const handlePostMessage = async (content: string, type?: string) => {
-    try {
-      const messageType =
-        type === 'comment' || type === 'status_change' || type === 'vote'
-          ? type
-          : 'comment'
-      const formData = new FormData()
-      formData.append('content', content)
-      formData.append('submissionId', String(submission.id))
-      formData.append('messageType', messageType)
+    const messageType =
+      type === 'comment' || type === 'status_change' || type === 'vote'
+        ? type
+        : 'comment'
 
-      const result = await postMessageToSubmission({}, formData)
+    const fd = new FormData()
+    fd.append('content', content)
+    fd.append('submissionId', String(submission.id))
+    fd.append('messageType', messageType)
 
-      if (result.error) {
-        throw new Error(result.error)
-      }
+    const result = await postMessageToSubmission({}, fd)
 
-      // Reload discussion data
-      const data = await getSubmissionDiscussion(submission.id)
-      setDiscussionData(data)
-    } catch (error) {
-      console.error('[SubmissionDetailView]: Error posting message', error)
-      throw error
+    if (result.error) {
+      throw new Error(result.error)
     }
+
+    // Refresh the page to get updated data
+    router.refresh()
   }
 
-  const handleVoteSubmitted = async () => {
-    try {
-      // Reload all data after vote
-      const [discussionData, reviewsData, currentStateData] = await Promise.all(
-        [
-          getSubmissionDiscussion(submission.id),
-          getSubmissionReviews(submission.id),
-          (async () => {
-            const formData = new FormData()
-            formData.append('submissionId', String(submission.id))
-            return await getSubmissionCurrentState({}, formData)
-          })(),
-        ]
-      )
-
-      setDiscussionData(discussionData)
-      setReviews(reviewsData.reviews)
-      setCurrentState(currentStateData)
-    } catch (error) {
-      console.error(
-        '[SubmissionDetailView]: Error reloading data after vote',
-        error
-      )
-    }
+  const handleVoteSubmitted = () => {
+    // Refresh the page to get updated data
+    router.refresh()
   }
 
-  // Show loading state
-  if (loading || submissionContext.isLoading) {
-    return (
-      <div className="mx-auto max-w-6xl">
-        <div className="flex justify-center py-12">
-          <div className="h-12 w-12 animate-spin rounded-full border-b-2 border-blue-600"></div>
-        </div>
-      </div>
-    )
-  }
+  const displayTitle = submission.title || 'Untitled Submission'
+  const appliedDate = submission.appliedAt
+    ? new Date(submission.appliedAt).toLocaleDateString()
+    : 'Unknown'
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -605,62 +88,41 @@ export function SubmissionDetailView({
         </Button>
 
         <div className="flex-1">
-          <h1 className="text-2xl font-bold">
-            {submission.title || formData?.title}
-          </h1>
+          <h1 className="text-2xl font-bold">{displayTitle}</h1>
           <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
             <span>Submission #{submission.id}</span>
             <Badge className={getStatusColor(submission.status)}>
               {submission.status.replace('_', ' ').toUpperCase()}
             </Badge>
-            <span>
-              Applied{' '}
-              {submission.appliedAt
-                ? new Date(submission.appliedAt).toLocaleDateString()
-                : 'Unknown'}
-            </span>
-            {/* Role indicator */}
+            <span>Applied {appliedDate}</span>
             <Badge variant="outline" className="text-xs">
-              Viewing as: {submissionContext.viewType}
+              Viewing as: {context.viewType}
             </Badge>
           </div>
         </div>
       </div>
 
       {/* Role-Based View Routing */}
-      {submissionContext.viewType === 'reviewer' && (
+      {context.viewType === 'reviewer' && (
         <ReviewerSubmissionView
           submission={submission}
           currentUser={currentUser}
-          currentState={currentState}
-          discussionData={discussionData}
-          reviews={reviews}
-          submissionContext={submissionContext}
           onPostMessage={handlePostMessage}
           onVoteSubmitted={handleVoteSubmitted}
         />
       )}
 
-      {submissionContext.viewType === 'grantee' && (
+      {context.viewType === 'grantee' && (
         <GranteeSubmissionView
           submission={submission}
           currentUser={currentUser}
-          currentState={currentState}
-          discussionData={discussionData}
-          reviews={reviews}
           onPostMessage={handlePostMessage}
           onVoteSubmitted={handleVoteSubmitted}
-          submissionContext={submissionContext}
         />
       )}
 
-      {submissionContext.viewType === 'public' && (
-        <PublicSubmissionView
-          submission={submission}
-          currentState={currentState}
-          discussionData={discussionData}
-          reviews={reviews}
-        />
+      {context.viewType === 'public' && (
+        <PublicSubmissionView submission={submission} />
       )}
     </div>
   )

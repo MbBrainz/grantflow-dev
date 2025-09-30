@@ -152,7 +152,7 @@ export default function NewSubmissionPage() {
         '[new_submission]: Submitting proposal with detailed logging:',
         {
           title: formData.title,
-          description: formData.description?.substring(0, 50) + '...',
+          description: `${formData.description?.substring(0, 50)}...`,
           labelsArray: formData.labels,
           labelsLength: formData.labels.length,
           milestonesArray: formData.milestones,
@@ -586,7 +586,7 @@ export default function NewSubmissionPage() {
 
           <Button
             onClick={submitProposal}
-            disabled={isSubmitting || !isFormValid}
+            disabled={isSubmitting ?? !isFormValid}
             className="bg-green-600 text-white hover:bg-green-700"
           >
             {isSubmitting ? (

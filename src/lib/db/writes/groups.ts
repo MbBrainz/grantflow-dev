@@ -11,7 +11,7 @@ export async function createGroup(data: {
   websiteUrl?: string
   githubOrg?: string
   walletAddress?: string
-  settings?: any
+  settings?: Record<string, unknown>
 }) {
   const [group] = await db
     .insert(groups)
@@ -42,10 +42,22 @@ export async function updateGroup(
     websiteUrl: string
     githubOrg: string
     walletAddress: string
-    settings: any
+    settings: Record<string, unknown>
   }>
 ) {
-  const updateData: any = {}
+  type UpdateData = Partial<{
+    name: string
+    description: string
+    logoUrl: string
+    focusAreas: string
+    websiteUrl: string
+    githubOrg: string
+    walletAddress: string
+    settings: string
+    updatedAt: Date
+  }>
+
+  const updateData: UpdateData = {}
 
   if (data.name !== undefined) updateData.name = data.name
   if (data.description !== undefined) updateData.description = data.description
@@ -81,7 +93,7 @@ export async function addMemberToGroup(data: {
     .values({
       groupId: data.groupId,
       userId: data.userId,
-      role: data.role || 'member',
+      role: data.role ?? 'member',
       permissions: data.permissions ? JSON.stringify(data.permissions) : null,
       isActive: true,
     })
@@ -110,9 +122,9 @@ export async function createGrantProgram(data: {
   name: string
   description?: string
   fundingAmount?: number
-  requirements?: any
-  applicationTemplate?: any
-  milestoneStructure?: any
+  requirements?: Record<string, unknown>
+  applicationTemplate?: Record<string, unknown>
+  milestoneStructure?: Record<string, unknown>
 }) {
   const [program] = await db
     .insert(grantPrograms)
@@ -143,13 +155,24 @@ export async function updateGrantProgram(
     name: string
     description: string
     fundingAmount: number
-    requirements: any
-    applicationTemplate: any
-    milestoneStructure: any
+    requirements: Record<string, unknown>
+    applicationTemplate: Record<string, unknown>
+    milestoneStructure: Record<string, unknown>
     isActive: boolean
   }>
 ) {
-  const updateData: any = {}
+  type UpdateData = Partial<{
+    name: string
+    description: string
+    fundingAmount: number
+    requirements: string
+    applicationTemplate: string
+    milestoneStructure: string
+    isActive: boolean
+    updatedAt: Date
+  }>
+
+  const updateData: UpdateData = {}
 
   if (data.name !== undefined) updateData.name = data.name
   if (data.description !== undefined) updateData.description = data.description

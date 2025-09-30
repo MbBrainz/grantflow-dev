@@ -18,9 +18,40 @@ import {
   XCircle,
   AlertCircle,
 } from 'lucide-react'
-import { PendingActionsPanel } from '@/components/review/pending-actions-panel'
+import { PendingActionsPanel, type PendingAction } from '@/components/review/pending-actions-panel'
 import { CommitteeBadge } from '@/components/submissions/committee-badge'
 import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge'
+import type { Milestone } from '@/lib/db/schema'
+
+interface Submitter {
+  name: string | null
+}
+
+interface Committee {
+  id: number
+  name: string
+  isActive: boolean
+}
+
+interface GrantProgram {
+  name: string
+  fundingAmount?: number
+}
+
+interface Submission {
+  id: number
+  title: string | null
+  description: string | null
+  executiveSummary: string | null
+  status: string
+  createdAt: string
+  labels: string | null
+  totalAmount?: number
+  submitter?: Submitter
+  committee?: Committee
+  grantProgram?: GrantProgram
+  milestones?: Milestone[]
+}
 
 function StatusBadge({ status }: { status: string }) {
   const colors = {
@@ -34,7 +65,7 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        colors[status as keyof typeof colors] || colors.draft
+        colors[status as keyof typeof colors] ?? colors.draft
       }`}
     >
       {status.replace('_', ' ').toUpperCase()}
@@ -42,8 +73,19 @@ function StatusBadge({ status }: { status: string }) {
   )
 }
 
-function SubmissionCard({ submission }: { submission: any }) {
-  const labels = submission.labels ? JSON.parse(submission.labels) : []
+function parseLabels(labelsString: string | null): string[] {
+  if (!labelsString) return []
+  try {
+    const parsed: unknown = JSON.parse(labelsString)
+    if (!Array.isArray(parsed)) return []
+    return parsed.filter((item): item is string => typeof item === 'string')
+  } catch {
+    return []
+  }
+}
+
+function SubmissionCard({ submission }: { submission: Submission }) {
+  const labels = parseLabels(submission.labels)
 
   return (
     <Card className="transition-shadow hover:shadow-md">
@@ -51,10 +93,10 @@ function SubmissionCard({ submission }: { submission: any }) {
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <CardTitle className="text-lg">
-              {submission.title || 'Untitled Submission'}
+              {submission.title ?? 'Untitled Submission'}
             </CardTitle>
             <CardDescription>
-              by {submission.submitter?.name || 'Anonymous'} •{' '}
+              by {submission.submitter?.name ?? 'Anonymous'} •{' '}
               {new Date(submission.createdAt).toLocaleDateString()}
             </CardDescription>
 
@@ -69,7 +111,7 @@ function SubmissionCard({ submission }: { submission: any }) {
 
             {/* Milestone Progress for Approved Submissions */}
             <MilestoneProgressBadge
-              milestones={submission.milestones || []}
+              milestones={(submission.milestones as any) ?? []}
               submissionStatus={submission.status}
               variant="compact"
             />
@@ -80,8 +122,8 @@ function SubmissionCard({ submission }: { submission: any }) {
       <CardContent>
         <div className="space-y-3">
           <p className="line-clamp-2 text-sm text-gray-600 dark:text-gray-400">
-            {submission.description ||
-              submission.executiveSummary ||
+            {submission.description ??
+              submission.executiveSummary ??
               'No description available'}
           </p>
 
@@ -107,7 +149,7 @@ function SubmissionCard({ submission }: { submission: any }) {
             <div className="flex items-center gap-4 text-sm text-gray-500">
               <div className="flex items-center gap-1">
                 <FileText className="h-4 w-4" />
-                {submission.milestones?.length || 0} milestones
+                {submission.milestones?.length ?? 0} milestones
               </div>
               <div className="flex items-center gap-1">
                 <Clock className="h-4 w-4" />
@@ -139,10 +181,23 @@ function SubmissionCard({ submission }: { submission: any }) {
   )
 }
 
+interface Stats {
+  total: number
+  submitted: number
+  underReview: number
+  approved: number
+  rejected: number
+}
+
+interface PendingActions {
+  submissionsNeedingVote: PendingAction[]
+  milestonesNeedingReview: PendingAction[]
+}
+
 interface ReviewDashboardClientProps {
-  initialSubmissions: any[]
-  stats: any
-  pendingActions: any
+  initialSubmissions: Submission[]
+  stats: Stats
+  pendingActions: PendingActions
 }
 
 export function ReviewDashboardClient({
@@ -163,7 +218,7 @@ export function ReviewDashboardClient({
     }
 
     const targetStatuses =
-      statusMap[selectedFilter as keyof typeof statusMap] || []
+      statusMap[selectedFilter as keyof typeof statusMap] ?? []
     return initialSubmissions.filter(submission =>
       targetStatuses.includes(submission.status)
     )
@@ -215,8 +270,8 @@ export function ReviewDashboardClient({
 
       {/* Pending Actions - Priority Section */}
       <PendingActionsPanel
-        submissionsNeedingVote={pendingActions.submissionsNeedingVote as any}
-        milestonesNeedingReview={pendingActions.milestonesNeedingReview as any}
+        submissionsNeedingVote={pendingActions.submissionsNeedingVote}
+        milestonesNeedingReview={pendingActions.milestonesNeedingReview}
       />
 
       {/* Quick Stats */}

@@ -63,7 +63,7 @@ export function LottieAnimation({
     )
   }
 
-  if (error || !animationData) {
+  if (error ?? !animationData) {
     return (
       <div
         className={`flex items-center justify-center ${className}`}

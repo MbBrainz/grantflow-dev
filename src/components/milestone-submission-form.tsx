@@ -26,10 +26,10 @@ import {
   FileText,
   Users,
 } from 'lucide-react'
+import type { GitHubCommit } from '@/lib/github/simple-client'
 import {
   getRepositoryCommits,
   getCommitsSince,
-  GitHubCommit,
 } from '@/lib/github/simple-client'
 
 // Use GitHubCommit type from simple-client
@@ -100,11 +100,11 @@ export function MilestoneSubmissionForm({
 
         // Fetch commits since the last milestone completion, or all commits if first milestone
         console.log('[MilestoneSubmissionForm]: Fetching commits', {
-          sinceCommit: previousMilestoneCommitSha || 'none (first milestone)',
+          sinceCommit: previousMilestoneCommitSha ?? 'none (first milestone)',
         })
         fetchedCommits = await getCommitsSince(
           submissionRepoUrl,
-          previousMilestoneCommitSha || undefined
+          previousMilestoneCommitSha ?? undefined
         )
 
         if (fetchedCommits) {
@@ -210,9 +210,9 @@ export function MilestoneSubmissionForm({
     )
     return selectedCommitObjects.reduce(
       (total, commit) => ({
-        additions: total.additions + (commit.stats?.additions || 0),
-        deletions: total.deletions + (commit.stats?.deletions || 0),
-        total: total.total + (commit.stats?.total || 0),
+        additions: total.additions + (commit.stats?.additions ?? 0),
+        deletions: total.deletions + (commit.stats?.deletions ?? 0),
+        total: total.total + (commit.stats?.total ?? 0),
       }),
       { additions: 0, deletions: 0, total: 0 }
     )
@@ -238,7 +238,7 @@ export function MilestoneSubmissionForm({
             <div className="flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-green-600" />
               <span className="font-medium">
-                ${milestone.amount?.toLocaleString() || 0}
+                ${milestone.amount?.toLocaleString() ?? 0}
               </span>
             </div>
             {milestone.dueDate && (
@@ -440,7 +440,7 @@ export function MilestoneSubmissionForm({
         <Button
           onClick={handleSubmit}
           disabled={
-            isSubmitting || selectedCommits.size === 0 || !deliverables.trim()
+            isSubmitting ?? selectedCommits.size === 0 ?? !deliverables.trim()
           }
           className="flex items-center gap-2"
         >

@@ -11,7 +11,7 @@ import {
 
 // Group-related queries (replaces committee queries)
 export async function getGroups(type?: 'committee' | 'team'): Promise<Group[]> {
-  let whereConditions = [eq(groups.isActive, true)]
+  const whereConditions = [eq(groups.isActive, true)]
   if (type) {
     whereConditions.push(eq(groups.type, type))
   }
@@ -263,7 +263,7 @@ export async function getGroupWithDetails(groupId: number) {
       approvedSubmissions: approvedSubmissionsCount,
       approvalRate,
       totalFunding: group.grantPrograms.reduce(
-        (sum, prog) => sum + (prog.fundingAmount || 0),
+        (sum, prog) => sum + (prog.fundingAmount ?? 0),
         0
       ),
     },
@@ -282,7 +282,7 @@ export async function searchGroups(searchParams: {
   const { query, type, focusAreas, minFunding, maxFunding, approvalRateMin } =
     searchParams
 
-  let whereConditions = [eq(groups.isActive, true)]
+  const whereConditions = [eq(groups.isActive, true)]
 
   // Type filter
   if (type) {
@@ -302,9 +302,7 @@ export async function searchGroups(searchParams: {
   // Focus areas filter (JSON array contains any of the specified areas)
   if (focusAreas && focusAreas.length > 0) {
     focusAreas.forEach(area => {
-      whereConditions.push(
-        sql`${groups.focusAreas}::text ILIKE ${`%\"${area}\"%`}`
-      )
+      whereConditions.push(sql`${groups.focusAreas}::text ILIKE ${`%${area}%`}`)
     })
   }
 

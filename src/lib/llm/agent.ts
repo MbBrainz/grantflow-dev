@@ -1,12 +1,13 @@
-import { generateObject, generateText } from 'ai'
+import { generateObject } from 'ai'
 import { akashApi } from './models'
-import z from 'zod'
+import type z from 'zod'
 
-const generateObjectWithAkash = async (prompt: string, schema: z.ZodSchema) => {
+ 
+const generateObjectWithAkash = async <T>(prompt: string, schema: z.ZodSchema<T>): Promise<T> => {
   const result = await generateObject({
     model: akashApi('Meta-Llama-4-Maverick-17B-128E-Instruct-FP8'),
-    prompt: prompt,
-    schema: schema,
+    prompt,
+    schema,
     output: 'object',
   })
   return result.object

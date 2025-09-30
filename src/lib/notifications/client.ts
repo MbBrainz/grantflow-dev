@@ -13,6 +13,7 @@ export interface RealtimeNotification extends NotificationData {
 interface SSEMessage {
   type: 'connection' | 'heartbeat' | 'notification'
   timestamp: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any
 }
 
@@ -24,7 +25,7 @@ interface NotificationConnectionState {
 }
 
 // Hook for managing SSE connection and receiving real-time notifications
-export function useNotificationStream(shouldConnect: boolean = true) {
+export function useNotificationStream(shouldConnect = true) {
   const [state, setState] = useState<NotificationConnectionState>({
     isConnected: false,
     isConnecting: false,
@@ -71,7 +72,9 @@ export function useNotificationStream(shouldConnect: boolean = true) {
 
       eventSource.onmessage = event => {
         try {
-          const message: SSEMessage = JSON.parse(event.data)
+          const message: SSEMessage = JSON.parse(
+            event.data as string
+          ) as unknown as SSEMessage
           console.log('[notifications-client]: Received SSE message', message)
 
           switch (message.type) {
@@ -199,6 +202,10 @@ export function useNotificationStream(shouldConnect: boolean = true) {
   }
 }
 
+interface WindowWithNotificationHandler extends Window {
+  handleRealtimeNotification?: (notification: RealtimeNotification) => void
+}
+
 // Hook for displaying notifications with specific submission context
 export function useSubmissionNotifications(submissionId?: number) {
   const notificationStream = useNotificationStream()
@@ -213,13 +220,12 @@ export function useSubmissionNotifications(submissionId?: number) {
 
       setNotifications(prev => [notification, ...prev].slice(0, 50)) // Keep last 50
     }
-
-    // Set up global notification handler
-    const originalHandler = (window as any).handleRealtimeNotification
-    ;(window as any).handleRealtimeNotification = handleNotification
+    const windowWithHandler = window as WindowWithNotificationHandler
+    const originalHandler = windowWithHandler.handleRealtimeNotification
+    windowWithHandler.handleRealtimeNotification = handleNotification
 
     return () => {
-      ;(window as any).handleRealtimeNotification = originalHandler
+      windowWithHandler.handleRealtimeNotification = originalHandler
     }
   }, [submissionId])
 
@@ -242,8 +248,9 @@ function handleRealtimeNotification(notification: RealtimeNotification) {
   })
 
   // Trigger any registered handlers
-  if ((window as any).handleRealtimeNotification) {
-    ;(window as any).handleRealtimeNotification(notification)
+  const windowWithHandler = window as WindowWithNotificationHandler
+  if (windowWithHandler.handleRealtimeNotification) {
+    windowWithHandler.handleRealtimeNotification(notification)
   }
 
   // Update page data if needed

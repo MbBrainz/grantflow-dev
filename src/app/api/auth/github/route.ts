@@ -1,9 +1,10 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { redirect } from 'next/navigation'
+import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server'
 
-export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
-  const redirectTo = searchParams.get('redirect') || '/dashboard'
+export function GET(request: NextRequest) {
+  const searchParams = new URLSearchParams(request.nextUrl.searchParams)
+
+  const redirectTo = searchParams.get('redirect') ?? '/dashboard'
 
   // Generate a random state for security
   const state = crypto.randomUUID()

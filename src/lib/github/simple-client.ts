@@ -3,6 +3,53 @@
  * No GitHub App authentication needed - just basic REST calls
  */
 
+// GitHub API response interfaces
+interface GitHubApiCommitAuthor {
+  name?: string
+  email?: string
+  date?: string
+}
+
+interface GitHubApiCommitData {
+  message: string
+  author?: GitHubApiCommitAuthor
+  committer?: GitHubApiCommitAuthor
+}
+
+interface GitHubApiStats {
+  additions?: number
+  deletions?: number
+  total?: number
+}
+
+interface GitHubApiFile {
+  filename: string
+  status: string
+  additions?: number
+  deletions?: number
+  changes?: number
+}
+
+interface GitHubApiCommit {
+  sha: string
+  commit: GitHubApiCommitData
+  html_url: string
+  stats?: GitHubApiStats
+  files?: GitHubApiFile[]
+}
+
+interface GitHubApiRepo {
+  name: string
+  full_name: string
+  description: string | null
+  default_branch: string
+  stargazers_count: number
+  forks_count: number
+  language: string | null
+  private: boolean
+}
+
+// Exported interfaces for our application
 export interface GitHubCommit {
   sha: string
   shortSha: string
@@ -26,13 +73,13 @@ export interface GitHubCommit {
 }
 
 export interface GitHubCommitDetail extends GitHubCommit {
-  files: Array<{
+  files: {
     filename: string
     status: string
     additions: number
     deletions: number
     changes: number
-  }>
+  }[]
 }
 
 /**
@@ -41,9 +88,8 @@ export interface GitHubCommitDetail extends GitHubCommit {
 export function parseGitHubRepoUrl(
   repoUrl: string
 ): { owner: string; repo: string } | null {
-  const match = repoUrl.match(
-    /https:\/\/github\.com\/([^\/]+)\/([^\/]+)(?:\.git)?(?:\/.*)?$/
-  )
+  const match =
+    /https:\/\/github\.com\/([^/]+)\/([^/]+)(?:\.git)?(?:\/.*)?$/.exec(repoUrl)
   if (!match) return null
 
   return {
@@ -64,10 +110,10 @@ function createHeaders(): HeadersInit {
 
   // Add token if available for better rate limits (5000/hour vs 60/hour)
   const token =
-    process.env.NEXT_PUBLIC_GITHUB_TOKEN ||
+    process.env.NEXT_PUBLIC_GITHUB_TOKEN ??
     process.env.GITHUB_PERSONAL_ACCESS_TOKEN
   if (token) {
-    headers['Authorization'] = `token ${token}`
+    headers.Authorization = `token ${token}`
   }
 
   return headers
@@ -104,8 +150,8 @@ async function githubApiRequest<T>(url: string): Promise<T | null> {
       )
     }
 
-    const data = await response.json()
-    return data as T
+    const data = (await response.json()) as T
+    return data
   } catch (error) {
     console.error('[github-simple]: API request failed:', { url, error })
     return null
@@ -138,7 +184,7 @@ export async function getRepositoryCommits(
     }
 
     const params = new URLSearchParams()
-    params.append('per_page', String(options.perPage || 50))
+    params.append('per_page', String(options.perPage ?? 50))
 
     if (options.since) {
       params.append('since', options.since.toISOString())
@@ -154,7 +200,7 @@ export async function getRepositoryCommits(
     }
 
     const url = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/commits?${params.toString()}`
-    const commits = await githubApiRequest<any[]>(url)
+    const commits = await githubApiRequest<GitHubApiCommit[]>(url)
 
     if (!commits) {
       return null
@@ -170,21 +216,21 @@ export async function getRepositoryCommits(
       shortSha: commit.sha.substring(0, 7),
       message: commit.commit.message,
       author: {
-        name: commit.commit.author?.name || 'Unknown',
-        email: commit.commit.author?.email || '',
-        date: commit.commit.author?.date || '',
+        name: commit.commit.author?.name ?? 'Unknown',
+        email: commit.commit.author?.email ?? '',
+        date: commit.commit.author?.date ?? '',
       },
       committer: {
-        name: commit.commit.committer?.name || 'Unknown',
-        email: commit.commit.committer?.email || '',
-        date: commit.commit.committer?.date || '',
+        name: commit.commit.committer?.name ?? 'Unknown',
+        email: commit.commit.committer?.email ?? '',
+        date: commit.commit.committer?.date ?? '',
       },
       url: commit.html_url,
       stats: commit.stats
         ? {
-            additions: commit.stats.additions || 0,
-            deletions: commit.stats.deletions || 0,
-            total: commit.stats.total || 0,
+            additions: commit.stats.additions ?? 0,
+            deletions: commit.stats.deletions ?? 0,
+            total: commit.stats.total ?? 0,
           }
         : undefined,
     }))
@@ -220,11 +266,9 @@ export async function getCommitsSince(
       console.error('[github-simple]: Invalid repository URL', { repoUrl })
       return null
     }
-    // for the first milestone, we need to get all commits
-    sinceCommitSha = undefined
 
     const params = new URLSearchParams()
-    params.append('per_page', String(options.perPage || 50))
+    params.append('per_page', String(options.perPage ?? 50))
 
     // If no sinceCommitSha provided, get all commits (first milestone case)
     if (!sinceCommitSha) {
@@ -237,7 +281,7 @@ export async function getCommitsSince(
       }
 
       const url = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/commits?${params.toString()}`
-      const commits = await githubApiRequest<any[]>(url)
+      const commits = await githubApiRequest<GitHubApiCommit[]>(url)
 
       if (!commits) {
         return null
@@ -253,14 +297,14 @@ export async function getCommitsSince(
         shortSha: commit.sha.substring(0, 7),
         message: commit.commit.message,
         author: {
-          name: commit.commit.author?.name || 'Unknown',
-          email: commit.commit.author?.email || '',
-          date: commit.commit.author?.date || '',
+          name: commit.commit.author?.name ?? 'Unknown',
+          email: commit.commit.author?.email ?? '',
+          date: commit.commit.author?.date ?? '',
         },
         committer: {
-          name: commit.commit.committer?.name || 'Unknown',
-          email: commit.commit.committer?.email || '',
-          date: commit.commit.committer?.date || '',
+          name: commit.commit.committer?.name ?? 'Unknown',
+          email: commit.commit.committer?.email ?? '',
+          date: commit.commit.committer?.date ?? '',
         },
         url: commit.html_url,
       }))
@@ -268,7 +312,7 @@ export async function getCommitsSince(
 
     // If sinceCommitSha provided, get commits since that specific commit
     const refCommitUrl = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/commits/${sinceCommitSha}`
-    const refCommit = await githubApiRequest<any>(refCommitUrl)
+    const refCommit = await githubApiRequest<GitHubApiCommit>(refCommitUrl)
 
     if (!refCommit) {
       console.error('[github-simple]: Could not find reference commit', {
@@ -278,7 +322,7 @@ export async function getCommitsSince(
     }
 
     const sinceDate = new Date(
-      refCommit.commit.committer?.date || refCommit.commit.author?.date || ''
+      refCommit.commit.committer?.date ?? refCommit.commit.author?.date ?? ''
     )
 
     // Add 1 second to exclude the reference commit itself
@@ -291,7 +335,7 @@ export async function getCommitsSince(
     }
 
     const url = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/commits?${params.toString()}`
-    const commits = await githubApiRequest<any[]>(url)
+    const commits = await githubApiRequest<GitHubApiCommit[]>(url)
 
     if (!commits) {
       return null
@@ -308,14 +352,14 @@ export async function getCommitsSince(
       shortSha: commit.sha.substring(0, 7),
       message: commit.commit.message,
       author: {
-        name: commit.commit.author?.name || 'Unknown',
-        email: commit.commit.author?.email || '',
-        date: commit.commit.author?.date || '',
+        name: commit.commit.author?.name ?? 'Unknown',
+        email: commit.commit.author?.email ?? '',
+        date: commit.commit.author?.date ?? '',
       },
       committer: {
-        name: commit.commit.committer?.name || 'Unknown',
-        email: commit.commit.committer?.email || '',
-        date: commit.commit.committer?.date || '',
+        name: commit.commit.committer?.name ?? 'Unknown',
+        email: commit.commit.committer?.email ?? '',
+        date: commit.commit.committer?.date ?? '',
       },
       url: commit.html_url,
     }))
@@ -349,7 +393,7 @@ export async function getCommitDetails(
     }
 
     const url = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}/commits/${commitSha}`
-    const commit = await githubApiRequest<any>(url)
+    const commit = await githubApiRequest<GitHubApiCommit>(url)
 
     if (!commit) {
       return null
@@ -357,7 +401,7 @@ export async function getCommitDetails(
 
     console.log('[github-simple]: Successfully fetched commit details', {
       commitSha,
-      filesChanged: commit.files?.length || 0,
+      filesChanged: commit.files?.length ?? 0,
       repo: `${repoInfo.owner}/${repoInfo.repo}`,
     })
 
@@ -366,29 +410,29 @@ export async function getCommitDetails(
       shortSha: commit.sha.substring(0, 7),
       message: commit.commit.message,
       author: {
-        name: commit.commit.author?.name || 'Unknown',
-        email: commit.commit.author?.email || '',
-        date: commit.commit.author?.date || '',
+        name: commit.commit.author?.name ?? 'Unknown',
+        email: commit.commit.author?.email ?? '',
+        date: commit.commit.author?.date ?? '',
       },
       committer: {
-        name: commit.commit.committer?.name || 'Unknown',
-        email: commit.commit.committer?.email || '',
-        date: commit.commit.committer?.date || '',
+        name: commit.commit.committer?.name ?? 'Unknown',
+        email: commit.commit.committer?.email ?? '',
+        date: commit.commit.committer?.date ?? '',
       },
       url: commit.html_url,
       stats: {
-        additions: commit.stats?.additions || 0,
-        deletions: commit.stats?.deletions || 0,
-        total: commit.stats?.total || 0,
+        additions: commit.stats?.additions ?? 0,
+        deletions: commit.stats?.deletions ?? 0,
+        total: commit.stats?.total ?? 0,
       },
       files:
-        commit.files?.map((file: any) => ({
+        commit.files?.map((file: GitHubApiFile) => ({
           filename: file.filename,
           status: file.status,
-          additions: file.additions || 0,
-          deletions: file.deletions || 0,
-          changes: file.changes || 0,
-        })) || [],
+          additions: file.additions ?? 0,
+          deletions: file.deletions ?? 0,
+          changes: file.changes ?? 0,
+        })) ?? [],
     }
   } catch (error) {
     console.error('[github-simple]: Error fetching commit details', {
@@ -420,7 +464,7 @@ export async function getRepositoryInfo(repoUrl: string): Promise<{
     }
 
     const url = `https://api.github.com/repos/${repoInfo.owner}/${repoInfo.repo}`
-    const repo = await githubApiRequest<any>(url)
+    const repo = await githubApiRequest<GitHubApiRepo>(url)
 
     if (!repo) {
       return null

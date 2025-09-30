@@ -38,7 +38,7 @@ export async function completeMilestone(formData: FormData) {
   console.log('[completeMilestone]: Starting milestone completion process')
 
   const session = await getSession()
-  if (!session || !session.user) {
+  if (!session?.user) {
     console.log('[completeMilestone]: No authenticated user')
     redirect('/sign-in')
   }
@@ -65,9 +65,9 @@ export async function completeMilestone(formData: FormData) {
       validation.error.issues
     )
     return {
-      error:
-        'Invalid form data: ' +
-        validation.error.issues.map(i => i.message).join(', '),
+      error: `Invalid form data: ${validation.error.issues
+        .map(i => i.message)
+        .join(', ')}`,
     }
   }
 
@@ -145,6 +145,7 @@ export async function completeMilestone(formData: FormData) {
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/require-await
 export async function validateTransactionHash(
   hash: string,
   explorerUrl: string
@@ -176,7 +177,7 @@ const submitMilestoneSchema = z.object({
   milestoneId: z.coerce.number().min(1, 'Invalid milestone ID'),
   selectedCommits: z.string().transform((str, ctx) => {
     try {
-      const parsed = JSON.parse(str)
+      const parsed: unknown = JSON.parse(str)
       if (!Array.isArray(parsed)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -205,7 +206,7 @@ const submitMilestoneSchema = z.object({
     .min(10, 'Deliverables description must be at least 10 characters'),
   githubCommitHashes: z.string().transform((str, ctx) => {
     try {
-      const parsed = JSON.parse(str)
+      const parsed: unknown = JSON.parse(str)
       if (!Array.isArray(parsed)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
@@ -298,12 +299,12 @@ export const submitMilestone = validatedActionWithUser(
 
       // Sort milestones by creation order
       const sortedMilestones = allMilestones.sort(
-        (a: any, b: any) =>
+        (a, b) =>
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       )
 
       const targetMilestoneIndex = sortedMilestones.findIndex(
-        (m: any) => m.id === data.milestoneId
+        m => m.id === data.milestoneId
       )
 
       // Check all previous milestones are completed

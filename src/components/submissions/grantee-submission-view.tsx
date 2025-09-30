@@ -26,31 +26,22 @@ import {
 import { MilestoneSubmissionForm } from '@/components/milestone-submission-form'
 import { submitMilestone } from '@/app/(dashboard)/dashboard/submissions/milestone-actions'
 
+import type { SubmissionWithMilestones, User } from '@/lib/db/schema'
+
 interface GranteeSubmissionViewProps {
-  submission: any
-  currentUser: any
-  currentState: any
-  discussionData: any
-  reviews: any[]
+  submission: SubmissionWithMilestones
+  currentUser: User | null
   onPostMessage: (content: string, type?: string) => Promise<void>
-  onVoteSubmitted: () => Promise<void>
-  submissionContext?: {
-    isCommitteeReviewer?: boolean
-    isSubmissionOwner?: boolean
-    canViewPrivateDiscussions?: boolean
-  }
+  onVoteSubmitted: () => void
 }
 
 export function GranteeSubmissionView({
   submission,
   currentUser,
-  currentState,
-  discussionData,
-  reviews,
   onPostMessage,
   onVoteSubmitted,
-  submissionContext,
 }: GranteeSubmissionViewProps) {
+  const reviews = submission.reviews || []
   const [activeTab, setActiveTab] = useState<
     'status' | 'feedback' | 'milestones'
   >('status')
@@ -118,17 +109,15 @@ export function GranteeSubmissionView({
   const StageIcon = stage.icon
 
   // Calculate funding timeline
-  const activeMilestones = currentState?.activeMilestones || []
   const completedMilestones =
-    submission.milestones?.filter((m: any) => m.status === 'completed')
-      .length || 0
-  const totalMilestones = submission.milestones?.length || 0
+    submission.milestones?.filter(m => m.status === 'completed').length ?? 0
+  const totalMilestones = submission.milestones?.length ?? 0
 
   // Get previous milestone commit SHA for commit selection
   const getPreviousMilestoneCommitSha = (currentMilestoneIndex: number) => {
     if (currentMilestoneIndex === 0) return null // First milestone, no previous
 
-    const sortedMilestones = [...(submission.milestones || [])].sort(
+    const sortedMilestones = [...(submission.milestones ?? [])].sort(
       (a, b) =>
         new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
     )
@@ -286,7 +275,7 @@ export function GranteeSubmissionView({
               <span className="font-medium">Funding</span>
             </div>
             <p className="text-lg font-bold">
-              ${submission.totalAmount?.toLocaleString() || 'TBD'}
+              ${submission.totalAmount?.toLocaleString() ?? 'TBD'}
             </p>
           </div>
 
@@ -306,7 +295,7 @@ export function GranteeSubmissionView({
               <span className="font-medium">Messages</span>
             </div>
             <p className="text-sm">
-              {discussionData?.discussion?.messages?.length || 0} total
+              {submission.discussions?.[0]?.messages?.length ?? 0} total
             </p>
           </div>
         </div>
@@ -424,7 +413,7 @@ export function GranteeSubmissionView({
                         </span>
                       </div>
                       <p className="text-gray-700">
-                        {review.feedback || 'No specific feedback provided'}
+                        {review.feedback ?? 'No specific feedback provided'}
                       </p>
                     </div>
                   ))}
@@ -436,13 +425,12 @@ export function GranteeSubmissionView({
             <div>
               <h3 className="mb-4 text-lg font-semibold">Discussion</h3>
               <DiscussionThread
-                discussion={discussionData?.discussion}
+                discussion={submission.discussions?.[0] || null}
                 submissionId={submission.id}
                 currentUser={currentUser}
                 onPostMessage={onPostMessage}
                 title={submission.title}
                 isPublic={true}
-                submissionContext={submissionContext}
               />
             </div>
           </div>
@@ -458,7 +446,7 @@ export function GranteeSubmissionView({
                 previousMilestoneCommitSha={getPreviousMilestoneCommitSha(
                   submission.milestones?.findIndex(
                     (m: any) => m.id === submittingMilestone.id
-                  ) || 0
+                  ) ?? 0
                 )}
                 onSubmit={handleMilestoneSubmission}
                 onCancel={() => setSubmittingMilestone(null)}
@@ -568,7 +556,7 @@ export function GranteeSubmissionView({
                                 })()}
                               </div>
                               <p className="mt-1 text-sm font-medium">
-                                ${milestone.amount?.toLocaleString() || 0}
+                                ${milestone.amount?.toLocaleString() ?? 0}
                               </p>
                             </div>
                           </div>

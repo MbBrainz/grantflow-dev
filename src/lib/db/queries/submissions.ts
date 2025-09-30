@@ -1,4 +1,4 @@
-import { eq, desc, and, or, sql, inArray, isNull } from 'drizzle-orm'
+import { eq, desc, and, or, sql, inArray } from 'drizzle-orm'
 import { db } from '../drizzle'
 import {
   submissions,
@@ -34,7 +34,7 @@ export async function getSubmissionsByUser(
 
 export async function getSubmissionsByGroup(
   groupId: number,
-  isSubmitter: boolean = true
+  isSubmitter = true
 ): Promise<Submission[]> {
   const field = isSubmitter
     ? submissions.submitterGroupId
@@ -49,6 +49,7 @@ export async function getSubmissionsByGroup(
 export async function getSubmissionById(
   submissionId: number
 ): Promise<SubmissionWithMilestones | null> {
+  const user = await getUser()
   const result = await db.query.submissions.findFirst({
     where: eq(submissions.id, submissionId),
     with: {
@@ -57,10 +58,55 @@ export async function getSubmissionById(
       reviewerGroup: true,
       grantProgram: true,
       milestones: true,
+      discussions: {
+        with: {
+          messages: {
+            with: {
+              author: true,
+            },
+            orderBy: [desc(messages.createdAt)],
+          },
+        },
+      },
+      reviews: {
+        with: {
+          reviewer: true,
+        },
+        orderBy: [desc(reviews.createdAt)],
+      },
     },
   })
 
-  return result || null
+  if (!result) return null
+
+  // Calculate user context server-side
+  let userContext: { isSubmissionOwner: boolean; isCommitteeReviewer: boolean } | undefined
+  if (user) {
+    const isSubmissionOwner = result.submitterId === user.id
+
+    // Check if user is committee reviewer
+    let isCommitteeReviewer = false
+    if (result.reviewerGroupId && user.primaryRole === 'committee') {
+      const membership = await db.query.groupMemberships.findFirst({
+        where: and(
+          eq(groupMemberships.userId, user.id),
+          eq(groupMemberships.groupId, result.reviewerGroupId),
+          eq(groupMemberships.isActive, true)
+        ),
+      })
+      isCommitteeReviewer = !!membership
+    }
+
+    userContext = {
+      isSubmissionOwner,
+      isCommitteeReviewer,
+    }
+  }
+
+  return {
+    ...result,
+    userContext,
+  } as unknown as SubmissionWithMilestones
 }
 
 // Get all pending actions that require current reviewer's response/approval
@@ -91,7 +137,7 @@ export async function getAllSubmissionsForReview(statusFilter?: string) {
   const groupIds = userGroups.map(g => g.groupId)
 
   // Build where conditions
-  let whereConditions = [
+  const whereConditions = [
     sql`${submissions.reviewerGroupId} IN (${sql.join(
       groupIds.map(id => sql`${id}`),
       sql`, `
@@ -133,18 +179,11 @@ export async function getAllSubmissionsForReview(statusFilter?: string) {
     orderBy: [desc(submissions.createdAt)],
   })
 
-  // Fetch milestones separately to avoid relation issues
-  const submissionsWithMilestones = await Promise.all(
+  return await Promise.all(
     submissionsData.map(async submission => {
-      const submissionMilestones = await db
-        .select({
-          id: milestones.id,
-          title: milestones.title,
-          status: milestones.status,
-          amount: milestones.amount,
-        })
-        .from(milestones)
-        .where(eq(milestones.submissionId, submission.id))
+      const submissionMilestones = await db.query.milestones.findMany({
+        where: eq(milestones.submissionId, submission.id),
+      })
 
       return {
         ...submission,
@@ -152,8 +191,6 @@ export async function getAllSubmissionsForReview(statusFilter?: string) {
       }
     })
   )
-
-  return submissionsWithMilestones
 }
 
 export async function getSubmissionStats() {
@@ -428,3 +465,7 @@ export async function getSubmissionCurrentState(submissionId: number) {
     },
   }
 }
+
+export type SubmissionCurrentState = Awaited<
+  ReturnType<typeof getSubmissionCurrentState>
+>

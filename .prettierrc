@@ -4,8 +4,21 @@
   "tabWidth": 2,
   "trailingComma": "es5",
   "printWidth": 80,
-  "parser": "typescript",
   "endOfLine": "lf",
   "arrowParens": "avoid",
-  "plugins": ["prettier-plugin-tailwindcss"]
+  "plugins": ["prettier-plugin-tailwindcss"],
+  "overrides": [
+    {
+      "files": "*.ts",
+      "options": {
+        "parser": "typescript"
+      }
+    },
+    {
+      "files": "*.tsx",
+      "options": {
+        "parser": "typescript"
+      }
+    }
+  ]
 }

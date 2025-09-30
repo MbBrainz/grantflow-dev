@@ -32,7 +32,7 @@ export function MilestoneCompletionForm({
   const [formData, setFormData] = useState({
     transactionHash: '',
     blockExplorerUrl: '',
-    amount: milestoneAmount || 0,
+    amount: milestoneAmount ?? 0,
     walletFrom: '',
     walletTo: '',
   })
@@ -77,7 +77,7 @@ export function MilestoneCompletionForm({
         formData.blockExplorerUrl
       )
       if (!validation.valid) {
-        errors.transactionHash = validation.error || 'Invalid transaction hash'
+        errors.transactionHash = validation.error ?? 'Invalid transaction hash'
       }
     }
 
@@ -121,7 +121,7 @@ export function MilestoneCompletionForm({
       } else {
         toast({
           title: 'Success',
-          description: result.message || 'Milestone completed successfully!',
+          description: result.message ?? 'Milestone completed successfully!',
           variant: 'default',
         })
         onSuccess?.()
@@ -207,7 +207,7 @@ export function MilestoneCompletionForm({
               min="0"
               value={formData.amount}
               onChange={e =>
-                handleInputChange('amount', parseFloat(e.target.value) || 0)
+                handleInputChange('amount', parseFloat(e.target.value) ?? 0)
               }
               className={validationErrors.amount ? 'border-red-500' : ''}
               disabled={isSubmitting}

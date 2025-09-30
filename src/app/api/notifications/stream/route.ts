@@ -1,6 +1,6 @@
 'use server'
 
-import { NextRequest } from 'next/server'
+import type { NextRequest } from 'next/server'
 import { getUser } from '@/lib/db/queries'
 
 // Type declaration for global notification streams

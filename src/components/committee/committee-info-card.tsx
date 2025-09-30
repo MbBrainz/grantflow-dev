@@ -25,7 +25,7 @@ interface Committee {
   websiteUrl?: string
   githubOrg?: string
   walletAddress?: string
-  votingThreshold: number
+  votingThreshold?: number
   isActive: boolean
 }
 
@@ -148,7 +148,7 @@ export function CommitteeInfoCard({
               <div className="flex items-center gap-2">
                 <Users className="h-4 w-4 text-gray-500" />
                 <span className="text-sm">
-                  {committee.votingThreshold} reviewer votes required
+                  {committee.votingThreshold ?? 3} reviewer votes required
                 </span>
               </div>
             </div>

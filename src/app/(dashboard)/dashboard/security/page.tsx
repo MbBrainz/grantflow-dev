@@ -7,19 +7,16 @@ import { Label } from '@/components/ui/label'
 import { Lock, Trash2, Loader2 } from 'lucide-react'
 import { useActionState } from 'react'
 import { updatePassword, deleteAccount } from '@/app/(login)/actions'
+import type { ActionState } from '@/lib/auth/middleware'
 
-type PasswordState = {
+interface PasswordState extends ActionState {
   currentPassword?: string
   newPassword?: string
   confirmPassword?: string
-  error?: string
-  success?: string
 }
 
-type DeleteState = {
+interface DeleteState extends ActionState {
   password?: string
-  error?: string
-  success?: string
 }
 
 export default function SecurityPage() {
