@@ -153,17 +153,17 @@ async function seed() {
       type: 'committee',
       description:
         'Supporting core infrastructure, developer tools, and protocol improvements',
-      focusAreas: JSON.stringify([
+      focusAreas: [
         'Infrastructure',
         'Developer Tools',
         'Protocol Development',
         'Security',
-      ]),
+      ],
       websiteUrl: 'https://infra-dev.org',
       githubOrg: 'infra-dev-committee',
       walletAddress: '0xAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
       isActive: true,
-      settings: JSON.stringify({
+      settings: {
         votingThreshold: 3,
         requiredApprovalPercentage: 66,
         stages: [
@@ -172,7 +172,7 @@ async function seed() {
           'security_review',
           'final_approval',
         ],
-      }),
+      },
     })
     .returning()
 
@@ -183,21 +183,16 @@ async function seed() {
       type: 'committee',
       description:
         'Funding research, educational content, and community building initiatives',
-      focusAreas: JSON.stringify([
-        'Research',
-        'Education',
-        'Documentation',
-        'Community',
-      ]),
+      focusAreas: ['Research', 'Education', 'Documentation', 'Community'],
       websiteUrl: 'https://research-grants.org',
       githubOrg: 'research-committee',
       walletAddress: '0xBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB',
       isActive: true,
-      settings: JSON.stringify({
+      settings: {
         votingThreshold: 2,
         requiredApprovalPercentage: 75,
         stages: ['academic_review', 'community_impact', 'final_approval'],
-      }),
+      },
     })
     .returning()
 
@@ -208,22 +203,22 @@ async function seed() {
       type: 'committee',
       description:
         'Supporting decentralized finance protocols, yield farming, and financial primitives',
-      focusAreas: JSON.stringify([
+      focusAreas: [
         'DeFi',
         'Yield Farming',
         'AMM',
         'Lending Protocols',
         'Financial Primitives',
-      ]),
+      ],
       websiteUrl: 'https://defi-grants.com',
       githubOrg: 'defi-innovation',
       walletAddress: '0xCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC',
       isActive: true,
-      settings: JSON.stringify({
+      settings: {
         votingThreshold: 2,
         requiredApprovalPercentage: 80,
         stages: ['financial_review', 'risk_assessment', 'final_approval'],
-      }),
+      },
     })
     .returning()
 
@@ -234,22 +229,22 @@ async function seed() {
       type: 'committee',
       description:
         'Funding gaming projects, NFT marketplaces, and digital asset platforms',
-      focusAreas: JSON.stringify([
+      focusAreas: [
         'Gaming',
         'NFTs',
         'Digital Assets',
         'Marketplaces',
         'Virtual Worlds',
-      ]),
+      ],
       websiteUrl: 'https://gaming-nft-grants.io',
       githubOrg: 'gaming-committee',
       walletAddress: '0xDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD',
       isActive: true,
-      settings: JSON.stringify({
+      settings: {
         votingThreshold: 2,
         requiredApprovalPercentage: 70,
         stages: ['concept_review', 'technical_review', 'market_assessment'],
-      }),
+      },
     })
     .returning()
 
@@ -261,19 +256,15 @@ async function seed() {
       type: 'team',
       description:
         'Building the most developer-friendly SDK for blockchain development',
-      focusAreas: JSON.stringify([
-        'SDK',
-        'Developer Tools',
-        'TypeScript',
-        'Documentation',
-      ]),
+      focusAreas: ['SDK', 'Developer Tools', 'TypeScript', 'Documentation'],
       githubOrg: 'nextgen-sdk',
       walletAddress: teamMember1.walletAddress,
       isActive: true,
-      settings: JSON.stringify({
-        collaborationStyle: 'agile',
-        communicationChannels: ['discord', 'github'],
-      }),
+      settings: {
+        votingThreshold: 1,
+        requiredApprovalPercentage: 100,
+        stages: ['internal_review'],
+      },
     })
     .returning()
 
@@ -283,19 +274,15 @@ async function seed() {
       name: 'Layer2 Research Group',
       type: 'team',
       description: 'Researching scalability solutions and Layer 2 technologies',
-      focusAreas: JSON.stringify([
-        'Research',
-        'Layer 2',
-        'Scalability',
-        'Analysis',
-      ]),
+      focusAreas: ['Research', 'Layer 2', 'Scalability', 'Analysis'],
       githubOrg: 'l2-research-group',
       walletAddress: teamMember3.walletAddress,
       isActive: true,
-      settings: JSON.stringify({
-        researchFocus: 'academic',
-        publicationGoals: ['peer-reviewed', 'conference-presentations'],
-      }),
+      settings: {
+        votingThreshold: 1,
+        requiredApprovalPercentage: 100,
+        stages: ['internal_review'],
+      },
     })
     .returning()
 
@@ -305,19 +292,15 @@ async function seed() {
       name: 'YieldOpt Protocol Team',
       type: 'team',
       description: 'Building automated yield optimization protocols',
-      focusAreas: JSON.stringify([
-        'DeFi',
-        'Yield Farming',
-        'Automation',
-        'Smart Contracts',
-      ]),
+      focusAreas: ['DeFi', 'Yield Farming', 'Automation', 'Smart Contracts'],
       githubOrg: 'yieldopt-protocol',
       walletAddress: teamMember4.walletAddress,
       isActive: true,
-      settings: JSON.stringify({
-        developmentStack: ['solidity', 'typescript', 'react'],
-        securityFocus: 'high',
-      }),
+      settings: {
+        votingThreshold: 1,
+        requiredApprovalPercentage: 100,
+        stages: ['internal_review'],
+      },
     })
     .returning()
 
@@ -328,19 +311,15 @@ async function seed() {
       type: 'team',
       description:
         'Creating educational content and courses for blockchain development',
-      focusAreas: JSON.stringify([
-        'Education',
-        'Video Course',
-        'Blockchain',
-        'Tutorial',
-      ]),
+      focusAreas: ['Education', 'Video Course', 'Blockchain', 'Tutorial'],
       githubOrg: 'blockchain-education',
       walletAddress: teamMember2.walletAddress,
       isActive: true,
-      settings: JSON.stringify({
-        contentTypes: ['video', 'written', 'interactive'],
-        targetAudience: 'beginners-to-intermediate',
-      }),
+      settings: {
+        votingThreshold: 1,
+        requiredApprovalPercentage: 100,
+        stages: ['internal_review'],
+      },
     })
     .returning()
 
@@ -350,19 +329,15 @@ async function seed() {
       name: 'NFT Gaming Studio',
       type: 'team',
       description: 'Developing innovative NFT-based gaming experiences',
-      focusAreas: JSON.stringify([
-        'Gaming',
-        'NFT',
-        'Trading Cards',
-        'Interactive',
-      ]),
+      focusAreas: ['Gaming', 'NFT', 'Trading Cards', 'Interactive'],
       githubOrg: 'nft-gaming-studio',
       walletAddress: teamMember5.walletAddress,
       isActive: true,
-      settings: JSON.stringify({
-        gameEngines: ['unity', 'unreal'],
-        platforms: ['web', 'mobile'],
-      }),
+      settings: {
+        votingThreshold: 1,
+        requiredApprovalPercentage: 100,
+        stages: ['internal_review'],
+      },
     })
     .returning()
 
@@ -985,16 +960,6 @@ async function seed() {
         'A comprehensive SDK that simplifies blockchain development with TypeScript-first APIs, built-in testing utilities, and extensive documentation.',
       executiveSummary:
         'This project aims to create the most developer-friendly SDK for blockchain development, reducing onboarding time from weeks to hours.',
-      milestones: JSON.stringify([
-        { title: 'Architecture Design', amount: 20000, dueDate: '2024-02-15' },
-        { title: 'Core SDK Development', amount: 30000, dueDate: '2024-03-30' },
-        {
-          title: 'Testing & Documentation',
-          amount: 25000,
-          dueDate: '2024-04-30',
-        },
-        { title: 'Production Release', amount: 25000, dueDate: '2024-05-15' },
-      ]),
       postGrantPlan:
         'Continue maintaining the SDK, add enterprise features, and grow the developer community.',
       labels: JSON.stringify([
@@ -1026,20 +991,6 @@ async function seed() {
         'Comprehensive research comparing different Layer 2 scaling solutions, analyzing performance, security, and adoption metrics.',
       executiveSummary:
         'This research will provide the community with data-driven insights into the most effective Layer 2 solutions for different use cases.',
-      milestones: JSON.stringify([
-        {
-          title: 'Data Collection Framework',
-          amount: 18750,
-          dueDate: '2024-03-01',
-        },
-        { title: 'Performance Analysis', amount: 30000, dueDate: '2024-04-15' },
-        { title: 'Security Assessment', amount: 18750, dueDate: '2024-05-01' },
-        {
-          title: 'Final Report & Presentation',
-          amount: 7500,
-          dueDate: '2024-05-15',
-        },
-      ]),
       postGrantPlan:
         'Publish findings in peer-reviewed journals and present at major blockchain conferences.',
       labels: JSON.stringify([
@@ -1071,16 +1022,6 @@ async function seed() {
         'An automated yield farming protocol that optimizes returns across multiple DeFi platforms while minimizing gas costs and impermanent loss.',
       executiveSummary:
         'This protocol will democratize advanced yield farming strategies, making them accessible to all users regardless of portfolio size.',
-      milestones: JSON.stringify([
-        {
-          title: 'Smart Contract Development',
-          amount: 52500,
-          dueDate: '2024-04-01',
-        },
-        { title: 'Security Audit', amount: 37500, dueDate: '2024-05-01' },
-        { title: 'Frontend Development', amount: 37500, dueDate: '2024-05-15' },
-        { title: 'Mainnet Launch', amount: 22500, dueDate: '2024-06-01' },
-      ]),
       postGrantPlan:
         'Expand to more DeFi protocols, add advanced analytics, and implement DAO governance.',
       labels: JSON.stringify([
@@ -1112,12 +1053,6 @@ async function seed() {
         'A simple trading card game using NFTs with basic battle mechanics.',
       executiveSummary:
         'Create a trading card game where players can collect, trade, and battle with NFT cards.',
-      milestones: JSON.stringify([
-        { title: 'Card Design', amount: 20000, dueDate: '2024-03-15' },
-        { title: 'Game Development', amount: 40000, dueDate: '2024-04-30' },
-        { title: 'NFT Integration', amount: 15000, dueDate: '2024-05-15' },
-        { title: 'Launch', amount: 5000, dueDate: '2024-06-01' },
-      ]),
       postGrantPlan: 'Add more cards and game modes.',
       labels: JSON.stringify(['Gaming', 'NFT', 'Trading Cards']),
       githubRepoUrl: 'https://github.com/nft-gaming-studio/trading-cards',
@@ -1143,20 +1078,6 @@ async function seed() {
         'A comprehensive video course series teaching blockchain development from basics to advanced topics with hands-on coding exercises.',
       executiveSummary:
         'Bridge the knowledge gap in blockchain development education with practical, hands-on learning materials.',
-      milestones: JSON.stringify([
-        {
-          title: 'Course Outline & Scripts',
-          amount: 7500,
-          dueDate: '2024-03-01',
-        },
-        { title: 'Video Production', amount: 12500, dueDate: '2024-04-15' },
-        { title: 'Interactive Exercises', amount: 3750, dueDate: '2024-05-01' },
-        {
-          title: 'Course Launch & Marketing',
-          amount: 1250,
-          dueDate: '2024-05-15',
-        },
-      ]),
       postGrantPlan: 'Create advanced courses and build a learning platform.',
       labels: JSON.stringify([
         'Education',
@@ -1438,21 +1359,21 @@ async function seed() {
       title: 'Architecture Design & Setup',
       description:
         'Complete system architecture design, development environment setup, and initial project structure.',
-      requirements: JSON.stringify([
+      requirements: [
         'Architecture documentation',
         'Development environment',
         'Project scaffolding',
         'CI/CD pipeline',
-      ]),
+      ],
       amount: 20000,
       dueDate: new Date('2024-02-15'),
       status: 'completed',
-      deliverables: JSON.stringify([
-        'System architecture document',
-        'Development setup guide',
-        'Initial codebase',
-        'CI/CD configuration',
-      ]),
+      deliverables: [
+        { description: 'System architecture document' },
+        { description: 'Development setup guide' },
+        { description: 'Initial codebase' },
+        { description: 'CI/CD configuration' },
+      ],
       githubRepoUrl: 'https://github.com/nextgen-sdk/sdk',
       githubCommitHash: 'abc123def456',
       codeAnalysis: JSON.stringify({
@@ -1476,21 +1397,21 @@ async function seed() {
       title: 'Core SDK Development',
       description:
         'Implement core SDK functionality including API wrappers, utilities, and developer tools.',
-      requirements: JSON.stringify([
+      requirements: [
         'Core API implementation',
         'Utility functions',
         'Developer tools',
         'Initial testing',
-      ]),
+      ],
       amount: 30000,
       dueDate: new Date('2024-03-30'),
-      status: 'in_progress',
-      deliverables: JSON.stringify([
-        'Core SDK modules',
-        'API wrappers',
-        'Utility libraries',
-        'Test suite',
-      ]),
+      status: 'in-progress',
+      deliverables: [
+        { description: 'Core SDK modules' },
+        { description: 'API wrappers' },
+        { description: 'Utility libraries' },
+        { description: 'Test suite' },
+      ],
       githubRepoUrl: 'https://github.com/nextgen-sdk/sdk',
       createdAt: new Date('2024-01-20T09:00:00Z'),
       updatedAt: new Date('2024-02-15T09:00:00Z'),
@@ -1505,21 +1426,21 @@ async function seed() {
       title: 'Testing & Documentation',
       description:
         'Comprehensive testing coverage and detailed documentation with examples.',
-      requirements: JSON.stringify([
+      requirements: [
         'Test coverage >90%',
         'API documentation',
         'Usage examples',
         'Tutorial guides',
-      ]),
+      ],
       amount: 25000,
       dueDate: new Date('2024-04-30'),
       status: 'pending',
-      deliverables: JSON.stringify([
-        'Test suite',
-        'API documentation',
-        'Example projects',
-        'Tutorial content',
-      ]),
+      deliverables: [
+        { description: 'Test suite' },
+        { description: 'API documentation' },
+        { description: 'Example projects' },
+        { description: 'Tutorial content' },
+      ],
       githubRepoUrl: 'https://github.com/nextgen-sdk/sdk',
       createdAt: new Date('2024-01-20T09:00:00Z'),
     })
@@ -1533,21 +1454,21 @@ async function seed() {
       title: 'Production Release',
       description:
         'Final production release with package publishing and community announcement.',
-      requirements: JSON.stringify([
+      requirements: [
         'Production build',
         'Package publishing',
         'Release announcement',
         'Community support',
-      ]),
+      ],
       amount: 25000,
       dueDate: new Date('2024-05-15'),
       status: 'pending',
-      deliverables: JSON.stringify([
-        'Production release',
-        'npm package',
-        'Release notes',
-        'Community launch',
-      ]),
+      deliverables: [
+        { description: 'Production release' },
+        { description: 'npm package' },
+        { description: 'Release notes' },
+        { description: 'Community launch' },
+      ],
       githubRepoUrl: 'https://github.com/nextgen-sdk/sdk',
       createdAt: new Date('2024-01-20T09:00:00Z'),
     })

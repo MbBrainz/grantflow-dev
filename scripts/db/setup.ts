@@ -36,7 +36,11 @@ export async function createGroup(groupData: {
   websiteUrl?: string
   githubOrg?: string
   walletAddress?: string
-  settings?: Record<string, unknown>
+  settings?: {
+    votingThreshold: number
+    requiredApprovalPercentage: number
+    stages: string[]
+  }
 }): Promise<Group> {
   const [group] = await db
     .insert(groups)
@@ -44,12 +48,16 @@ export async function createGroup(groupData: {
       name: groupData.name,
       type: groupData.type,
       description: groupData.description,
-      focusAreas: JSON.stringify(groupData.focusAreas),
+      focusAreas: groupData.focusAreas,
       websiteUrl: groupData.websiteUrl,
       githubOrg: groupData.githubOrg,
       walletAddress: groupData.walletAddress,
       isActive: true,
-      settings: JSON.stringify(groupData.settings ?? {}),
+      settings: groupData.settings ?? {
+        votingThreshold: 1,
+        requiredApprovalPercentage: 50,
+        stages: [],
+      },
     })
     .returning()
 
@@ -458,7 +466,11 @@ export async function quickSetup(): Promise<void> {
       type: 'committee',
       description: 'A test committee for development',
       focusAreas: ['Testing', 'Development'],
-      settings: { votingThreshold: 2 },
+      settings: {
+        votingThreshold: 2,
+        requiredApprovalPercentage: 66,
+        stages: ['review', 'approval'],
+      },
     })
 
     // Create a test team

@@ -51,7 +51,7 @@ export type SubmissionWithMilestones = Submission & {
   reviews?: (Review & {
     reviewer: {
       id: number
-      name: string
+      name: string | null
       primaryRole: string | null
     }
   })[]

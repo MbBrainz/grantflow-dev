@@ -175,7 +175,6 @@ export const createSubmission = async (
       title: data.title,
       description: data.description,
       executiveSummary: data.executiveSummary,
-      milestones: JSON.stringify(data.milestones), // Store milestones as JSON in submission
       postGrantPlan: data.postGrantPlan,
       labels: JSON.stringify(data.labels),
       githubRepoUrl: data.githubRepoUrl ?? null,

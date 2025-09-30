@@ -35,7 +35,6 @@ export const submissions = pgTable('submissions', {
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
   executiveSummary: text('executive_summary'),
-  milestones: text('milestones'), // JSON milestone data
   postGrantPlan: text('post_grant_plan'),
   labels: text('labels'), // JSON array of project labels
   githubRepoUrl: varchar('github_repo_url', { length: 255 }),

@@ -54,8 +54,8 @@ export type DiscussionWithMessages = Discussion & {
   messages: (Message & {
     author: {
       id: number
-      name: string
-      role: string
+      name: string | null
+      primaryRole: string
     }
   })[]
 }

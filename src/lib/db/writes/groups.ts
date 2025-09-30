@@ -1,17 +1,21 @@
 import { eq, and } from 'drizzle-orm'
 import { db } from '../drizzle'
 import { groups, groupMemberships, grantPrograms } from '../schema'
+import type {
+  FocusAreas,
+  GroupSettings,
+} from '../schema/jsonTypes/GroupSettings'
 
 export async function createGroup(data: {
   name: string
   type: 'committee' | 'team'
   description?: string
   logoUrl?: string
-  focusAreas?: string[]
+  focusAreas?: FocusAreas
   websiteUrl?: string
   githubOrg?: string
   walletAddress?: string
-  settings?: Record<string, unknown>
+  settings?: GroupSettings
 }) {
   const [group] = await db
     .insert(groups)
@@ -20,11 +24,11 @@ export async function createGroup(data: {
       type: data.type,
       description: data.description,
       logoUrl: data.logoUrl,
-      focusAreas: data.focusAreas ? JSON.stringify(data.focusAreas) : null,
+      focusAreas: data.focusAreas ?? null,
       websiteUrl: data.websiteUrl,
       githubOrg: data.githubOrg,
       walletAddress: data.walletAddress,
-      settings: data.settings ? JSON.stringify(data.settings) : null,
+      settings: data.settings ?? null,
       isActive: true,
     })
     .returning()
@@ -38,22 +42,22 @@ export async function updateGroup(
     name: string
     description: string
     logoUrl: string
-    focusAreas: string[]
+    focusAreas: FocusAreas
     websiteUrl: string
     githubOrg: string
     walletAddress: string
-    settings: Record<string, unknown>
+    settings: GroupSettings
   }>
 ) {
   type UpdateData = Partial<{
     name: string
     description: string
     logoUrl: string
-    focusAreas: string
+    focusAreas: FocusAreas
     websiteUrl: string
     githubOrg: string
     walletAddress: string
-    settings: string
+    settings: GroupSettings
     updatedAt: Date
   }>
 
@@ -62,14 +66,12 @@ export async function updateGroup(
   if (data.name !== undefined) updateData.name = data.name
   if (data.description !== undefined) updateData.description = data.description
   if (data.logoUrl !== undefined) updateData.logoUrl = data.logoUrl
-  if (data.focusAreas !== undefined)
-    updateData.focusAreas = JSON.stringify(data.focusAreas)
+  if (data.focusAreas !== undefined) updateData.focusAreas = data.focusAreas
   if (data.websiteUrl !== undefined) updateData.websiteUrl = data.websiteUrl
   if (data.githubOrg !== undefined) updateData.githubOrg = data.githubOrg
   if (data.walletAddress !== undefined)
     updateData.walletAddress = data.walletAddress
-  if (data.settings !== undefined)
-    updateData.settings = JSON.stringify(data.settings)
+  if (data.settings !== undefined) updateData.settings = data.settings
 
   updateData.updatedAt = new Date()
 

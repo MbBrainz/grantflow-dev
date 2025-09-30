@@ -1,0 +1,13 @@
+#!/usr/bin/env sh
+
+# Run type-check
+echo "Running type-check..."
+pnpm type-check || exit 1
+
+# Run lint
+echo "Running lint..."
+pnpm lint:check || exit 1
+
+# Run lint-staged (format and stage changes)
+echo "Running formatter..."
+pnpm lint-staged

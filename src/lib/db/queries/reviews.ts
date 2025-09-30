@@ -160,7 +160,7 @@ export async function getReviewerPendingActions() {
     if (!existingVote) {
       submissionsNeedingVote.push({
         ...submission,
-        actionType: 'submission_vote',
+        actionType: 'submission_vote' as const,
         actionDescription: 'Vote needed on submission',
         daysOld: Math.floor(
           (Date.now() -
@@ -192,8 +192,8 @@ export async function getReviewerPendingActions() {
               sql`, `
             )})`,
             or(
-              eq(milestones.status, 'submitted'),
-              eq(milestones.status, 'under_review')
+              eq(milestones.status, 'in-progress'),
+              eq(milestones.status, 'in-review')
             )
           ),
           with: {
@@ -254,7 +254,7 @@ export async function getReviewerPendingActions() {
     if (!existingReview) {
       milestonesNeedingReviewFiltered.push({
         ...milestone,
-        actionType: 'milestone_review',
+        actionType: 'milestone_review' as const,
         actionDescription: 'Milestone review needed',
         daysOld: milestone.submittedAt
           ? Math.floor(

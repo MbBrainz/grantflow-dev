@@ -422,14 +422,13 @@ export async function getSubmissionCurrentState(submissionId: number) {
     ),
   })
 
-  // Get active milestones (in_progress or submitted status)
+  // Get active milestones (in_progress or in-review status)
   const activeMilestones = await db.query.milestones.findMany({
     where: and(
       eq(milestones.submissionId, submissionId),
       or(
-        eq(milestones.status, 'in_progress'),
-        eq(milestones.status, 'submitted'),
-        eq(milestones.status, 'under_review')
+        eq(milestones.status, 'in-progress'),
+        eq(milestones.status, 'in-review')
       )
     ),
     with: {
@@ -471,3 +470,53 @@ export async function getSubmissionCurrentState(submissionId: number) {
 export type SubmissionCurrentState = Awaited<
   ReturnType<typeof getSubmissionCurrentState>
 >
+
+/**
+ * Get a submission with all related data including milestones, discussions, reviews
+ */
+export async function getSubmissionWithMilestones(
+  id: number
+): Promise<SubmissionWithMilestones | null> {
+  try {
+    const submission = await db.query.submissions.findFirst({
+      where: eq(submissions.id, id),
+      with: {
+        milestones: {
+          orderBy: [milestones.createdAt],
+        },
+        submitter: true,
+        submitterGroup: true,
+        reviewerGroup: true,
+        grantProgram: true,
+        discussions: {
+          with: {
+            messages: {
+              with: {
+                author: {
+                  columns: {
+                    id: true,
+                    name: true,
+                    primaryRole: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        reviews: {
+          with: {
+            reviewer: true,
+          },
+        },
+      },
+    })
+
+    return submission ?? null
+  } catch (error) {
+    console.error(
+      '[getSubmissionWithMilestones]: Error fetching submission',
+      error
+    )
+    return null
+  }
+}

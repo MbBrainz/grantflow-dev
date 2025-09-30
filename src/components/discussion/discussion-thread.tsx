@@ -201,9 +201,9 @@ export function DiscussionThread({
                       {message.author.name ?? 'Anonymous'}
                     </span>
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs ${getRoleBadgeColor(message.author.role)}`}
+                      className={`rounded-full px-2 py-0.5 text-xs ${getRoleBadgeColor(message.author.primaryRole)}`}
                     >
-                      {message.author.role}
+                      {message.author.primaryRole}
                     </span>
                     <div className="flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                       <Clock className="h-3 w-3" />

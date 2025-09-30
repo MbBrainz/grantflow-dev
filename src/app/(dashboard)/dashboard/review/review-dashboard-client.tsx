@@ -36,9 +36,9 @@ interface Submission {
   description: string | null
   executiveSummary: string | null
   status: string
-  createdAt: string
+  createdAt: string | Date
   labels: string | null
-  totalAmount?: number
+  totalAmount?: number | null
   submitter?: Submitter
   committee?: Pick<
     Committee,

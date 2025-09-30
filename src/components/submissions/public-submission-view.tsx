@@ -363,7 +363,7 @@ export function PublicSubmissionView({
                     {message.author?.name ?? 'Anonymous'}
                   </span>
                   <Badge variant="outline" className="text-xs">
-                    {message.author?.role ?? 'user'}
+                    {message.author?.primaryRole ?? 'user'}
                   </Badge>
                   <span className="ml-auto text-xs text-gray-500">
                     {new Date(message.createdAt).toLocaleDateString()}
