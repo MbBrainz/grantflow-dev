@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import AsyncButton from '@/components/ui/async-button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card } from '@/components/ui/card'
@@ -28,7 +29,6 @@ export function MilestoneCompletionForm({
   onSuccess,
   onCancel,
 }: MilestoneCompletionFormProps) {
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [formData, setFormData] = useState({
     transactionHash: '',
     blockExplorerUrl: '',
@@ -85,19 +85,15 @@ export function MilestoneCompletionForm({
     return Object.keys(errors).length === 0
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-
+  const handleSubmit = async () => {
     if (!(await validateForm())) {
       toast({
         title: 'Validation Error',
         description: 'Please fix the form errors before submitting.',
         variant: 'destructive',
       })
-      return
+      throw new Error('Please fix the form errors before submitting.')
     }
-
-    setIsSubmitting(true)
 
     try {
       const formDataObj = new FormData()
@@ -118,6 +114,7 @@ export function MilestoneCompletionForm({
           description: result.error,
           variant: 'destructive',
         })
+        throw new Error(result.error)
       } else {
         toast({
           title: 'Success',
@@ -133,8 +130,7 @@ export function MilestoneCompletionForm({
         description: 'An unexpected error occurred. Please try again.',
         variant: 'destructive',
       })
-    } finally {
-      setIsSubmitting(false)
+      throw error // Re-throw for AsyncButton
     }
   }
 
@@ -149,7 +145,7 @@ export function MilestoneCompletionForm({
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-4">
           <div>
             <Label htmlFor="transactionHash">Transaction Hash *</Label>
             <Input
@@ -163,7 +159,6 @@ export function MilestoneCompletionForm({
               className={
                 validationErrors.transactionHash ? 'border-red-500' : ''
               }
-              disabled={isSubmitting}
             />
             {validationErrors.transactionHash && (
               <p className="mt-1 text-sm text-red-500">
@@ -185,7 +180,6 @@ export function MilestoneCompletionForm({
               className={
                 validationErrors.blockExplorerUrl ? 'border-red-500' : ''
               }
-              disabled={isSubmitting}
             />
             {validationErrors.blockExplorerUrl && (
               <p className="mt-1 text-sm text-red-500">
@@ -210,7 +204,6 @@ export function MilestoneCompletionForm({
                 handleInputChange('amount', parseFloat(e.target.value) ?? 0)
               }
               className={validationErrors.amount ? 'border-red-500' : ''}
-              disabled={isSubmitting}
             />
             {validationErrors.amount && (
               <p className="mt-1 text-sm text-red-500">
@@ -228,7 +221,6 @@ export function MilestoneCompletionForm({
                 placeholder="Committee wallet address"
                 value={formData.walletFrom}
                 onChange={e => handleInputChange('walletFrom', e.target.value)}
-                disabled={isSubmitting}
               />
             </div>
 
@@ -240,28 +232,26 @@ export function MilestoneCompletionForm({
                 placeholder="Grantee wallet address"
                 value={formData.walletTo}
                 onChange={e => handleInputChange('walletTo', e.target.value)}
-                disabled={isSubmitting}
               />
             </div>
           </div>
 
           <div className="flex gap-2 pt-4">
-            <Button type="submit" disabled={isSubmitting} className="flex-1">
-              {isSubmitting ? 'Processing...' : 'Complete Milestone'}
-            </Button>
+            <AsyncButton
+              onClick={handleSubmit}
+              className="flex-1"
+              loadingContent="Processing..."
+            >
+              Complete Milestone
+            </AsyncButton>
 
             {onCancel && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={onCancel}
-                disabled={isSubmitting}
-              >
+              <Button type="button" variant="outline" onClick={onCancel}>
                 Cancel
               </Button>
             )}
           </div>
-        </form>
+        </div>
 
         <div className="rounded bg-gray-50 p-3 text-xs text-gray-500">
           <strong>Note:</strong> Only committee members can complete milestones.

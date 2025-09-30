@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { use, useState, Suspense } from 'react'
+import { useState, Suspense } from 'react'
 import { Button } from '@/components/ui/button'
 import { CircleIcon, Home, LogOut } from 'lucide-react'
 import {
@@ -25,7 +25,9 @@ function UserMenu() {
 
   async function handleSignOut() {
     await signOut()
-    mutate('/api/user')
+    mutate('/api/user').catch(err => {
+      console.error('[UserMenu]: Error mutating user', err)
+    })
     router.push('/')
   }
 

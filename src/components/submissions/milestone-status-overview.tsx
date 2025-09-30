@@ -11,7 +11,6 @@ import { Badge } from '@/components/ui/badge'
 
 import {
   Target,
-  Clock,
   CheckCircle,
   AlertTriangle,
   PlayCircle,
@@ -21,32 +20,16 @@ import {
   DollarSign,
   Calendar,
 } from 'lucide-react'
-
-interface Milestone {
-  id: number
-  title: string
-  description: string | null
-  status: string // 'pending', 'in_progress', 'submitted', 'under_review', 'completed', 'rejected'
-  amount: number | null
-  dueDate: Date | null
-  deliverables: string | null
-  githubRepoUrl: string | null
-  submittedAt: Date | null
-  reviewedAt: Date | null
-  createdAt: Date
-}
+import type { Milestone, Submission } from '@/lib/db/schema'
 
 interface MilestoneStatusOverviewProps {
-  submission: {
-    id: number
-    title: string
-    status: string
-    milestones: Milestone[]
+  submission: Pick<Submission, 'id' | 'title' | 'status'> & {
+    milestones: Pick<Milestone, 'id' | 'title' | 'description' | 'status' | 'amount' | 'dueDate' | 'deliverables' | 'githubRepoUrl' | 'submittedAt' | 'reviewedAt' | 'createdAt'>[]
   }
   className?: string
 }
 
-function getMilestoneStatusInfo(milestone: Milestone) {
+function getMilestoneStatusInfo(milestone: Pick<Milestone, 'status'>) {
   switch (milestone.status) {
     case 'pending':
       return {
@@ -56,7 +39,7 @@ function getMilestoneStatusInfo(milestone: Milestone) {
         description: 'Waiting to start',
         actionRequired: false,
       }
-    case 'in_progress':
+    case 'in-progress':
       return {
         icon: <PlayCircle className="h-4 w-4" />,
         color: 'bg-blue-100 text-blue-800 border-blue-200',
@@ -64,20 +47,12 @@ function getMilestoneStatusInfo(milestone: Milestone) {
         description: 'Currently building',
         actionRequired: false,
       }
-    case 'submitted':
+    case 'in-review':
       return {
         icon: <FileText className="h-4 w-4" />,
         color: 'bg-purple-100 text-purple-800 border-purple-200',
         bgColor: 'bg-purple-50',
         description: 'Submitted for review',
-        actionRequired: true,
-      }
-    case 'under_review':
-      return {
-        icon: <Clock className="h-4 w-4" />,
-        color: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-        bgColor: 'bg-yellow-50',
-        description: 'Under reviewer review',
         actionRequired: true,
       }
     case 'completed':
@@ -107,7 +82,7 @@ function getMilestoneStatusInfo(milestone: Milestone) {
   }
 }
 
-function getCurrentActiveStep(milestones: Milestone[]) {
+function getCurrentActiveStep(milestones: Pick<Milestone, 'id' | 'title' | 'description' | 'status' | 'amount' | 'dueDate' | 'deliverables' | 'githubRepoUrl' | 'submittedAt' | 'reviewedAt' | 'createdAt'>[]) {
   // Find the first non-completed milestone
   const activeMilestone = milestones.find(
     m => m.status !== 'completed' && m.status !== 'rejected'
@@ -165,9 +140,8 @@ export function MilestoneStatusOverview({
   ).length
   const activeMilestones = milestones.filter(
     m =>
-      m.status === 'in_progress' ||
-      m.status === 'submitted' ||
-      m.status === 'under_review'
+      m.status === 'in-progress' ||
+      m.status === 'in-review'
   ).length
 
   const progressPercentage = Math.round(
@@ -318,7 +292,7 @@ export function MilestoneStatusOverview({
                       </span>
                     )}
                     <Badge className={`text-xs ${statusInfo.color}`}>
-                      {milestone.status.replace('_', ' ')}
+                      {milestone.status?.replace('_', ' ')}
                     </Badge>
                   </div>
                 </div>

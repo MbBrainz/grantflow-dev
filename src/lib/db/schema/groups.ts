@@ -5,6 +5,7 @@ import {
   text,
   timestamp,
   boolean,
+  jsonb,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
@@ -17,6 +18,7 @@ import { reviews } from './reviews'
 import { payouts } from './payouts'
 import { groupAnalytics } from './group-analytics'
 import { users } from './users'
+import type { FocusAreas, GroupSettings } from './jsonTypes/GroupSettings'
 
 // Unified groups table for both committees and teams
 export const groups = pgTable('groups', {
@@ -25,12 +27,12 @@ export const groups = pgTable('groups', {
   description: text('description'),
   logoUrl: varchar('logo_url', { length: 255 }),
   type: varchar('type', { length: 20 }).notNull(), // 'committee' | 'team'
-  focusAreas: text('focus_areas'), // JSON array of focus areas
+  focusAreas: jsonb('focus_areas').$type<FocusAreas>(), // JSON array of focus areas
   websiteUrl: varchar('website_url', { length: 255 }),
   githubOrg: varchar('github_org', { length: 100 }),
   walletAddress: varchar('wallet_address', { length: 64 }),
   isActive: boolean('is_active').notNull().default(true),
-  settings: text('settings'), // JSON configuration (voting thresholds, approval workflows, etc.)
+  settings: jsonb('settings').$type<GroupSettings>(), // JSON configuration (voting thresholds, approval workflows, etc.)
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
@@ -51,5 +53,6 @@ export const groupsRelations = relations(groups, ({ many }) => ({
 export const insertGroupSchema = createInsertSchema(groups)
 export const selectGroupSchema = createSelectSchema(groups)
 
+export type Committee = typeof groups.$inferSelect
 export type Group = typeof groups.$inferSelect
 export type NewGroup = typeof groups.$inferInsert

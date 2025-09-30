@@ -2,18 +2,11 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Building2 } from 'lucide-react'
+import type { Committee } from '@/lib/db/schema'
 
-interface Committee {
-  id: number
-  name: string
-  description?: string
-  logoUrl?: string
-  focusAreas?: string
-  isActive: boolean
-}
 
 interface CommitteeBadgeProps {
-  committee: Committee
+  committee: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'>
   className?: string
   showIcon?: boolean
   variant?: 'default' | 'outline' | 'compact'

@@ -21,22 +21,12 @@ import {
 import { PendingActionsPanel, type PendingAction } from '@/components/review/pending-actions-panel'
 import { CommitteeBadge } from '@/components/submissions/committee-badge'
 import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge'
-import type { Milestone } from '@/lib/db/schema'
+import type { Committee, Milestone, GrantProgram} from '@/lib/db/schema'
 
 interface Submitter {
   name: string | null
 }
 
-interface Committee {
-  id: number
-  name: string
-  isActive: boolean
-}
-
-interface GrantProgram {
-  name: string
-  fundingAmount?: number
-}
 
 interface Submission {
   id: number
@@ -48,8 +38,8 @@ interface Submission {
   labels: string | null
   totalAmount?: number
   submitter?: Submitter
-  committee?: Committee
-  grantProgram?: GrantProgram
+  committee?: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'>
+  grantProgram?: Pick<GrantProgram, 'id' | 'name' | 'fundingAmount'>
   milestones?: Milestone[]
 }
 
@@ -111,7 +101,7 @@ function SubmissionCard({ submission }: { submission: Submission }) {
 
             {/* Milestone Progress for Approved Submissions */}
             <MilestoneProgressBadge
-              milestones={(submission.milestones as any) ?? []}
+              milestones={submission.milestones ?? []}
               submissionStatus={submission.status}
               variant="compact"
             />

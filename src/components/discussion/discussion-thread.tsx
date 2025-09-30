@@ -15,16 +15,18 @@ import {
   AlertCircle,
 } from 'lucide-react'
 import type { User as UserType, DiscussionWithMessages } from '@/lib/db/schema'
+import type {
+  RealtimeNotification,
+  WindowWithNotificationHandler} from '@/lib/notifications/client';
 import {
   useSubmissionNotifications,
-  useConnectionStatus,
+  useConnectionStatus
 } from '@/lib/notifications/client'
 
 // Type alias for backwards compatibility
-type DiscussionData = DiscussionWithMessages
 
 interface DiscussionThreadProps {
-  discussion: DiscussionData | null
+  discussion: DiscussionWithMessages | undefined
   submissionId?: number
   milestoneId?: number
   currentUser: UserType | null
@@ -62,7 +64,6 @@ function getRoleBadgeColor(role: string): string {
 export function DiscussionThread({
   discussion,
   submissionId,
-  milestoneId,
   currentUser,
   onPostMessage,
   title,
@@ -86,18 +87,16 @@ export function DiscussionThread({
       window.location.reload()
     }
 
-    interface NotificationWithSubmission {
-      type: string
+    interface NotificationWithSubmission extends RealtimeNotification {
       submissionId?: number
     }
 
     // Set up listener for new messages in this submission
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if (submissionId && (window as any).handleRealtimeNotification) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const originalHandler = (window as any).handleRealtimeNotification
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(window as any).handleRealtimeNotification = (notification: NotificationWithSubmission) => {
+     
+    const windowWithHandler = window as WindowWithNotificationHandler
+    if (submissionId && windowWithHandler.handleRealtimeNotification) {
+      const originalHandler = windowWithHandler.handleRealtimeNotification
+      windowWithHandler.handleRealtimeNotification = (notification: NotificationWithSubmission) => {
         originalHandler?.(notification)
         if (
           notification.type === 'new_message' &&
@@ -109,6 +108,7 @@ export function DiscussionThread({
     }
   }, [submissionId])
 
+  // eslint-disable-next-line @typescript-eslint/require-await
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!newMessage.trim()) return

@@ -4,9 +4,10 @@ import Link from 'next/link'
 import { useActionState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import AsyncButton from '@/components/ui/async-button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { CircleIcon, Loader2 } from 'lucide-react'
+import { CircleIcon } from 'lucide-react'
 import { signIn, signUp } from './actions'
 import type { ActionState } from '@/lib/auth/middleware'
 
@@ -129,22 +130,13 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
           )}
 
           <div>
-            <Button
+            <AsyncButton
               type="submit"
               className="flex w-full items-center justify-center rounded-full border border-transparent bg-orange-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-700 focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 focus:outline-none"
-              disabled={pending}
+              pendingExternal={pending}
             >
-              {pending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Loading...
-                </>
-              ) : mode === 'signin' ? (
-                'Sign in'
-              ) : (
-                'Sign up'
-              )}
-            </Button>
+              {mode === 'signin' ? 'Sign in' : 'Sign up'}
+            </AsyncButton>
           </div>
         </form>
 

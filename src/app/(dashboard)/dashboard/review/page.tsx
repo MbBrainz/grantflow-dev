@@ -50,9 +50,9 @@ async function ReviewDashboard() {
 
   return (
     <ReviewDashboardClient
-      initialSubmissions={submissions as any}
+      initialSubmissions={submissions}
       stats={stats}
-      pendingActions={pendingActions as any}
+      pendingActions={pendingActions}
     />
   )
 }

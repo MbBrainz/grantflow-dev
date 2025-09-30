@@ -12,6 +12,8 @@ interface LottieAnimationProps {
   height?: number
 }
 
+type LottieAnimationData = Record<string, unknown>;
+
 export function LottieAnimation({
   animationPath,
   className = '',
@@ -20,7 +22,7 @@ export function LottieAnimation({
   width,
   height,
 }: LottieAnimationProps) {
-  const [animationData, setAnimationData] = useState(null)
+  const [animationData, setAnimationData] = useState<LottieAnimationData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -35,7 +37,7 @@ export function LottieAnimation({
           throw new Error(`Failed to load animation: ${response.statusText}`)
         }
 
-        const data = await response.json()
+        const data = await response.json() as LottieAnimationData
         setAnimationData(data)
       } catch (err) {
         console.error('[LottieAnimation]: Failed to load animation', err)
@@ -45,7 +47,10 @@ export function LottieAnimation({
       }
     }
 
-    loadAnimation()
+    loadAnimation().catch(err => {
+      console.error('[LottieAnimation]: Failed to load animation', err)
+      setError(err instanceof Error ? err.message : 'Unknown error')
+    })
   }, [animationPath])
 
   if (isLoading) {

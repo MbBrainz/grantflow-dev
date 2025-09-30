@@ -202,7 +202,7 @@ export function useNotificationStream(shouldConnect = true) {
   }
 }
 
-interface WindowWithNotificationHandler extends Window {
+export interface WindowWithNotificationHandler extends Window {
   handleRealtimeNotification?: (notification: RealtimeNotification) => void
 }
 

@@ -9,24 +9,15 @@ import {
   ChevronDown,
   Crown,
   Shield,
-  Eye,
   Users,
   CheckCircle,
   AlertTriangle,
   Loader2,
 } from 'lucide-react'
-
-interface Committee {
-  id: number
-  name: string
-  description?: string
-  logoUrl?: string
-  focusAreas?: string
-  isActive: boolean
-}
+import type { Committee, User } from '@/lib/db/schema'
 
 interface CommitteeMembership {
-  committee: Committee
+  committee: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'>
   role: 'admin' | 'reviewer'
   permissions?: string[]
   joinedAt: string
@@ -34,9 +25,9 @@ interface CommitteeMembership {
 }
 
 interface ReviewerCommitteesDropdownProps {
-  currentUser: any
+  currentUser: Pick<User, 'id'> | null
   currentCommitteeId?: number
-  onCommitteeSelect?: (committee: Committee) => void
+  onCommitteeSelect?: (committee: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'>) => void
   className?: string
 }
 

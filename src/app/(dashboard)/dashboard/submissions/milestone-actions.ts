@@ -280,7 +280,7 @@ export const submitMilestone = validatedActionWithUser(
       }
 
       // Verify milestone can be submitted (status should be 'pending' or 'in_progress')
-      if (!['pending', 'in_progress'].includes(milestone.status)) {
+      if (!['pending', 'in_progress'].includes(milestone.status ?? '')) {
         console.log(
           '[submitMilestone]: Milestone cannot be submitted in current status',
           {
@@ -325,16 +325,18 @@ export const submitMilestone = validatedActionWithUser(
 
       // Update milestone with submission data
       const updateData = {
-        deliverables: JSON.stringify({
-          description: data.deliverables,
-          commits: data.selectedCommits.map(sha => ({
-            sha,
-            shortSha: sha.substring(0, 7),
-            url: `${submission.githubRepoUrl}/commit/${sha}`, // Construct GitHub URL
-          })),
-          submittedAt: new Date().toISOString(),
-          submittedBy: user.id,
-        }),
+        deliverables: [
+          {
+            description: data.deliverables,
+            commits: data.selectedCommits.map(sha => ({
+              sha,
+              shortSha: sha.substring(0, 7),
+              url: `${submission.githubRepoUrl}/commit/${sha}`, // Construct GitHub URL
+            })),
+            submittedAt: new Date().toISOString(),
+            submittedBy: user.id,
+          },
+        ],
         githubCommitHash: data.selectedCommits[data.selectedCommits.length - 1], // Use latest commit as primary
         status: 'in-review' as const,
         submittedAt: new Date(),

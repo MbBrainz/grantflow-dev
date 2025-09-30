@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { CommitteeBadge } from '@/components/submissions/committee-badge'
+import type { Committee } from '@/lib/db/schema'
 
 export interface PendingAction {
   id: number
@@ -31,13 +32,7 @@ export interface PendingAction {
     name: string | null
     email: string | null
   }
-  committee?: {
-    id: number
-    name: string
-    description: string | null
-    logoUrl: string | null
-    focusAreas: string | null
-  }
+  committee?: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'>
   grantProgram?: {
     id: number
     name: string
@@ -53,12 +48,7 @@ export interface PendingAction {
       name: string | null
       email: string | null
     }
-    committee?: {
-      id: number
-      name: string
-      description: string | null
-      logoUrl: string | null
-    }
+    committee?: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas'>
   }
 }
 
@@ -135,20 +125,9 @@ function ActionCard({ action }: { action: PendingAction }) {
         </div>
 
         {/* Committee Badge */}
-        {(action.committee ?? action.submission?.committee) && (
+        {(action.committee ) && (
           <CommitteeBadge
-            committee={{
-              id: (action.committee ?? action.submission?.committee!).id,
-              name: (action.committee ?? action.submission?.committee!).name,
-              description:
-                (action.committee ?? action.submission?.committee!)
-                  ?.description ?? undefined,
-              logoUrl:
-                (action.committee ?? action.submission?.committee!)?.logoUrl ||
-                undefined,
-              focusAreas: action.committee?.focusAreas ?? undefined,
-              isActive: true,
-            }}
+            committee={action.committee}
             variant="compact"
             className="mt-2"
           />

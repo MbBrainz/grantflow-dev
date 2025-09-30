@@ -685,7 +685,56 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
     )}
   />
 </Form>
+
 ```
+
+## Component creation using db types
+IMPORTANT: Never create new types in component files if they already exist in the database schema.
+
+  When creating components that display database entities, always derive types from the existing database schema using TypeScript's Pick utility,
+  rather than defining new types in your component file.
+
+  ❌ DON'T DO THIS
+  ```ts
+  // components/committee-badge.tsx
+  interface Committee {
+    id: number
+    name: string
+    description: string
+    // Duplicating types that already exist in the schema!
+  }
+  ```
+
+  ✅ DO THIS INSTEAD
+
+  ```ts
+  // components/committee-badge.tsx
+  import type { Committee } from '@/lib/db/schema'
+
+  interface CommitteeBadgeProps {
+    committee: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'>
+    className?: string
+  }
+  ```
+
+  Why This Approach?
+
+  1. Single source of truth - Database schema is the authoritative type definition
+  2. Automatic updates - Schema changes propagate to all components automatically
+  3. Type safety - Compiler ensures required fields actually exist in the database
+  4. No duplication - Avoid maintaining the same types in multiple places
+  5. Explicit dependencies - Clear which fields the component actually needs
+
+  When Component-Local Types Are OK
+
+  You CAN define types locally when they are:
+  - UI-specific state (not database entities)
+  - Component configuration options
+  - Derived/computed types that don't exist in the schema
+
+  Rule of Thumb
+
+  If it comes from the database, import and derive the type. Don't recreate it.
 
 ## CSS Variables Structure
 

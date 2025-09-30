@@ -6,6 +6,8 @@ import {
   text,
   timestamp,
   bigint,
+  pgEnum,
+  jsonb,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
@@ -14,6 +16,23 @@ import { groups } from './groups'
 import { discussions } from './discussions'
 import { reviews } from './reviews'
 import { payouts } from './payouts'
+
+const STATUS_OPTIONS = [
+  'pending',
+  'in-review',
+  'in-progress',
+  'completed',
+  'rejected',
+] as const
+const statusEnum = pgEnum('status', STATUS_OPTIONS)
+export type Status = (typeof STATUS_OPTIONS)[number]
+
+interface Deliverable {
+  description: string
+  commits?: { sha: string; shortSha: string; url: string }[]
+  submittedAt?: string
+  submittedBy?: number
+}
 
 export const milestones = pgTable('milestones', {
   id: serial('id').primaryKey(),
@@ -25,11 +44,14 @@ export const milestones = pgTable('milestones', {
     .references(() => groups.id),
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
-  requirements: text('requirements'), // What needs to be delivered
+  requirements: jsonb('requirements').$type<string[]>().notNull().default([]), // What needs to be delivered
   amount: bigint('amount', { mode: 'number' }),
   dueDate: timestamp('due_date'),
-  status: varchar('status', { length: 32 }).notNull().default('pending'),
-  deliverables: text('deliverables'), // JSON array of deliverable items
+  status: statusEnum('status').notNull().default('pending'),
+  deliverables: jsonb('deliverables')
+    .$type<Deliverable[]>()
+    .notNull()
+    .default([]), // JSON array of deliverable items
   githubRepoUrl: varchar('github_repo_url', { length: 255 }),
   githubPrUrl: varchar('github_pr_url', { length: 255 }),
   githubCommitHash: varchar('github_commit_hash', { length: 64 }),

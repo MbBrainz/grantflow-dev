@@ -26,7 +26,7 @@ export function PublicSubmissionView({
   submission,
 }: PublicSubmissionViewProps) {
   // Calculate public metrics from server data
-  const reviews = submission.reviews || []
+  const reviews = submission.reviews ?? []
   const approveVotes = reviews.filter(r => r.vote === 'approve').length
   const totalVotes = reviews.length
   const completedMilestones =
@@ -189,7 +189,7 @@ export function PublicSubmissionView({
               <div>
                 <h4 className="mb-2 font-medium">Project Tags</h4>
                 <div className="flex flex-wrap gap-2">
-                  {JSON.parse(submission.labels).map(
+                  {(JSON.parse(submission.labels) as string[]).map(
                     (label: string, index: number) => (
                       <Badge key={index} variant="outline" className="text-xs">
                         {label}
@@ -240,21 +240,21 @@ export function PublicSubmissionView({
             <div>
               <h4 className="mb-3 font-medium">Review Timeline</h4>
               <div className="space-y-2">
-                {reviews.slice(0, 3).map((review: any, index: number) => (
+                {reviews.slice(0, 3).map((review, index: number) => (
                   <div
                     key={review.id}
                     className="flex items-center gap-3 rounded border p-2"
                   >
                     <div
                       className={`h-3 w-3 rounded-full ${
-                        review.decision === 'approve'
+                        review.vote === 'approve'
                           ? 'bg-green-500'
                           : 'bg-red-500'
                       }`}
                     />
                     <div className="flex-1">
                       <p className="text-sm font-medium">
-                        Reviewer {index + 1} • {review.decision}
+                        Reviewer {index + 1} • {review.vote}
                       </p>
                       <p className="text-xs text-gray-600">
                         {new Date(review.createdAt).toLocaleDateString()}
@@ -282,7 +282,7 @@ export function PublicSubmissionView({
           </div>
 
           <div className="space-y-4">
-            {submission.milestones.map((milestone: any, index: number) => (
+            {submission.milestones.map((milestone, index: number) => (
               <div key={milestone.id} className="rounded-lg border p-4">
                 <div className="mb-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
@@ -290,7 +290,7 @@ export function PublicSubmissionView({
                       className={`flex h-8 w-8 items-center justify-center rounded-full font-bold text-white ${
                         milestone.status === 'completed'
                           ? 'bg-green-500'
-                          : milestone.status === 'in_progress'
+                          : milestone.status === 'in-progress'
                             ? 'bg-blue-500'
                             : 'bg-gray-400'
                       }`}
@@ -309,12 +309,12 @@ export function PublicSubmissionView({
                       className={
                         milestone.status === 'completed'
                           ? 'bg-green-100 text-green-800'
-                          : milestone.status === 'in_progress'
+                          : milestone.status === 'in-progress'
                             ? 'bg-blue-100 text-blue-800'
                             : 'bg-gray-100 text-gray-800'
                       }
                     >
-                      {milestone.status.replace('_', ' ')}
+                      {milestone.status?.replace('_', ' ')}
                     </Badge>
                     <p className="mt-1 text-sm font-medium">
                       ${milestone.amount?.toLocaleString() ?? 0}
@@ -351,7 +351,7 @@ export function PublicSubmissionView({
 
         {publicMessages.length > 0 ? (
           <div className="space-y-3">
-            {publicMessages.slice(0, 5).map((message: any) => (
+            {publicMessages.slice(0, 5).map((message) => (
               <div key={message.id} className="rounded-lg border p-3">
                 <div className="mb-2 flex items-center gap-2">
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">

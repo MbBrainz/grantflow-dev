@@ -6,6 +6,7 @@ import {
   text,
   timestamp,
   boolean,
+  pgEnum,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
@@ -14,6 +15,9 @@ import { milestones } from './milestones'
 import { groups } from './groups'
 import { users } from './users'
 import { discussions } from './discussions'
+
+const VOTE_OPTIONS = ['approve', 'reject', 'abstain'] as const
+const voteEnum = pgEnum('vote', VOTE_OPTIONS)
 
 // Group reviews (committee members reviewing submissions/milestones)
 export const reviews = pgTable('reviews', {
@@ -27,7 +31,7 @@ export const reviews = pgTable('reviews', {
     .notNull()
     .references(() => users.id),
   discussionId: integer('discussion_id').references(() => discussions.id),
-  vote: varchar('vote', { length: 16 }), // approve, reject, abstain
+  vote: voteEnum('vote'), // approve, reject, abstain
   feedback: text('feedback'),
   reviewType: varchar('review_type', { length: 20 })
     .notNull()
@@ -64,5 +68,6 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
 export const insertReviewSchema = createInsertSchema(reviews)
 export const selectReviewSchema = createSelectSchema(reviews)
 
+export type Vote = (typeof VOTE_OPTIONS)[number]
 export type Review = typeof reviews.$inferSelect
 export type NewReview = typeof reviews.$inferInsert

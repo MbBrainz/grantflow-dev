@@ -26,7 +26,7 @@ import {
 import { MilestoneSubmissionForm } from '@/components/milestone-submission-form'
 import { submitMilestone } from '@/app/(dashboard)/dashboard/submissions/milestone-actions'
 
-import type { SubmissionWithMilestones, User } from '@/lib/db/schema'
+import type { SubmissionWithMilestones, User, Milestone } from '@/lib/db/schema'
 
 interface GranteeSubmissionViewProps {
   submission: SubmissionWithMilestones
@@ -39,13 +39,14 @@ export function GranteeSubmissionView({
   submission,
   currentUser,
   onPostMessage,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onVoteSubmitted,
 }: GranteeSubmissionViewProps) {
-  const reviews = submission.reviews || []
+  const reviews = submission.reviews ?? []
   const [activeTab, setActiveTab] = useState<
     'status' | 'feedback' | 'milestones'
   >('status')
-  const [submittingMilestone, setSubmittingMilestone] = useState<any | null>(
+  const [submittingMilestone, setSubmittingMilestone] = useState<Pick<Milestone, 'id' | 'title' | 'description' | 'requirements' | 'amount' | 'dueDate' | 'status' | 'deliverables' | 'githubRepoUrl' | 'githubCommitHash'> | null>(
     null
   )
 
@@ -168,7 +169,7 @@ export function GranteeSubmissionView({
     }
   }
 
-  const canSubmitMilestone = (milestone: any) => {
+  const canSubmitMilestone = (milestone: Pick<Milestone, 'id' | 'status' | 'createdAt'>) => {
     // Check basic requirements
     if (
       !['pending', 'in_progress'].includes(milestone.status) ||
@@ -180,12 +181,12 @@ export function GranteeSubmissionView({
     // Check sequential milestone requirement
     if (submission.milestones) {
       const sortedMilestones = [...submission.milestones].sort(
-        (a: any, b: any) =>
+        (a, b) =>
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       )
 
       const targetIndex = sortedMilestones.findIndex(
-        (m: any) => m.id === milestone.id
+        (m) => m.id === milestone.id
       )
 
       // Check all previous milestones are completed
@@ -375,7 +376,7 @@ export function GranteeSubmissionView({
                       {
                         reviews.filter(
                           r =>
-                            r.vote === 'reject' || r.vote === 'request_changes'
+                            r.vote === 'reject' || r.vote === 'abstain'
                         ).length
                       }
                     </p>
@@ -396,17 +397,17 @@ export function GranteeSubmissionView({
                   Reviewer Feedback
                 </h3>
                 <div className="space-y-3">
-                  {reviews.map((review: any) => (
+                  {reviews.map((review) => (
                     <div key={review.id} className="rounded-lg border p-4">
                       <div className="mb-2 flex items-center gap-2">
                         <Badge
                           className={
-                            review.decision === 'approve'
+                            review.vote === 'approve'
                               ? 'bg-green-100 text-green-800'
                               : 'bg-red-100 text-red-800'
                           }
                         >
-                          {review.decision}
+                          {review.vote}
                         </Badge>
                         <span className="text-sm text-gray-600">
                           {new Date(review.createdAt).toLocaleDateString()}
@@ -425,7 +426,7 @@ export function GranteeSubmissionView({
             <div>
               <h3 className="mb-4 text-lg font-semibold">Discussion</h3>
               <DiscussionThread
-                discussion={submission.discussions?.[0] || null}
+                discussion={submission.discussions?.[0] ?? undefined}
                 submissionId={submission.id}
                 currentUser={currentUser}
                 onPostMessage={onPostMessage}
@@ -445,7 +446,7 @@ export function GranteeSubmissionView({
                 submissionRepoUrl={submission.githubRepoUrl}
                 previousMilestoneCommitSha={getPreviousMilestoneCommitSha(
                   submission.milestones?.findIndex(
-                    (m: any) => m.id === submittingMilestone.id
+                    (m) => m.id === submittingMilestone.id
                   ) ?? 0
                 )}
                 onSubmit={handleMilestoneSubmission}
@@ -471,7 +472,7 @@ export function GranteeSubmissionView({
                 {submission.milestones?.length > 0 ? (
                   <div className="space-y-4">
                     {submission.milestones.map(
-                      (milestone: any, index: number) => (
+                      (milestone, index: number) => (
                         <div
                           key={milestone.id}
                           className="rounded-lg border p-4"
@@ -484,11 +485,11 @@ export function GranteeSubmissionView({
                                     ? 'bg-green-500'
                                     : milestone.status === 'in-review'
                                       ? 'bg-yellow-500'
-                                      : milestone.status === 'under_review'
+                                      : milestone.status === 'in-progress'
                                         ? 'bg-orange-500'
-                                        : milestone.status === 'in_progress'
-                                          ? 'bg-blue-500'
-                                          : 'bg-gray-400'
+                                        : milestone.status === 'pending'
+                                          ? 'bg-gray-400'
+                                        : 'bg-gray-400'
                                 }`}
                               >
                                 {index + 1}
@@ -510,14 +511,14 @@ export function GranteeSubmissionView({
                                       ? 'bg-green-100 text-green-800'
                                       : milestone.status === 'in-review'
                                         ? 'bg-yellow-100 text-yellow-800'
-                                        : milestone.status === 'under_review'
+                                        : milestone.status === 'in-progress'
                                           ? 'bg-orange-100 text-orange-800'
-                                          : milestone.status === 'in_progress'
+                                          : milestone.status === 'pending'
                                             ? 'bg-blue-100 text-blue-800'
                                             : 'bg-gray-100 text-gray-800'
                                   }
                                 >
-                                  {milestone.status.replace('_', ' ')}
+                                  {milestone.status?.replace('_', ' ')}
                                 </Badge>
                                 {(() => {
                                   const { canSubmit, reason } =
@@ -569,11 +570,9 @@ export function GranteeSubmissionView({
                               <div className="text-sm text-gray-600">
                                 {typeof milestone.requirements === 'string'
                                   ? milestone.requirements
-                                  : JSON.parse(milestone.requirements).map(
-                                      (req: string, i: number) => (
-                                        <div key={i}>• {req}</div>
-                                      )
-                                    )}
+                                  : milestone.requirements.map((req: string, i: number) => (
+                                    <div key={i}>• {req}</div>
+                                  ))}
                               </div>
                             </div>
                           )}
@@ -586,7 +585,7 @@ export function GranteeSubmissionView({
                             </div>
                           )}
 
-                          {milestone.status === 'submitted' &&
+                          {milestone.status === 'in-review' &&
                             milestone.deliverables && (
                               <div className="mt-3 rounded border border-blue-200 bg-blue-50 p-3">
                                 <p className="mb-1 text-sm font-medium text-blue-700">
@@ -594,49 +593,48 @@ export function GranteeSubmissionView({
                                 </p>
                                 <div className="text-sm text-blue-600">
                                   {(() => {
-                                    try {
-                                      const deliverables = JSON.parse(
-                                        milestone.deliverables
-                                      )
-                                      return (
-                                        <div>
-                                          <p className="mb-2">
-                                            {deliverables.description}
-                                          </p>
-                                          {deliverables.commits && (
-                                            <div>
-                                              <p className="mb-1 font-medium">
-                                                Commits included:
-                                              </p>
-                                              <div className="space-y-1">
-                                                {deliverables.commits.map(
-                                                  (commit: any, i: number) => (
-                                                    <div
-                                                      key={i}
-                                                      className="flex items-center gap-2"
-                                                    >
-                                                      <code className="rounded bg-blue-100 px-2 py-1 text-xs">
-                                                        {commit.shortSha}
-                                                      </code>
-                                                      <a
-                                                        href={commit.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-blue-600 hover:underline"
-                                                      >
-                                                        <ExternalLink className="h-3 w-3" />
-                                                      </a>
-                                                    </div>
-                                                  )
-                                                )}
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      )
-                                    } catch {
-                                      return milestone.deliverables
+                                    const items = Array.isArray(milestone.deliverables)
+                                      ? milestone.deliverables
+                                      : [milestone.deliverables as unknown as Record<string, unknown>]
+
+                                    const latest = items[items.length - 1] as {
+                                      description?: string
+                                      commits?: { shortSha: string; url: string }[]
                                     }
+
+                                    if (!latest) return null
+
+                                    return (
+                                      <div>
+                                        {latest.description && (
+                                          <p className="mb-2">{latest.description}</p>
+                                        )}
+                                        {latest.commits && latest.commits.length > 0 && (
+                                          <div>
+                                            <p className="mb-1 font-medium">Commits included:</p>
+                                            <div className="space-y-1">
+                                              {latest.commits.map(
+                                                (commit, i: number) => (
+                                                  <div key={i} className="flex items-center gap-2">
+                                                    <code className="rounded bg-blue-100 px-2 py-1 text-xs">
+                                                      {commit.shortSha}
+                                                    </code>
+                                                    <a
+                                                      href={commit.url}
+                                                      target="_blank"
+                                                      rel="noopener noreferrer"
+                                                      className="text-blue-600 hover:underline"
+                                                    >
+                                                      <ExternalLink className="h-3 w-3" />
+                                                    </a>
+                                                  </div>
+                                                )
+                                              )}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )
                                   })()}
                                 </div>
                               </div>

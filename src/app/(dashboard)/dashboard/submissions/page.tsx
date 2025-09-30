@@ -22,7 +22,7 @@ function StatusBadge({ status }: { status: string }) {
   return (
     <span
       className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        colors[status as keyof typeof colors] || colors.draft
+        colors[status as keyof typeof colors] ?? colors.draft
       }`}
     >
       {status.replace('_', ' ').toUpperCase()}
@@ -33,8 +33,12 @@ function StatusBadge({ status }: { status: string }) {
 type UserSubmission = UserSubmissions[number]
 
 function SubmissionCard({ submission }: { submission: UserSubmission }) {
-  // Parse labels from JSON
-  const labels = submission.labels ? JSON.parse(submission.labels) : []
+  // Ensure labels is always a string array
+  const labels: string[] = Array.isArray(submission.labels)
+    ? submission.labels
+    : typeof submission.labels === 'string'
+      ? [submission.labels]
+      : []
 
   return (
     <Card className="transition-shadow hover:shadow-md">
@@ -42,10 +46,10 @@ function SubmissionCard({ submission }: { submission: UserSubmission }) {
         <div className="flex items-start justify-between">
           <div className="space-y-2">
             <CardTitle className="text-lg">
-              {submission.title || 'Untitled Submission'}
+              {submission.title ?? 'Untitled Submission'}
             </CardTitle>
             <CardDescription className="line-clamp-2">
-              {submission.description || 'No description available'}
+              {submission.description ?? 'No description available'}
             </CardDescription>
 
             {/* Committee Badge */}
@@ -57,7 +61,7 @@ function SubmissionCard({ submission }: { submission: UserSubmission }) {
 
             {/* Milestone Progress */}
             <MilestoneProgressBadge
-              milestones={(submission.milestones as any) || []}
+              milestones={submission.milestones ?? []}
               submissionStatus={submission.status}
               variant="compact"
             />

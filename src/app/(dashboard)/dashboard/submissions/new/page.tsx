@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
+import AsyncButton from '@/components/ui/async-button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import {
@@ -12,7 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { ArrowLeft, Save, Send, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Save, Send } from 'lucide-react'
 import Link from 'next/link'
 import { createSubmission } from '../actions'
 import { useToast } from '@/lib/hooks/use-toast'
@@ -20,8 +21,6 @@ import { useToast } from '@/lib/hooks/use-toast'
 export default function NewSubmissionPage() {
   const router = useRouter()
   const { toast } = useToast()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isDraft, setIsDraft] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Form state
@@ -119,8 +118,7 @@ export default function NewSubmissionPage() {
     handleInputChange('labels', newLabels)
   }
 
-  const saveDraft = async () => {
-    setIsDraft(true)
+  const saveDraft = () => {
     try {
       console.log('[new_submission]: Saving draft', formData)
       localStorage.setItem('grant_draft', JSON.stringify(formData))
@@ -138,13 +136,11 @@ export default function NewSubmissionPage() {
         description: 'Failed to save draft. Please try again.',
         variant: 'destructive',
       })
-    } finally {
-      setIsDraft(false)
+      throw error // Re-throw so AsyncButton shows error state
     }
   }
 
   const submitProposal = async () => {
-    setIsSubmitting(true)
     setError(null)
 
     try {
@@ -184,7 +180,7 @@ export default function NewSubmissionPage() {
           console.log('[new_submission]: Adding milestones as JSON:', value)
           submitFormData.append(key, JSON.stringify(value))
         } else {
-          submitFormData.append(key, String(value))
+          submitFormData.append(key, typeof value === 'object' ? JSON.stringify(value) : String(value))
         }
       })
 
@@ -247,8 +243,7 @@ export default function NewSubmissionPage() {
         description: errorMessage,
         variant: 'destructive',
       })
-    } finally {
-      setIsSubmitting(false)
+      throw error // Re-throw so AsyncButton shows error state
     }
   }
 
@@ -257,7 +252,7 @@ export default function NewSubmissionPage() {
     const draft = localStorage.getItem('grant_draft')
     if (draft) {
       try {
-        const parsedDraft = JSON.parse(draft)
+        const parsedDraft = JSON.parse(draft) as typeof formData
         setFormData(parsedDraft)
       } catch (error) {
         console.error('[new_submission]: Error loading draft', error)
@@ -570,37 +565,34 @@ export default function NewSubmissionPage() {
 
         {/* Action Buttons */}
         <div className="flex justify-between">
-          <Button variant="outline" onClick={saveDraft} disabled={isDraft}>
-            {isDraft ? (
-              <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-gray-600"></div>
-                Saving...
-              </>
-            ) : (
+          <AsyncButton
+            variant="outline"
+            onClick={saveDraft}
+            loadingContent={
               <>
                 <Save className="mr-2 h-4 w-4" />
-                Save Draft
+                Saving...
               </>
-            )}
-          </Button>
-
-          <Button
-            onClick={submitProposal}
-            disabled={isSubmitting ?? !isFormValid}
-            className="bg-green-600 text-white hover:bg-green-700"
+            }
           >
-            {isSubmitting ? (
-              <>
-                <div className="mr-2 h-4 w-4 animate-spin rounded-full border-b-2 border-white"></div>
-                Submitting...
-              </>
-            ) : (
+            <Save className="mr-2 h-4 w-4" />
+            Save Draft
+          </AsyncButton>
+
+          <AsyncButton
+            onClick={submitProposal}
+            disabled={!isFormValid}
+            className="bg-green-600 text-white hover:bg-green-700"
+            loadingContent={
               <>
                 <Send className="mr-2 h-4 w-4" />
-                Submit Proposal
+                Submitting...
               </>
-            )}
-          </Button>
+            }
+          >
+            <Send className="mr-2 h-4 w-4" />
+            Submit Proposal
+          </AsyncButton>
         </div>
       </div>
     </div>

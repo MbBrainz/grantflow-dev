@@ -53,7 +53,7 @@ const createSubmissionSchema = z.object({
           .string()
           .min(10, 'Milestone description must be at least 10 characters'),
         requirements: z
-          .string()
+          .array(z.string())
           .min(5, 'Milestone requirements must be at least 5 characters'),
         amount: z.string().min(1, 'Milestone amount is required'),
         dueDate: z.string().min(1, 'Due date is required'),
@@ -200,7 +200,7 @@ export const createSubmission = async (
 
     // Create milestone records (combine description and requirements)
     const milestonePromises = data.milestones.map(async milestone => {
-      const combinedDescription = `${milestone.description}\n\n**Acceptance Criteria:**\n${milestone.requirements}`
+      const combinedDescription = `${milestone.description}\n\n**Acceptance Criteria:**\n${milestone.requirements.join('\n')}`
 
       const newMilestone: NewMilestone = {
         submissionId: createdSubmission.id,

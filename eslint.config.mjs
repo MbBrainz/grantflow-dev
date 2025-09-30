@@ -74,6 +74,7 @@ const config = tseslint.config(
       'no-var': 'error',
       'object-shorthand': 'warn',
       'prefer-template': 'warn',
+      'react/no-unescaped-entities': 'off',
     },
   }
 

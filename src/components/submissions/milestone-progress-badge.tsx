@@ -2,16 +2,11 @@
 
 import { Badge } from '@/components/ui/badge'
 import { Target, CheckCircle, Clock } from 'lucide-react'
+import type { Milestone } from '@/lib/db/schema'
 
-interface Milestone {
-  id: number
-  status: string
-  title: string
-  amount?: number
-}
 
 interface MilestoneProgressBadgeProps {
-  milestones: Milestone[]
+  milestones: Pick<Milestone, 'id' | 'status' | 'title' | 'amount'>[]
   submissionStatus: string
   className?: string
   variant?: 'default' | 'compact' | 'detailed'
@@ -36,7 +31,7 @@ export function MilestoneProgressBadge({
     m => m.status === 'completed'
   ).length
   const inProgressMilestones = milestones.filter(
-    m => m.status === 'in_progress' || m.status === 'submitted'
+    m => m.status === 'in-progress' || m.status === 'in-review'
   ).length
 
   const progressPercentage = Math.round(

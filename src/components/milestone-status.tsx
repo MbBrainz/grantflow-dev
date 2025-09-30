@@ -5,41 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { MilestoneCompletionForm } from './milestone-completion-form'
-
-interface Milestone {
-  id: number
-  title: string
-  description?: string
-  amount?: number
-  status: string
-  dueDate?: string
-  submittedAt?: string
-  reviewedAt?: string
-  deliverables?: string
-  githubRepoUrl?: string
-  githubPrUrl?: string
-  githubCommitHash?: string
-}
-
-interface Payout {
-  id: number
-  amount: number
-  transactionHash?: string
-  blockExplorerUrl?: string
-  status: string
-  processedAt?: string
-  walletFrom?: string
-  walletTo?: string
-  triggeredByUser?: {
-    id: number
-    name: string
-    email: string
-  }
-}
+import type { Milestone, Payout, User } from '@/lib/db/schema'
 
 interface MilestoneStatusProps {
-  milestone: Milestone
-  payouts?: Payout[]
+  milestone: Pick<Milestone, 'id' | 'title' | 'description' | 'amount' | 'status' | 'dueDate' | 'submittedAt' | 'reviewedAt' | 'deliverables' | 'githubRepoUrl' | 'githubPrUrl' | 'githubCommitHash'>
+  payouts?: (Pick<Payout, 'id' | 'amount' | 'transactionHash' | 'blockExplorerUrl' | 'status' | 'processedAt' | 'walletFrom' | 'walletTo'> & {
+    triggeredByUser?: Pick<User, 'id' | 'name' | 'email'>
+  })[]
   committeeId: number
   isCommitteeMember?: boolean
   onStatusChange?: () => void
@@ -69,7 +41,7 @@ export function MilestoneStatus({
     }
   }
 
-  const formatAmount = (amount?: number) => {
+  const formatAmount = (amount?: number | null) => {
     if (!amount) return 'N/A'
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -77,7 +49,7 @@ export function MilestoneStatus({
     }).format(amount)
   }
 
-  const formatDate = (date?: string) => {
+  const formatDate = (date?: Date | null) => {
     if (!date) return 'N/A'
     return new Date(date).toLocaleDateString()
   }

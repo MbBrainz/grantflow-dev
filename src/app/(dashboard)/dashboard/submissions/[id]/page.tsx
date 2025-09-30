@@ -70,7 +70,7 @@ export default async function SubmissionDetailPage({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <SubmissionDetailView submission={submission as any} currentUser={currentUser} />
+      <SubmissionDetailView submission={submission} currentUser={currentUser} />
     </div>
   )
 }

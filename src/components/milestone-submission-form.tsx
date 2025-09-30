@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
+import AsyncButton from '@/components/ui/async-button'
 import {
   Card,
   CardContent,
@@ -9,9 +10,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+
 // Removed checkbox import - will use HTML input instead
 import {
   Target,
@@ -24,32 +23,18 @@ import {
   AlertTriangle,
   ExternalLink,
   FileText,
-  Users,
 } from 'lucide-react'
 import type { GitHubCommit } from '@/lib/github/simple-client'
 import {
-  getRepositoryCommits,
   getCommitsSince,
 } from '@/lib/github/simple-client'
+import type { Milestone } from '@/lib/db/schema'
 
 // Use GitHubCommit type from simple-client
 type Commit = GitHubCommit
 
-interface Milestone {
-  id: number
-  title: string
-  description: string | null
-  requirements: string | null
-  amount: number | null
-  dueDate: Date | null
-  status: string
-  deliverables: string | null
-  githubRepoUrl: string | null
-  githubCommitHash: string | null // Last completed milestone commit
-}
-
 interface MilestoneSubmissionFormProps {
-  milestone: Milestone
+  milestone: Pick<Milestone, 'id' | 'title' | 'description' | 'requirements' | 'amount' | 'dueDate' | 'status' | 'deliverables' | 'githubRepoUrl' | 'githubCommitHash'>
   submissionRepoUrl: string | null
   previousMilestoneCommitSha?: string | null // Last approved milestone commit
   onSubmit: (data: {
@@ -72,18 +57,10 @@ export function MilestoneSubmissionForm({
   const [selectedCommits, setSelectedCommits] = useState<Set<string>>(new Set())
   const [deliverables, setDeliverables] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   // Parse requirements from milestone
-  const requirements = milestone.requirements
-    ? JSON.parse(milestone.requirements)
-    : ['Complete milestone objectives']
-
-  // Parse existing deliverables if any
-  const existingDeliverables = milestone.deliverables
-    ? JSON.parse(milestone.deliverables)
-    : []
+  const requirements = milestone.requirements ?? ['Complete milestone objectives']
 
   useEffect(() => {
     async function fetchCommits() {
@@ -129,7 +106,10 @@ export function MilestoneSubmissionForm({
       }
     }
 
-    fetchCommits()
+    fetchCommits().catch(err => {
+      console.error('[MilestoneSubmissionForm]: Error fetching commits', err)
+      setError('Failed to fetch commits from GitHub repository')
+    })
   }, [submissionRepoUrl, previousMilestoneCommitSha])
 
   const handleCommitToggle = (commitSha: string) => {
@@ -155,17 +135,20 @@ export function MilestoneSubmissionForm({
       setError(
         'Please select at least one commit to submit with this milestone'
       )
-      return
+      throw new Error(
+        'Please select at least one commit to submit with this milestone'
+      )
     }
 
     if (!deliverables.trim()) {
       setError(
         'Please provide a description of deliverables for this milestone'
       )
-      return
+      throw new Error(
+        'Please provide a description of deliverables for this milestone'
+      )
     }
 
-    setIsSubmitting(true)
     setError(null)
 
     try {
@@ -189,8 +172,7 @@ export function MilestoneSubmissionForm({
         err
       )
       setError('Failed to submit milestone. Please try again.')
-    } finally {
-      setIsSubmitting(false)
+      throw err // Re-throw for AsyncButton
     }
   }
 
@@ -433,29 +415,24 @@ export function MilestoneSubmissionForm({
 
       {/* Submit Actions */}
       <div className="flex justify-between">
-        <Button variant="outline" onClick={onCancel} disabled={isSubmitting}>
+        <Button variant="outline" onClick={onCancel}>
           Cancel
         </Button>
 
-        <Button
+        <AsyncButton
           onClick={handleSubmit}
-          disabled={
-            isSubmitting ?? selectedCommits.size === 0 ?? !deliverables.trim()
-          }
+          disabled={selectedCommits.size === 0 || !deliverables.trim()}
           className="flex items-center gap-2"
-        >
-          {isSubmitting ? (
+          loadingContent={
             <>
               <Clock className="h-4 w-4 animate-spin" />
               Submitting...
             </>
-          ) : (
-            <>
-              <CheckCircle className="h-4 w-4" />
-              Submit Milestone
-            </>
-          )}
-        </Button>
+          }
+        >
+          <CheckCircle className="h-4 w-4" />
+          Submit Milestone
+        </AsyncButton>
       </div>
 
       {error && (

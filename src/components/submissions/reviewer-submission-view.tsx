@@ -17,7 +17,7 @@ import {
   Target,
 } from 'lucide-react'
 import { CommitteeInfoCard } from '@/components/committee/committee-info-card'
-import type { SubmissionWithMilestones, User } from '@/lib/db/schema'
+import type { Milestone, SubmissionWithMilestones, User } from '@/lib/db/schema'
 
 interface ReviewerSubmissionViewProps {
   submission: SubmissionWithMilestones
@@ -37,7 +37,7 @@ export function ReviewerSubmissionView({
   >('review')
 
   // Calculate voting status from server data
-  const reviews = submission.reviews || []
+  const reviews = submission.reviews ?? []
   const approveVotes = reviews.filter(r => r.vote === 'approve').length
   const rejectVotes = reviews.filter(
     r => r.vote === 'reject' || r.vote === 'request_changes'
@@ -51,7 +51,7 @@ export function ReviewerSubmissionView({
       {/* Committee Context */}
       {submission.reviewerGroup && (
         <CommitteeInfoCard
-          committee={submission.reviewerGroup as any}
+          committee={submission.reviewerGroup}
           userRole={null}
           isUserMember={submission.userContext?.isCommitteeReviewer ?? false}
           className="border-l-4 border-l-blue-500"
@@ -195,7 +195,7 @@ export function ReviewerSubmissionView({
             <div>
               <h3 className="mb-4 text-lg font-semibold">Discussion</h3>
               <DiscussionThread
-                discussion={submission.discussions?.[0] || null}
+                discussion={submission.discussions?.[0]}
                 submissionId={submission.id}
                 currentUser={currentUser}
                 onPostMessage={onPostMessage}
@@ -238,7 +238,7 @@ export function ReviewerSubmissionView({
                 <h3 className="text-lg font-semibold">Milestones</h3>
                 <div className="space-y-2">
                   {submission.milestones?.map(
-                    (milestone: any, index: number) => (
+                    (milestone: Pick<Milestone, 'id' | 'status' | 'title' | 'amount'>, index: number) => (
                       <div key={milestone.id} className="rounded border p-3">
                         <div className="flex items-center justify-between">
                           <span className="font-medium">

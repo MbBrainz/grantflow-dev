@@ -13,24 +13,13 @@ import {
   AlertTriangle,
   Crown,
   Shield,
-  Eye,
 } from 'lucide-react'
-
-interface Committee {
-  id: number
-  name: string
-  description?: string
-  logoUrl?: string
-  focusAreas?: string
-  websiteUrl?: string
-  githubOrg?: string
-  walletAddress?: string
-  votingThreshold?: number
-  isActive: boolean
-}
+import type { Committee } from '@/lib/db/schema'
 
 interface CommitteeInfoCardProps {
-  committee: Committee
+  committee: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'websiteUrl' | 'githubOrg' | 'walletAddress' | 'isActive'> & {
+    votingThreshold?: number
+  }
   userRole?: 'admin' | 'reviewer' | null
   isUserMember?: boolean
   className?: string
@@ -44,7 +33,7 @@ export function CommitteeInfoCard({
   className = '',
   showActions = true,
 }: CommitteeInfoCardProps) {
-  const focusAreas = committee.focusAreas
+  const focusAreas: string[] = committee.focusAreas
     ? JSON.parse(committee.focusAreas)
     : []
 
