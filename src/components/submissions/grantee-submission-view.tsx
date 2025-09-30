@@ -64,7 +64,7 @@ export function GranteeSubmissionView({
   const getApplicationStage = () => {
     switch (submission.status) {
       case 'pending':
-      case 'submitted':
+      case 'in-review':
         return {
           stage: 'Under Review',
           description:
@@ -74,7 +74,7 @@ export function GranteeSubmissionView({
           nextStep: 'Wait for reviewer feedback and voting to complete.',
           canEdit: false,
         }
-      case 'changes_requested':
+      case 'changes-requested':
         return {
           stage: 'Changes Requested',
           description:
@@ -490,7 +490,7 @@ export function GranteeSubmissionView({
                                   ? 'bg-green-500'
                                   : milestone.status === 'in-review'
                                     ? 'bg-yellow-500'
-                                    : milestone.status === 'in-progress'
+                                    : milestone.status === 'changes-requested'
                                       ? 'bg-orange-500'
                                       : milestone.status === 'pending'
                                         ? 'bg-gray-400'
@@ -514,7 +514,7 @@ export function GranteeSubmissionView({
                                     ? 'bg-green-100 text-green-800'
                                     : milestone.status === 'in-review'
                                       ? 'bg-yellow-100 text-yellow-800'
-                                      : milestone.status === 'in-progress'
+                                      : milestone.status === 'changes-requested'
                                         ? 'bg-orange-100 text-orange-800'
                                         : milestone.status === 'pending'
                                           ? 'bg-blue-100 text-blue-800'

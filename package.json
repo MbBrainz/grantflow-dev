@@ -4,7 +4,7 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "db:setup": "npx tsx scripts/db/setup.ts",
+    "db:setup": "docker-compose up -d postgres && sleep 5 && pnpm run db:reset",
     "db:seed": "npx tsx scripts/db/seed.ts",
     "db:clean": "npx tsx scripts/db/clean.ts",
     "db:reset": "pnpm db:clean && pnpm db:push && pnpm db:seed",

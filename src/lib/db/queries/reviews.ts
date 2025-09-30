@@ -115,10 +115,7 @@ export async function getReviewerPendingActions() {
         groupIds.map(id => sql`${id}`),
         sql`, `
       )})`,
-      or(
-        eq(submissions.status, 'submitted'),
-        eq(submissions.status, 'under_review')
-      )
+      or(eq(submissions.status, 'pending'), eq(submissions.status, 'in-review'))
     ),
     with: {
       submitter: {
@@ -192,7 +189,7 @@ export async function getReviewerPendingActions() {
               sql`, `
             )})`,
             or(
-              eq(milestones.status, 'in-progress'),
+              eq(milestones.status, 'changes-requested'),
               eq(milestones.status, 'in-review')
             )
           ),

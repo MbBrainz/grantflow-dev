@@ -139,7 +139,7 @@ export default async function SubmissionsPage() {
   const stats = {
     total: submissions.length,
     underReview: submissions.filter(
-      s => s.status === 'submitted' || s.status === 'under_review'
+      s => s.status === 'pending' || s.status === 'in-review'
     ).length,
     approved: submissions.filter(s => s.status === 'approved').length,
     totalFunding: submissions.reduce((sum, s) => {

@@ -52,7 +52,7 @@ function getMilestoneStatusInfo(milestone: Pick<Milestone, 'status'>) {
         description: 'Waiting to start',
         actionRequired: false,
       }
-    case 'in-progress':
+    case 'changes-requested':
       return {
         icon: <PlayCircle className="h-4 w-4" />,
         color: 'bg-blue-100 text-blue-800 border-blue-200',
@@ -167,7 +167,7 @@ export function MilestoneStatusOverview({
     m => m.status === 'completed'
   ).length
   const activeMilestones = milestones.filter(
-    m => m.status === 'in-progress' || m.status === 'in-review'
+    m => m.status === 'changes-requested' || m.status === 'in-review'
   ).length
 
   const progressPercentage = Math.round(

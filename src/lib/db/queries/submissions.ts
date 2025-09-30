@@ -1,5 +1,6 @@
 import { eq, desc, and, or, sql, inArray } from 'drizzle-orm'
 import { db } from '../drizzle'
+import type { SubmissionStatus } from '../schema'
 import {
   submissions,
   groupMemberships,
@@ -147,7 +148,9 @@ export async function getAllSubmissionsForReview(statusFilter?: string) {
   ]
 
   if (statusFilter) {
-    whereConditions.push(eq(submissions.status, statusFilter))
+    whereConditions.push(
+      eq(submissions.status, statusFilter as SubmissionStatus)
+    )
   }
 
   const submissionsData = await db.query.submissions.findMany({
@@ -245,7 +248,7 @@ export async function getSubmissionStats() {
   const underReviewResult = await db
     .select()
     .from(submissions)
-    .where(and(groupFilter, eq(submissions.status, 'under_review')))
+    .where(and(groupFilter, eq(submissions.status, 'in-review')))
   const approvedResult = await db
     .select()
     .from(submissions)
@@ -427,7 +430,7 @@ export async function getSubmissionCurrentState(submissionId: number) {
     where: and(
       eq(milestones.submissionId, submissionId),
       or(
-        eq(milestones.status, 'in-progress'),
+        eq(milestones.status, 'changes-requested'),
         eq(milestones.status, 'in-review')
       )
     ),

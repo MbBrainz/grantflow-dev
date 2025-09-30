@@ -30,7 +30,7 @@ export function MilestoneProgressBadge({
     m => m.status === 'completed'
   ).length
   const inProgressMilestones = milestones.filter(
-    m => m.status === 'in-progress' || m.status === 'in-review'
+    m => m.status === 'changes-requested' || m.status === 'in-review'
   ).length
 
   const progressPercentage = Math.round(

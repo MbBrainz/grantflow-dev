@@ -1,5 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js'
 import { eq } from 'drizzle-orm'
+import type { NewMessage } from '../../src/lib/db/schema'
 import {
   users,
   groups,
@@ -1001,7 +1002,7 @@ async function seed() {
       ]),
       githubRepoUrl: 'https://github.com/l2-research-group/analysis',
       walletAddress: teamMember3.walletAddress,
-      status: 'under_review',
+      status: 'in-review',
       totalAmount: 75000,
       appliedAt: new Date('2024-01-25'),
       createdAt: new Date('2024-01-25'),
@@ -1183,7 +1184,7 @@ async function seed() {
       messageType: 'status_change',
       metadata: JSON.stringify({
         newStatus: 'approved',
-        oldStatus: 'under_review',
+        oldStatus: 'in-review',
       }),
       createdAt: new Date('2024-01-20T09:00:00Z'),
     },
@@ -1243,12 +1244,12 @@ async function seed() {
       messageType: 'status_change',
       metadata: JSON.stringify({
         newStatus: 'rejected',
-        oldStatus: 'under_review',
+        oldStatus: 'in-review',
         reason: 'Insufficient technical detail and innovation',
       }),
       createdAt: new Date('2024-01-22T10:30:00Z'),
     },
-  ])
+  ] as NewMessage[])
 
   // ============================================================================
   // REVIEWS - Create reviewer reviews/votes
@@ -1405,7 +1406,7 @@ async function seed() {
       ],
       amount: 30000,
       dueDate: new Date('2024-03-30'),
-      status: 'in-progress',
+      status: 'changes-requested',
       deliverables: [
         { description: 'Core SDK modules' },
         { description: 'API wrappers' },
@@ -1705,7 +1706,7 @@ async function seed() {
 
   console.log(`\n📋 Created ${5} submissions in various states:`)
   console.log('   • 1 APPROVED (with milestones and payouts)')
-  console.log('   • 1 UNDER_REVIEW (partial reviewer votes)')
+  console.log('   • 1 in-review (partial reviewer votes)')
   console.log('   • 2 PENDING (just submitted)')
   console.log('   • 1 REJECTED (with feedback)')
 

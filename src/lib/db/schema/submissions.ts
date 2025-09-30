@@ -6,6 +6,7 @@ import {
   text,
   timestamp,
   bigint,
+  pgEnum,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
@@ -17,6 +18,20 @@ import { milestones } from './milestones'
 import { reviews } from './reviews'
 import { payouts } from './payouts'
 import { notifications } from './notifications'
+
+const SUBMISSION_STATUS_OPTIONS = [
+  'pending',
+  'in-review',
+  'changes-requested',
+  'approved',
+  'rejected',
+] as const
+
+export const submissionStatusEnum = pgEnum(
+  'submission_status',
+  SUBMISSION_STATUS_OPTIONS
+)
+export type SubmissionStatus = (typeof SUBMISSION_STATUS_OPTIONS)[number]
 
 export const submissions = pgTable('submissions', {
   id: serial('id').primaryKey(),
@@ -39,7 +54,7 @@ export const submissions = pgTable('submissions', {
   labels: text('labels'), // JSON array of project labels
   githubRepoUrl: varchar('github_repo_url', { length: 255 }),
   walletAddress: varchar('wallet_address', { length: 64 }), // Grantee wallet
-  status: varchar('status', { length: 32 }).notNull().default('pending'),
+  status: submissionStatusEnum('status').notNull().default('pending'),
   totalAmount: bigint('total_amount', { mode: 'number' }),
   appliedAt: timestamp('applied_at').notNull().defaultNow(),
   createdAt: timestamp('created_at').notNull().defaultNow(),

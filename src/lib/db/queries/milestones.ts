@@ -73,8 +73,9 @@ export async function getSubmissionMilestonesOverview(submissionId: number) {
     total: submissionMilestones.length,
     completed: submissionMilestones.filter(m => m.status === 'completed')
       .length,
-    inProgress: submissionMilestones.filter(m => m.status === 'in-progress')
-      .length,
+    inProgress: submissionMilestones.filter(
+      m => m.status === 'changes-requested'
+    ).length,
     pending: submissionMilestones.filter(m => m.status === 'pending').length,
     underReview: submissionMilestones.filter(m => m.status === 'in-review')
       .length,

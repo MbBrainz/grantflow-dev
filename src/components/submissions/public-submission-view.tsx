@@ -290,7 +290,7 @@ export function PublicSubmissionView({
                       className={`flex h-8 w-8 items-center justify-center rounded-full font-bold text-white ${
                         milestone.status === 'completed'
                           ? 'bg-green-500'
-                          : milestone.status === 'in-progress'
+                          : milestone.status === 'changes-requested'
                             ? 'bg-blue-500'
                             : 'bg-gray-400'
                       }`}
@@ -309,7 +309,7 @@ export function PublicSubmissionView({
                       className={
                         milestone.status === 'completed'
                           ? 'bg-green-100 text-green-800'
-                          : milestone.status === 'in-progress'
+                          : milestone.status === 'changes-requested'
                             ? 'bg-blue-100 text-blue-800'
                             : 'bg-gray-100 text-gray-800'
                       }

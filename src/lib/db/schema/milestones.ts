@@ -17,15 +17,19 @@ import { discussions } from './discussions'
 import { reviews } from './reviews'
 import { payouts } from './payouts'
 
-const STATUS_OPTIONS = [
+const MILESTONE_STATUS_OPTIONS = [
   'pending',
   'in-review',
-  'in-progress',
+  'changes-requested',
   'completed',
   'rejected',
 ] as const
-const statusEnum = pgEnum('status', STATUS_OPTIONS)
-export type Status = (typeof STATUS_OPTIONS)[number]
+
+export const milestoneStatusEnum = pgEnum(
+  'milestone_status',
+  MILESTONE_STATUS_OPTIONS
+)
+export type MilestoneStatus = (typeof MILESTONE_STATUS_OPTIONS)[number]
 
 interface Deliverable {
   description: string
@@ -47,7 +51,7 @@ export const milestones = pgTable('milestones', {
   requirements: jsonb('requirements').$type<string[]>().notNull().default([]), // What needs to be delivered
   amount: bigint('amount', { mode: 'number' }),
   dueDate: timestamp('due_date'),
-  status: statusEnum('status').notNull().default('pending'),
+  status: milestoneStatusEnum('status').notNull().default('pending'),
   deliverables: jsonb('deliverables')
     .$type<Deliverable[]>()
     .notNull()

@@ -17,7 +17,7 @@ import { users } from './users'
 import { discussions } from './discussions'
 
 const VOTE_OPTIONS = ['approve', 'reject', 'abstain'] as const
-const voteEnum = pgEnum('vote', VOTE_OPTIONS)
+export const voteEnum = pgEnum('vote', VOTE_OPTIONS)
 
 // Group reviews (committee members reviewing submissions/milestones)
 export const reviews = pgTable('reviews', {
