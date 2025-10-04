@@ -17,6 +17,10 @@ import { ArrowLeft, Save, Send } from 'lucide-react'
 import Link from 'next/link'
 import { createSubmission } from '../actions'
 import { useToast } from '@/lib/hooks/use-toast'
+import {
+  isValidGitHubUrl,
+  validateMilestoneAmounts,
+} from '@/lib/validation/submission'
 
 export default function NewSubmissionPage() {
   const router = useRouter()
@@ -159,13 +163,57 @@ export default function NewSubmissionPage() {
 
       // Validate critical data before sending
       if (!Array.isArray(formData.labels) || formData.labels.length === 0) {
-        throw new Error('Labels must be a non-empty array')
+        const errorMessage = 'Please select at least one project category'
+        setError(errorMessage)
+        toast({
+          title: 'Validation Error',
+          description: errorMessage,
+          variant: 'destructive',
+        })
+        return
       }
       if (
         !Array.isArray(formData.milestones) ||
         formData.milestones.length === 0
       ) {
-        throw new Error('Milestones must be a non-empty array')
+        const errorMessage = 'Please add at least one milestone'
+        setError(errorMessage)
+        toast({
+          title: 'Validation Error',
+          description: errorMessage,
+          variant: 'destructive',
+        })
+        return
+      }
+
+      // Validate GitHub URL format if provided using shared utility
+      if (formData.githubRepoUrl && !isValidGitHubUrl(formData.githubRepoUrl)) {
+        const errorMessage =
+          'GitHub URL must be a valid repository URL (e.g., https://github.com/username/repo)'
+        setError(errorMessage)
+        toast({
+          title: 'Validation Error',
+          description: errorMessage,
+          variant: 'destructive',
+        })
+        return
+      }
+
+      // Validate that milestone amounts sum to total amount using shared utility
+      const milestoneAmounts = formData.milestones.map(m => m.amount)
+      const validationResult = validateMilestoneAmounts(
+        formData.totalAmount,
+        milestoneAmounts
+      )
+
+      if (!validationResult.isValid) {
+        setError(validationResult.error!)
+        toast({
+          title: 'Validation Error',
+          description: validationResult.error,
+          variant: 'destructive',
+        })
+        return
       }
 
       // Create FormData and add fields properly
@@ -265,14 +313,24 @@ export default function NewSubmissionPage() {
 
   // Validation
   const isFormValid =
-    formData.title &&
-    formData.description &&
-    formData.executiveSummary &&
-    formData.postGrantPlan &&
+    formData.title.trim().length >= 3 &&
+    formData.description.trim().length >= 10 &&
+    formData.executiveSummary.trim().length >= 50 &&
+    formData.postGrantPlan.trim().length >= 20 &&
     formData.totalAmount &&
+    !isNaN(parseFloat(formData.totalAmount)) &&
+    parseFloat(formData.totalAmount) > 0 &&
     formData.labels.length > 0 &&
+    formData.milestones.length > 0 &&
     formData.milestones.every(
-      m => m.title && m.description && m.requirements && m.amount
+      m =>
+        m.title.trim().length > 0 &&
+        m.description.trim().length >= 10 &&
+        m.requirements.trim().length >= 5 &&
+        m.amount &&
+        !isNaN(parseFloat(m.amount)) &&
+        parseFloat(m.amount) > 0 &&
+        m.dueDate
     )
 
   return (

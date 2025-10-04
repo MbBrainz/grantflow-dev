@@ -1,21 +1,38 @@
 import { eq, and } from 'drizzle-orm'
 import { db } from '../drizzle'
 import { users, groupMemberships, type User } from '../schema'
-import { getSession } from '@/lib/auth/session'
+import { getSession as getCustomSession } from '@/lib/auth/session'
+import { getSession as getNextAuthSession } from '@/lib/auth/next-auth'
 
 export async function getUser(): Promise<User | null> {
-  const session = await getSession()
-  if (!session?.user?.id) {
-    return null
+  // Try NextAuth session first (for GitHub OAuth)
+  const nextAuthSession = await getNextAuthSession()
+  if (nextAuthSession?.user?.id) {
+    const userId = parseInt(nextAuthSession.user.id)
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1)
+
+    if (result.length > 0) {
+      return result[0]
+    }
   }
 
-  const result = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, session.user.id))
-    .limit(1)
+  // Fallback to custom JWT session (for email/password auth)
+  const customSession = await getCustomSession()
+  if (customSession?.user?.id) {
+    const result = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, customSession.user.id))
+      .limit(1)
 
-  return result.length > 0 ? result[0] : null
+    return result.length > 0 ? result[0] : null
+  }
+
+  return null
 }
 
 export async function getUserById(userId: number): Promise<User | null> {

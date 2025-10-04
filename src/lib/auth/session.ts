@@ -44,16 +44,37 @@ export async function getSession() {
 }
 
 export async function setSession(user: NewUser) {
+  if (!user.id) {
+    throw new Error('Cannot create session: user ID is required')
+  }
+
   const expiresInOneDay = new Date(Date.now() + 24 * 60 * 60 * 1000)
   const session: SessionData = {
-    user: { id: user.id! },
+    user: { id: user.id },
     expires: expiresInOneDay.toISOString(),
   }
-  const encryptedSession = await signToken(session)
-  ;(await cookies()).set('session', encryptedSession, {
-    expires: expiresInOneDay,
-    httpOnly: true,
-    secure: true,
-    sameSite: 'lax',
-  })
+
+  try {
+    const encryptedSession = await signToken(session)
+    const cookieStore = await cookies()
+
+    cookieStore.set('session', encryptedSession, {
+      expires: expiresInOneDay,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+    })
+
+    // Verify the cookie was actually set
+    const verificationCookie = cookieStore.get('session')
+    if (!verificationCookie) {
+      throw new Error('Session cookie was not set')
+    }
+
+    console.log('[Session]: Session created successfully for user:', user.id)
+  } catch (error) {
+    console.error('[Session]: Failed to create session:', error)
+    throw new Error('Failed to create session')
+  }
 }

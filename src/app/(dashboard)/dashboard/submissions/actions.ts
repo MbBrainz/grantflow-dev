@@ -15,6 +15,10 @@ import {
   ensureDiscussionForMilestone,
 } from '@/lib/db/queries'
 import { revalidatePath } from 'next/cache'
+import {
+  GITHUB_URL_REGEX,
+  parseRequirements,
+} from '@/lib/validation/submission'
 
 // Validation schemas (prefixed with _ to indicate unused but kept for future use)
 const _milestoneSchema = z.object({
@@ -25,42 +29,103 @@ const _milestoneSchema = z.object({
   dueDate: z.string().optional(),
 })
 
-const createSubmissionSchema = z.object({
-  title: z.string().min(3, 'Title must be at least 3 characters'),
-  description: z.string().min(10, 'Description must be at least 10 characters'),
-  executiveSummary: z
-    .string()
-    .min(50, 'Executive summary must be at least 50 characters'),
-  postGrantPlan: z
-    .string()
-    .min(20, 'Post-grant plan must be at least 20 characters'),
-  githubRepoUrl: z
-    .string()
-    .url('Must be a valid URL')
-    .optional()
-    .or(z.literal('')),
-  totalAmount: z.string().min(1, 'Total amount is required'),
-  committeeId: z.coerce.number().min(1, 'Committee selection is required'),
-  grantProgramId: z.coerce
-    .number()
-    .min(1, 'Grant program selection is required'),
-  labels: z.array(z.string()).optional().default([]),
-  milestones: z
-    .array(
-      z.object({
-        title: z.string().min(1, 'Milestone title is required'),
-        description: z
-          .string()
-          .min(10, 'Milestone description must be at least 10 characters'),
-        requirements: z
-          .array(z.string())
-          .min(5, 'Milestone requirements must be at least 5 characters'),
-        amount: z.string().min(1, 'Milestone amount is required'),
-        dueDate: z.string().min(1, 'Due date is required'),
-      })
-    )
-    .min(1, 'At least one milestone is required'),
-})
+const createSubmissionSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(3, 'Title must be at least 3 characters')
+      .max(200, 'Title must not exceed 200 characters'),
+    description: z
+      .string()
+      .trim()
+      .min(10, 'Description must be at least 10 characters')
+      .max(500, 'Description must not exceed 500 characters'),
+    executiveSummary: z
+      .string()
+      .trim()
+      .min(50, 'Executive summary must be at least 50 characters')
+      .max(5000, 'Executive summary must not exceed 5000 characters'),
+    postGrantPlan: z
+      .string()
+      .trim()
+      .min(20, 'Post-grant plan must be at least 20 characters')
+      .max(3000, 'Post-grant plan must not exceed 3000 characters'),
+    githubRepoUrl: z
+      .string()
+      .trim()
+      .refine(
+        val => {
+          if (val === '' || val === undefined) return true // Allow empty
+          return GITHUB_URL_REGEX.test(val)
+        },
+        {
+          message:
+            'Must be a valid GitHub repository URL (e.g., https://github.com/username/repo)',
+        }
+      )
+      .optional()
+      .or(z.literal('')),
+    totalAmount: z
+      .string()
+      .min(1, 'Total amount is required')
+      .refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+        message: 'Total amount must be a positive number',
+      }),
+    committeeId: z.coerce.number().min(1, 'Committee selection is required'),
+    grantProgramId: z.coerce
+      .number()
+      .min(1, 'Grant program selection is required'),
+    labels: z
+      .array(z.string().trim().min(1))
+      .min(1, 'At least one project category must be selected')
+      .max(10, 'Maximum 10 project categories allowed'),
+    milestones: z
+      .array(
+        z.object({
+          title: z
+            .string()
+            .trim()
+            .min(1, 'Milestone title is required')
+            .max(200, 'Milestone title must not exceed 200 characters'),
+          description: z
+            .string()
+            .trim()
+            .min(10, 'Milestone description must be at least 10 characters')
+            .max(2000, 'Milestone description must not exceed 2000 characters'),
+          requirements: z
+            .string()
+            .trim()
+            .min(5, 'Acceptance criteria must be at least 5 characters')
+            .max(2000, 'Acceptance criteria must not exceed 2000 characters'),
+          amount: z
+            .string()
+            .min(1, 'Milestone amount is required')
+            .refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
+              message: 'Milestone amount must be a positive number',
+            }),
+          dueDate: z.string().min(1, 'Due date is required'),
+        })
+      )
+      .min(1, 'At least one milestone is required')
+      .max(20, 'Maximum 20 milestones allowed'),
+  })
+  .refine(
+    data => {
+      // Validate that milestone amounts sum up to total amount
+      const totalAmount = parseFloat(data.totalAmount)
+      const milestonesTotal = data.milestones.reduce((sum, milestone) => {
+        const amount = parseFloat(milestone.amount)
+        return sum + (isNaN(amount) ? 0 : amount)
+      }, 0)
+      return Math.abs(milestonesTotal - totalAmount) < 0.01 // Allow for floating point errors
+    },
+    {
+      message:
+        'The sum of milestone amounts must equal the total funding amount',
+      path: ['milestones'],
+    }
+  )
 
 interface SubmissionActionState {
   error?: string
@@ -134,7 +199,13 @@ export const createSubmission = async (
         '[createSubmission]: Validation error:',
         validationResult.error.issues
       )
-      return { error: validationResult.error.issues[0].message }
+      // Return the first meaningful error message
+      const firstError = validationResult.error.issues[0]
+      const errorPath = firstError.path.join('.')
+      const errorMessage = errorPath
+        ? `${errorPath}: ${firstError.message}`
+        : firstError.message
+      return { error: errorMessage }
     }
 
     const data = validationResult.data
@@ -199,14 +270,17 @@ export const createSubmission = async (
 
     // Create milestone records (combine description and requirements)
     const milestonePromises = data.milestones.map(async milestone => {
-      const combinedDescription = `${milestone.description}\n\n**Acceptance Criteria:**\n${milestone.requirements.join('\n')}`
+      // Convert requirements string to array using shared utility
+      const requirementsArray = parseRequirements(milestone.requirements)
+
+      const combinedDescription = `${milestone.description}\n\n**Acceptance Criteria:**\n${requirementsArray.map(r => `- ${r}`).join('\n')}`
 
       const newMilestone: NewMilestone = {
         submissionId: createdSubmission.id,
         groupId: user.primaryGroupId ?? 1, // Use user's primary group
         title: milestone.title,
         description: combinedDescription, // Include requirements in description
-        requirements: milestone.requirements,
+        requirements: requirementsArray,
         amount: Number(milestone.amount.replace(/,/g, '')),
         dueDate: milestone.dueDate ? new Date(milestone.dueDate) : null,
         status: 'pending',

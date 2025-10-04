@@ -128,8 +128,15 @@ export async function signOut() {
   if (user) {
     await logActivity(user.id, ActivityType.SIGN_OUT)
   }
-  ;(await cookies()).delete('session')
-  redirect('/sign-in')
+
+  // Delete both session cookies (custom JWT and NextAuth)
+  const cookieStore = await cookies()
+  cookieStore.delete('session') // Custom JWT session
+  cookieStore.delete('next-auth.session-token') // NextAuth session (development)
+  cookieStore.delete('__Secure-next-auth.session-token') // NextAuth session (production)
+
+  // Redirect to home page
+  redirect('/')
 }
 
 const updatePasswordSchema = z

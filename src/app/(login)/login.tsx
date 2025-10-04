@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useActionState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { signIn as nextAuthSignIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import AsyncButton from '@/components/ui/async-button'
 import { Input } from '@/components/ui/input'
@@ -21,10 +22,10 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     { error: '' }
   )
 
-  const handleGitHubLogin = () => {
-    const params = new URLSearchParams()
-    if (redirect) params.append('redirect', redirect)
-    window.location.href = `/api/auth/github?${params.toString()}`
+  const handleGitHubLogin = async () => {
+    await nextAuthSignIn('github', {
+      callbackUrl: redirect ?? '/dashboard',
+    })
   }
 
   return (

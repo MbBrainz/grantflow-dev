@@ -3,6 +3,8 @@ import type { Metadata, Viewport } from 'next'
 import { Manrope } from 'next/font/google'
 import { SWRConfig } from 'swr'
 import { NotificationProvider } from '@/components/providers/notification-provider'
+import { SessionProvider } from '@/components/providers/session-provider'
+import { getSession } from '@/lib/auth/next-auth'
 
 export const metadata: Metadata = {
   title: 'GrantFlow - Grant Management Platform',
@@ -16,25 +18,29 @@ export const viewport: Viewport = {
 
 const manrope = Manrope({ subsets: ['latin'] })
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
+  const session = await getSession()
+
   return (
     <html lang="en">
       <body className={manrope.className}>
-        <SWRConfig
-          value={{
-            refreshInterval: 0,
-            revalidateOnFocus: false,
-            revalidateOnReconnect: true,
-            errorRetryCount: 2,
-            errorRetryInterval: 5000,
-          }}
-        >
-          <NotificationProvider>{children}</NotificationProvider>
-        </SWRConfig>
+        <SessionProvider session={session}>
+          <SWRConfig
+            value={{
+              refreshInterval: 0,
+              revalidateOnFocus: false,
+              revalidateOnReconnect: true,
+              errorRetryCount: 2,
+              errorRetryInterval: 5000,
+            }}
+          >
+            <NotificationProvider>{children}</NotificationProvider>
+          </SWRConfig>
+        </SessionProvider>
       </body>
     </html>
   )
