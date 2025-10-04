@@ -21,6 +21,7 @@ export const users = pgTable('users', {
   email: varchar('email', { length: 255 }).unique(),
   passwordHash: text('password_hash'),
   githubId: varchar('github_id', { length: 64 }),
+  avatarUrl: text('avatar_url'),
   walletAddress: varchar('wallet_address', { length: 64 }),
   primaryGroupId: integer('primary_group_id'), // Will reference groups.id
   primaryRole: varchar('primary_role', { length: 20 })

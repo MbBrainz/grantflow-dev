@@ -26,6 +26,7 @@ export const authOptions: NextAuthOptions = {
             login: string
             name: string
             email: string
+            avatar_url: string
           }
 
           const existingUser = await db
@@ -40,7 +41,8 @@ export const authOptions: NextAuthOptions = {
               .update(users)
               .set({
                 name: user.name ?? githubProfile.login,
-                email: user.email ?? '',
+                email: user.email ?? githubProfile.email ?? '',
+                avatarUrl: user.image ?? githubProfile.avatar_url,
                 updatedAt: new Date(),
               })
               .where(eq(users.id, existingUser[0].id))
@@ -64,6 +66,7 @@ export const authOptions: NextAuthOptions = {
                 .set({
                   githubId: String(githubProfile.id),
                   name: user.name ?? userByEmail[0].name,
+                  avatarUrl: user.image ?? githubProfile.avatar_url,
                   updatedAt: new Date(),
                 })
                 .where(eq(users.id, userByEmail[0].id))
@@ -75,8 +78,9 @@ export const authOptions: NextAuthOptions = {
                 .insert(users)
                 .values({
                   name: user.name ?? githubProfile.login,
-                  email: user.email ?? '',
+                  email: user.email ?? githubProfile.email ?? '',
                   githubId: String(githubProfile.id),
+                  avatarUrl: user.image ?? githubProfile.avatar_url,
                   primaryRole: 'team',
                   passwordHash: null,
                 })
@@ -127,6 +131,7 @@ export const authOptions: NextAuthOptions = {
           if (dbUser) {
             session.user.name = dbUser.name
             session.user.email = dbUser.email
+            session.user.image = dbUser.avatarUrl
             session.user.role = dbUser.primaryRole
           }
         } catch (error) {
