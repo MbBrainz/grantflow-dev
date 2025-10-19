@@ -1,4 +1,3 @@
-import type { z } from 'zod'
 import type { User } from '@/lib/db/schema'
 import { getUser } from '@/lib/db/queries'
 
@@ -9,25 +8,54 @@ export interface ActionState {
   [key: string]: unknown
 }
 
+interface ZodLike {
+  safeParse: (data: unknown) => {
+    success: boolean
+    data?: unknown
+    error?: { issues: { message: string }[] }
+  }
+}
+
 type ValidatedActionFunction<TInput, TOutput extends ActionState> = (
   data: TInput,
   formData: FormData
 ) => Promise<TOutput>
 
 export function validatedAction<
-  TSchema extends z.ZodTypeAny,
+  TSchema extends ZodLike,
   TOutput extends ActionState,
->(schema: TSchema, action: ValidatedActionFunction<z.infer<TSchema>, TOutput>) {
+>(
+  schema: TSchema,
+  action: ValidatedActionFunction<
+    TSchema extends {
+      safeParse: (
+        data: unknown
+      ) => { success: true; data: infer TData } | { success: false }
+    }
+      ? TData
+      : never,
+    TOutput
+  >
+) {
   return async (
     _prevState: ActionState,
     formData: FormData
   ): Promise<TOutput | { error: string }> => {
     const result = schema.safeParse(Object.fromEntries(formData))
     if (!result.success) {
-      return { error: result.error.issues[0].message }
+      return { error: result.error?.issues[0]?.message ?? 'Validation failed' }
     }
 
-    return action(result.data as z.infer<TSchema>, formData)
+    return action(
+      result.data as TSchema extends {
+        safeParse: (
+          data: unknown
+        ) => { success: true; data: infer TData } | { success: false }
+      }
+        ? TData
+        : never,
+      formData
+    )
   }
 }
 
@@ -38,11 +66,20 @@ type ValidatedActionWithUserFunction<TInput, TOutput extends ActionState> = (
 ) => Promise<TOutput>
 
 export function validatedActionWithUser<
-  TSchema extends z.ZodTypeAny,
+  TSchema extends ZodLike,
   TOutput extends ActionState,
 >(
   schema: TSchema,
-  action: ValidatedActionWithUserFunction<z.infer<TSchema>, TOutput>
+  action: ValidatedActionWithUserFunction<
+    TSchema extends {
+      safeParse: (
+        data: unknown
+      ) => { success: true; data: infer TData } | { success: false }
+    }
+      ? TData
+      : never,
+    TOutput
+  >
 ) {
   return async (
     _prevState: ActionState,
@@ -55,10 +92,20 @@ export function validatedActionWithUser<
 
     const result = schema.safeParse(Object.fromEntries(formData))
     if (!result.success) {
-      return { error: result.error.issues[0].message }
+      return { error: result.error?.issues[0]?.message ?? 'Validation failed' }
     }
 
-    return action(result.data as z.infer<TSchema>, formData, user)
+    return action(
+      result.data as TSchema extends {
+        safeParse: (
+          data: unknown
+        ) => { success: true; data: infer TData } | { success: false }
+      }
+        ? TData
+        : never,
+      formData,
+      user
+    )
   }
 }
 

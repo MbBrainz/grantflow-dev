@@ -33,26 +33,30 @@ interface NotificationProviderProps {
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
 export function NotificationProvider({ children }: NotificationProviderProps) {
+  // DISABLED: SSE notifications temporarily disabled to reduce RAM usage
   // Check if user is authenticated before initializing notifications
   const { data: user, error: userError } = useSWR<User>(
     '/api/user',
     fetcher
   ) as { data: User | undefined; error: Error | undefined }
-  const [shouldConnect, setShouldConnect] = useState<boolean>(false)
 
-  // Only attempt to connect if user is authenticated
+  // SSE disabled - set to false to prevent connection
+  const [shouldConnect] = useState<boolean>(false)
+
+  // DISABLED: Only attempt to connect if user is authenticated
   useEffect(() => {
-    if (user && !userError) {
-      console.log(
-        '[NotificationProvider]: User authenticated, enabling notifications'
-      )
-      setShouldConnect(true)
-    } else {
-      console.log(
-        '[NotificationProvider]: No authenticated user, skipping notifications'
-      )
-      setShouldConnect(false)
-    }
+    console.log('[NotificationProvider]: SSE notifications disabled')
+    // if (user && !userError) {
+    //   console.log(
+    //     '[NotificationProvider]: User authenticated, enabling notifications'
+    //   )
+    //   setShouldConnect(true)
+    // } else {
+    //   console.log(
+    //     '[NotificationProvider]: No authenticated user, skipping notifications'
+    //   )
+    //   setShouldConnect(false)
+    // }
   }, [user, userError])
 
   // Initialize the notification stream only for authenticated users

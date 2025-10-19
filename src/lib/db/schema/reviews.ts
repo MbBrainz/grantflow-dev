@@ -22,7 +22,9 @@ export const voteEnum = pgEnum('vote', VOTE_OPTIONS)
 // Group reviews (committee members reviewing submissions/milestones)
 export const reviews = pgTable('reviews', {
   id: serial('id').primaryKey(),
-  submissionId: integer('submission_id').references(() => submissions.id),
+  submissionId: integer('submission_id')
+    .notNull()
+    .references(() => submissions.id),
   milestoneId: integer('milestone_id').references(() => milestones.id),
   groupId: integer('group_id')
     .notNull()

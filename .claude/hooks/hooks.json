@@ -46,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh -c 'if [ -f \"package.json\" ] && [ -d \"app\" ]; then echo \"🚀 Next.js Tip: Run \\`npm run dev\\` to start the development server\"; if [ -f \"tsconfig.json\" ]; then echo \"📝 Run \\`npm run type-check\\` to verify TypeScript types\"; fi; fi'"
+            "command": "sh -c 'if [ -f \"package.json\" ] && [ -d \"app\" ]; then echo \"🚀 Next.js Tip: Run \\`npm run dev\\` to start the development server\"; if [ -f \"tsconfig.json\" ]; then echo \"📝 Run \\`npm run typecheck\\` to verify TypeScript types\"; fi; fi'"
           }
         ]
       }

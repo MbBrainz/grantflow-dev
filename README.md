@@ -34,23 +34,28 @@ pnpm install
 
 ## Running Locally
 
-[Install](https://docs.stripe.com/stripe-cli) and log in to your Stripe account:
+### Database Setup
 
-```bash
-stripe login
-```
-
-Use the included setup script to create your `.env` file:
+Use the included setup script to start PostgreSQL and initialize the database:
 
 ```bash
 pnpm db:setup
 ```
 
-Run the database migrations and seed the database with a default user and team:
+Your `.env` file should contain:
+
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/grantflow
+```
+
+Note: This project uses port `5433` and database name `grantflow` to avoid conflicts with other local PostgreSQL instances.
+
+### Stripe Setup
+
+[Install](https://docs.stripe.com/stripe-cli) and log in to your Stripe account:
 
 ```bash
-pnpm db:migrate
-pnpm db:seed
+stripe login
 ```
 
 This will create the following user and team:
@@ -105,7 +110,7 @@ In your Vercel project settings (or during deployment), add all the necessary en
 1. `BASE_URL`: Set this to your production domain.
 2. `STRIPE_SECRET_KEY`: Use your Stripe secret key for the production environment.
 3. `STRIPE_WEBHOOK_SECRET`: Use the webhook secret from the production webhook you created in step 1.
-4. `POSTGRES_URL`: Set this to your production database URL.
+4. `DATABASE_URL`: Set this to your production database URL.
 5. `AUTH_SECRET`: Set this to a random string. `openssl rand -base64 32` will generate one.
 
 ## Other Templates

@@ -18,24 +18,15 @@ import {
   notifyVoteCast,
   notifyStatusChange,
 } from '@/lib/notifications/server'
+import { insertMessageSchema } from '@/lib/db/schema'
 
-const messageSchema = z.object({
-  content: z
-    .string()
-    .min(1, 'Message content is required')
-    .max(2000, 'Message too long'),
-  discussionId: z.number(),
-  messageType: z.enum(['comment', 'status_change', 'vote']).default('comment'),
-  metadata: z.string().optional(),
-})
-
-const _discussionParamsSchema = z.object({
-  submissionId: z.number().optional(),
-  milestoneId: z.number().optional(),
-})
+/**
+ * Schema for posting messages in discussions
+ * Extends insertMessageSchema with validation for FormData
+ */
 
 export const postMessage = validatedActionWithUser(
-  messageSchema,
+  insertMessageSchema,
   async (data, formData, user) => {
     console.log('[postMessage]: Creating new message', {
       userId: user.id,
@@ -49,7 +40,7 @@ export const postMessage = validatedActionWithUser(
         discussionId: data.discussionId,
         content: data.content,
         messageType: data.messageType,
-        metadata: data.metadata,
+        metadata: data.metadata ?? undefined,
       })
 
       console.log('[postMessage]: Message created successfully', {
@@ -162,6 +153,7 @@ export const postMessageToSubmission = validatedActionWithUser(
     messageType: z
       .enum(['comment', 'status_change', 'vote'])
       .default('comment'),
+    metadata: z.string().optional(),
   }),
   async (data, formData, user) => {
     try {
@@ -303,6 +295,7 @@ export const postMessageToMilestone = validatedActionWithUser(
     messageType: z
       .enum(['comment', 'status_change', 'vote'])
       .default('comment'),
+    metadata: z.string().optional(),
   }),
   async (data, formData, user) => {
     try {

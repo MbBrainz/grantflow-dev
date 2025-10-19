@@ -24,6 +24,15 @@ export * from './payouts'
 // Notification queries
 export * from './notifications'
 
+// Dashboard queries
+export * from './dashboard'
+
+// Committee queries
+export * from './committees'
+
+// Grant program queries
+export * from './grant-programs'
+
 // Re-export write functions for convenience
 export {
   createGroup,

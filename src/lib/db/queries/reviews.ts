@@ -188,10 +188,9 @@ export async function getReviewerPendingActions() {
               submissionIds.map(id => sql`${id}`),
               sql`, `
             )})`,
-            or(
-              eq(milestones.status, 'changes-requested'),
-              eq(milestones.status, 'in-review')
-            )
+            // Only 'in-review' status needs reviewer action
+            // 'changes-requested' means grantee needs to make changes
+            eq(milestones.status, 'in-review')
           ),
           with: {
             submission: {

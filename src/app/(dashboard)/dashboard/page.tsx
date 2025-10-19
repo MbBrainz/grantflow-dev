@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import useSWR from 'swr'
-import { Suspense, useEffect, useState } from 'react'
+import { Suspense } from 'react'
 import {
   Loader2,
   PlusCircle,
@@ -18,16 +18,13 @@ import {
   AlertCircle,
   MessageSquare,
   Gavel,
-  type LucideIcon,
 } from 'lucide-react'
 import Link from 'next/link'
+import { UserCommittees } from '@/components/dashboard/user-committees'
+import type { User } from '@/lib/db/schema'
 
-interface UserData {
-  id: number
-  name: string | null
-  email: string
-  role: string
-  primaryRole?: string | null
+type UserData = Pick<User, 'id' | 'name' | 'email' | 'primaryRole'> & {
+  role: string // API-specific field for compatibility
 }
 
 interface DashboardStatsType {
@@ -49,25 +46,14 @@ interface DashboardStatsType {
     project: string
     time: string
   }[]
-}
-
-interface ActivityItem {
-  id: number
-  type: string
-  title: string
-  description: string
-  time: string
-  icon: LucideIcon
-  color: string
-}
-
-interface DeadlineItem {
-  id: number
-  title: string
-  project: string
-  dueDate: string
-  status: string
-  urgent: boolean
+  upcomingDeadlines?: {
+    id: number
+    title: string
+    project: string
+    dueDate: string
+    status: string
+    urgent: boolean
+  }[]
 }
 
 const fetcher = async (url: string): Promise<UserData> => {
@@ -139,79 +125,280 @@ function UserProfile() {
   )
 }
 
-function DashboardStats() {
-  const [stats, setStats] = useState<DashboardStatsType>({
-    submissions: { total: 0, pending: 0, approved: 0, inReview: 0 },
-    milestones: { total: 0, completed: 0, inProgress: 0, pending: 0 },
-    committees: { active: 0, isReviewer: false },
-    recentActivity: [],
-  })
-  const [loading, setLoading] = useState(true)
+function RecentActivity({
+  activities,
+}: {
+  activities: DashboardStatsType['recentActivity']
+}) {
+  const getActivityInfo = (type: string) => {
+    switch (type) {
+      case 'milestone_completed':
+        return {
+          title: 'Milestone completed',
+          icon: CheckCircle,
+          color: 'text-green-600',
+        }
+      case 'vote_cast':
+        return {
+          title: 'Vote cast',
+          icon: MessageSquare,
+          color: 'text-blue-600',
+        }
+      case 'submission_approved':
+        return {
+          title: 'Submission approved',
+          icon: CheckCircle,
+          color: 'text-green-600',
+        }
+      case 'submission_rejected':
+        return {
+          title: 'Submission rejected',
+          icon: AlertCircle,
+          color: 'text-red-600',
+        }
+      default:
+        return {
+          title: 'Activity',
+          icon: Activity,
+          color: 'text-orange-600',
+        }
+    }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Activity className="h-5 w-5" />
+          Recent Activity
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {activities.length > 0 ? (
+          <>
+            <div className="space-y-4">
+              {activities.map((activity, index) => {
+                const activityInfo = getActivityInfo(activity.type)
+                const Icon = activityInfo.icon
+                return (
+                  <div key={index} className="flex items-start gap-3">
+                    <div
+                      className={`rounded-full bg-gray-100 p-2 ${activityInfo.color}`}
+                    >
+                      <Icon className="h-4 w-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium">
+                        {activityInfo.title}
+                      </p>
+                      <p className="truncate text-sm text-gray-600">
+                        {activity.project}
+                      </p>
+                      <p className="mt-1 text-xs text-gray-500">
+                        {activity.time}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            <div className="mt-4 border-t pt-4">
+              <Link href="/dashboard/activity">
+                <Button variant="outline" className="w-full" size="sm">
+                  View All Activity
+                </Button>
+              </Link>
+            </div>
+          </>
+        ) : (
+          <p className="text-sm text-gray-500">No recent activity</p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function QuickActions() {
   const result = useSWR<UserData>('/api/user', fetcher)
   const user = result.data
+  const isReviewer = user?.role === 'committee' || user?.role === 'admin'
 
-  useEffect(() => {
-    function loadStats() {
-      try {
-        // This would typically be a real API call to get dashboard stats
-        // For now, showing realistic placeholder data structure
-        const mockStats: DashboardStatsType = {
-          submissions: { total: 2, pending: 1, approved: 1, inReview: 0 },
-          milestones: { total: 8, completed: 2, inProgress: 3, pending: 3 },
-          committees: {
-            active: 3,
-            isReviewer: user?.role === 'committee' || user?.role === 'admin',
-          },
-          recentActivity: [
-            {
-              type: 'milestone_completed',
-              project: 'Next-Gen SDK',
-              time: '2 hours ago',
-            },
-            {
-              type: 'vote_cast',
-              project: 'Blockchain Course',
-              time: '1 day ago',
-            },
-            {
-              type: 'submission_approved',
-              project: 'DeFi Protocol',
-              time: '3 days ago',
-            },
-          ],
-        }
-        setStats(mockStats)
-      } catch (error) {
-        console.error('Error loading dashboard stats:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Quick Actions</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          {!isReviewer && (
+            <Link href="/dashboard/submissions/new">
+              <Button className="flex h-16 w-full flex-col items-center justify-center space-y-2">
+                <PlusCircle className="h-6 w-6" />
+                <span>New Submission</span>
+              </Button>
+            </Link>
+          )}
 
-    if (user) {
-      void loadStats()
-    }
-  }, [user])
+          <Link href="/dashboard/submissions">
+            <Button
+              variant="outline"
+              className="flex h-16 w-full flex-col items-center justify-center space-y-2"
+            >
+              <FileText className="h-6 w-6" />
+              <span>
+                {isReviewer ? 'Review Submissions' : 'View Submissions'}
+              </span>
+            </Button>
+          </Link>
 
-  if (loading ?? !user) {
-    return (
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Card key={i}>
-            <CardContent className="p-6">
-              <div className="animate-pulse space-y-2">
-                <div className="h-4 w-3/4 rounded bg-gray-200"></div>
-                <div className="h-8 w-1/2 rounded bg-gray-200"></div>
-                <div className="h-3 w-full rounded bg-gray-200"></div>
+          {isReviewer && (
+            <Link href="/dashboard/review">
+              <Button className="flex h-16 w-full flex-col items-center justify-center space-y-2">
+                <Gavel className="h-6 w-6" />
+                <span>Reviewer Dashboard</span>
+              </Button>
+            </Link>
+          )}
+
+          <Link href="/dashboard/activity">
+            <Button
+              variant="outline"
+              className="flex h-16 w-full flex-col items-center justify-center space-y-2"
+            >
+              <Activity className="h-6 w-6" />
+              <span>Activity Feed</span>
+            </Button>
+          </Link>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function UpcomingDeadlines({
+  deadlines,
+}: {
+  deadlines: DashboardStatsType['upcomingDeadlines']
+}) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Clock className="h-5 w-5" />
+          Upcoming Deadlines
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {deadlines && deadlines.length > 0 ? (
+          <div className="space-y-3">
+            {deadlines.map(deadline => (
+              <div
+                key={deadline.id}
+                className={`rounded-lg border p-3 ${
+                  deadline.urgent
+                    ? 'border-orange-200 bg-orange-50'
+                    : 'border-gray-200 bg-gray-50'
+                }`}
+              >
+                <div className="mb-1 flex items-center justify-between">
+                  <p className="text-sm font-medium">{deadline.title}</p>
+                  {deadline.urgent && (
+                    <AlertCircle className="h-4 w-4 text-orange-600" />
+                  )}
+                </div>
+                <p className="text-xs text-gray-600">{deadline.project}</p>
+                <p
+                  className={`mt-1 text-xs ${
+                    deadline.urgent
+                      ? 'font-medium text-orange-600'
+                      : 'text-gray-500'
+                  }`}
+                >
+                  {deadline.dueDate}
+                </p>
               </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500">No upcoming deadlines</p>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+function DashboardContent() {
+  const result = useSWR<UserData>('/api/user', fetcher)
+  const user = result.data
+  const {
+    data: stats,
+    isLoading: loading,
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    error,
+  } = useSWR<DashboardStatsType>(
+    user ? '/api/dashboard/stats' : null,
+    async (url: string): Promise<DashboardStatsType> => {
+      console.log('[dashboard_page]: fetching dashboard stats from ${url}')
+      const res = await fetch(url)
+      if (!res.ok) throw new Error('Failed to fetch dashboard stats')
+      return (await res.json()) as DashboardStatsType
+    }
+  )
+
+  if (loading || !user || !stats) {
+    return (
+      <>
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Card key={i}>
+              <CardContent className="p-6">
+                <div className="animate-pulse space-y-2">
+                  <div className="h-4 w-3/4 rounded bg-gray-200"></div>
+                  <div className="h-8 w-1/2 rounded bg-gray-200"></div>
+                  <div className="h-3 w-full rounded bg-gray-200"></div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+          <Card>
+            <CardContent className="p-6">
+              <Loader2 className="mx-auto h-8 w-8 animate-spin" />
             </CardContent>
           </Card>
-        ))}
+        </div>
+      </>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="rounded-md bg-red-50 p-4">
+        <p className="text-sm text-red-800">
+          Failed to load dashboard statistics
+        </p>
       </div>
     )
   }
 
-  const isReviewer = user.role === 'committee' || user.role === 'admin'
+  return (
+    <>
+      <DashboardStatsDisplay stats={stats} />
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
+          <QuickActions />
+          <UserCommittees userId={user.id} />
+          <UpcomingDeadlines deadlines={stats.upcomingDeadlines} />
+        </div>
+        <RecentActivity activities={stats.recentActivity} />
+      </div>
+    </>
+  )
+}
+
+function DashboardStatsDisplay({ stats }: { stats: DashboardStatsType }) {
+  const isReviewer = stats.committees.isReviewer
 
   return (
     <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
@@ -283,218 +470,6 @@ function DashboardStats() {
   )
 }
 
-function RecentActivity() {
-  const [_activities] = useState<ActivityItem[]>([
-    {
-      id: 1,
-      type: 'milestone_completed',
-      title: 'Milestone completed',
-      description: 'Architecture Design milestone for Next-Gen SDK',
-      time: '2 hours ago',
-      icon: CheckCircle,
-      color: 'text-green-600',
-    },
-    {
-      id: 2,
-      type: 'vote_cast',
-      title: 'Vote cast',
-      description: 'Approved submission for Blockchain Educational Course',
-      time: '1 day ago',
-      icon: MessageSquare,
-      color: 'text-blue-600',
-    },
-    {
-      id: 3,
-      type: 'submission_approved',
-      title: 'Submission approved',
-      description: 'DeFi Protocol submission approved by committee',
-      time: '3 days ago',
-      icon: CheckCircle,
-      color: 'text-green-600',
-    },
-    {
-      id: 4,
-      type: 'discussion_activity',
-      title: 'New discussion message',
-      description: 'Update posted on Infrastructure Tools project',
-      time: '1 week ago',
-      icon: Activity,
-      color: 'text-orange-600',
-    },
-  ])
-
-  const activities = _activities
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Activity className="h-5 w-5" />
-          Recent Activity
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-          {activities.map(activity => {
-            const Icon = activity.icon
-            return (
-              <div key={activity.id} className="flex items-start gap-3">
-                <div
-                  className={`rounded-full bg-gray-100 p-2 ${activity.color}`}
-                >
-                  <Icon className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium">{activity.title}</p>
-                  <p className="truncate text-sm text-gray-600">
-                    {activity.description}
-                  </p>
-                  <p className="mt-1 text-xs text-gray-500">{activity.time}</p>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-        <div className="mt-4 border-t pt-4">
-          <Link href="/dashboard/activity">
-            <Button variant="outline" className="w-full" size="sm">
-              View All Activity
-            </Button>
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function QuickActions() {
-  const result = useSWR<UserData>('/api/user', fetcher)
-  const user = result.data
-  const isReviewer = user?.role === 'committee' || user?.role === 'admin'
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Quick Actions</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {!isReviewer && (
-            <Link href="/dashboard/submissions/new">
-              <Button className="flex h-16 w-full flex-col items-center justify-center space-y-2">
-                <PlusCircle className="h-6 w-6" />
-                <span>New Submission</span>
-              </Button>
-            </Link>
-          )}
-
-          <Link href="/dashboard/submissions">
-            <Button
-              variant="outline"
-              className="flex h-16 w-full flex-col items-center justify-center space-y-2"
-            >
-              <FileText className="h-6 w-6" />
-              <span>
-                {isReviewer ? 'Review Submissions' : 'View Submissions'}
-              </span>
-            </Button>
-          </Link>
-
-          {isReviewer && (
-            <Link href="/dashboard/review">
-              <Button className="flex h-16 w-full flex-col items-center justify-center space-y-2">
-                <Gavel className="h-6 w-6" />
-                <span>Reviewer Dashboard</span>
-              </Button>
-            </Link>
-          )}
-
-          <Link href="/dashboard/activity">
-            <Button
-              variant="outline"
-              className="flex h-16 w-full flex-col items-center justify-center space-y-2"
-            >
-              <Activity className="h-6 w-6" />
-              <span>Activity Feed</span>
-            </Button>
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
-function UpcomingDeadlines() {
-  const deadlines: DeadlineItem[] = [
-    {
-      id: 1,
-      title: 'Core Development Review',
-      project: 'Next-Gen SDK',
-      dueDate: 'Due in 3 days',
-      status: 'in_progress',
-      urgent: true,
-    },
-    {
-      id: 2,
-      title: 'Final Submission Review',
-      project: 'Educational Platform',
-      dueDate: 'Due in 1 week',
-      status: 'pending',
-      urgent: false,
-    },
-    {
-      id: 3,
-      title: 'Testing & Documentation',
-      project: 'DeFi Protocol',
-      dueDate: 'Due in 2 weeks',
-      status: 'pending',
-      urgent: false,
-    },
-  ]
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Clock className="h-5 w-5" />
-          Upcoming Deadlines
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          {deadlines.map(deadline => (
-            <div
-              key={deadline.id}
-              className={`rounded-lg border p-3 ${
-                deadline.urgent
-                  ? 'border-orange-200 bg-orange-50'
-                  : 'border-gray-200 bg-gray-50'
-              }`}
-            >
-              <div className="mb-1 flex items-center justify-between">
-                <p className="text-sm font-medium">{deadline.title}</p>
-                {deadline.urgent && (
-                  <AlertCircle className="h-4 w-4 text-orange-600" />
-                )}
-              </div>
-              <p className="text-xs text-gray-600">{deadline.project}</p>
-              <p
-                className={`mt-1 text-xs ${
-                  deadline.urgent
-                    ? 'font-medium text-orange-600'
-                    : 'text-gray-500'
-                }`}
-              >
-                {deadline.dueDate}
-              </p>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  )
-}
-
 export default function DashboardPage() {
   return (
     <div className="mx-auto max-w-7xl space-y-8 p-6">
@@ -517,15 +492,7 @@ export default function DashboardPage() {
         <UserProfile />
       </Suspense>
 
-      <DashboardStats />
-
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <div className="space-y-6">
-          <QuickActions />
-          <UpcomingDeadlines />
-        </div>
-        <RecentActivity />
-      </div>
+      <DashboardContent />
     </div>
   )
 }

@@ -25,7 +25,7 @@ function UserMenu() {
 
   async function handleSignOut() {
     await signOut()
-    mutate('/api/user').catch(err => {
+    await mutate('/api/user').catch(err => {
       console.error('[UserMenu]: Error mutating user', err)
     })
     router.push('/')

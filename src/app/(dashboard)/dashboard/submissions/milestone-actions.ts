@@ -1,9 +1,7 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { getSession } from '@/lib/auth/session'
 import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db/drizzle'
 import { milestones } from '@/lib/db/schema'
@@ -18,9 +16,14 @@ import {
 } from '@/lib/db/queries'
 import { validatedActionWithUser } from '@/lib/auth/middleware'
 
+/**
+ * Schema for completing a milestone with payout
+ * Note: Defined manually due to drizzle-zod .extend() type inference issues
+ * Matches insertPayoutSchema structure with FormData-specific fields
+ */
 const CompleteMilestoneSchema = z.object({
-  milestoneId: z.number(),
-  committeeId: z.number(),
+  milestoneId: z.coerce.number().min(1, 'Invalid milestone ID'),
+  committeeId: z.coerce.number().min(1, 'Invalid committee ID'),
   transactionHash: z
     .string()
     .min(1, 'Transaction hash is required')
@@ -29,121 +32,99 @@ const CompleteMilestoneSchema = z.object({
     .string()
     .url('Must be a valid URL')
     .max(500, 'URL is too long'),
-  amount: z.number().min(0, 'Amount must be positive'),
+  amount: z.coerce.number().min(0, 'Amount must be positive'),
   walletFrom: z.string().optional(),
   walletTo: z.string().optional(),
 })
 
-export async function completeMilestone(formData: FormData) {
-  console.log('[completeMilestone]: Starting milestone completion process')
+type CompleteMilestoneData = z.infer<typeof CompleteMilestoneSchema>
 
-  const session = await getSession()
-  if (!session?.user) {
-    console.log('[completeMilestone]: No authenticated user')
-    redirect('/sign-in')
-  }
-
-  const rawData = {
-    milestoneId: parseInt(formData.get('milestoneId') as string),
-    committeeId: parseInt(formData.get('committeeId') as string),
-    transactionHash: formData.get('transactionHash') as string,
-    blockExplorerUrl: formData.get('blockExplorerUrl') as string,
-    amount: parseFloat(formData.get('amount') as string),
-    walletFrom: (formData.get('walletFrom') as string) || undefined,
-    walletTo: (formData.get('walletTo') as string) || undefined,
-  }
-
-  console.log(
-    '[completeMilestone]: Processing data for milestone',
-    rawData.milestoneId
-  )
-
-  const validation = CompleteMilestoneSchema.safeParse(rawData)
-  if (!validation.success) {
-    console.log(
-      '[completeMilestone]: Validation failed',
-      validation.error.issues
-    )
-    return {
-      error: `Invalid form data: ${validation.error.issues
-        .map(i => i.message)
-        .join(', ')}`,
-    }
-  }
-
-  const data = validation.data
-
-  try {
-    // Verify user is a reviewer for this committee
-    const isAuthorized = await isUserReviewer(session.user.id)
-    if (!isAuthorized) {
-      console.log('[completeMilestone]: User not authorized')
-      return {
-        error: 'You are not authorized to complete milestones',
-      }
-    }
-
-    // Get milestone details for notification
-    const milestone = await getMilestoneById(data.milestoneId)
-    if (!milestone) {
-      return {
-        error: 'Milestone not found',
-      }
-    }
-
-    // Complete the milestone with payout
-    const result = await completeMilestoneWithPayout({
+export const completeMilestone = validatedActionWithUser(
+  CompleteMilestoneSchema,
+  async (
+    data: CompleteMilestoneData,
+    formData: FormData,
+    user: { id: number; email: string | null }
+  ) => {
+    console.log('[completeMilestone]: Starting milestone completion process', {
       milestoneId: data.milestoneId,
-      groupId: milestone.groupId,
-      reviewerId: session.user.id,
-      transactionHash: data.transactionHash,
-      blockExplorerUrl: data.blockExplorerUrl,
-      amount: data.amount,
-      walletFrom: data.walletFrom,
-      walletTo: data.walletTo,
+      userId: user.id,
     })
 
-    console.log(
-      '[completeMilestone]: Milestone completed successfully',
-      result.milestone.id
-    )
-
-    // Create notification for the submission owner
     try {
-      await createNotification({
-        userId: milestone.submissionId, // This should be the submitter ID, need to get it properly
-        type: 'milestone_completed',
-        content: `Milestone "${milestone.title}" has been completed and payment has been processed.`,
-        submissionId: milestone.submissionId,
+      // Verify user is a reviewer for this committee
+      const isAuthorized = await isUserReviewer(user.id)
+      if (!isAuthorized) {
+        console.log('[completeMilestone]: User not authorized')
+        return {
+          error: 'You are not authorized to complete milestones',
+        }
+      }
+
+      // Get milestone details for notification
+      const milestone = await getMilestoneById(data.milestoneId)
+      if (!milestone) {
+        return {
+          error: 'Milestone not found',
+        }
+      }
+
+      // Complete the milestone with payout
+      const result = await completeMilestoneWithPayout({
         milestoneId: data.milestoneId,
         groupId: milestone.groupId,
+        reviewerId: user.id,
+        transactionHash: data.transactionHash,
+        blockExplorerUrl: data.blockExplorerUrl,
+        amount: data.amount,
+        walletFrom: data.walletFrom,
+        walletTo: data.walletTo,
       })
-    } catch (notificationError) {
+
       console.log(
-        '[completeMilestone]: Failed to create notification',
-        notificationError
+        '[completeMilestone]: Milestone completed successfully',
+        result.milestone.id
       )
-      // Don't fail the whole operation for notification errors
-    }
 
-    // Revalidate relevant pages
-    revalidatePath('/dashboard/submissions')
-    revalidatePath(`/dashboard/submissions/${milestone.submissionId}`)
-    revalidatePath('/dashboard/review')
+      // Create notification for the submission owner
+      try {
+        await createNotification({
+          userId: milestone.submissionId, // This should be the submitter ID, need to get it properly
+          type: 'milestone_completed',
+          content: `Milestone "${milestone.title}" has been completed and payment has been processed.`,
+          submissionId: milestone.submissionId,
+          milestoneId: data.milestoneId,
+          groupId: milestone.groupId,
+        })
+      } catch (notificationError) {
+        console.log(
+          '[completeMilestone]: Failed to create notification',
+          notificationError
+        )
+        // Don't fail the whole operation for notification errors
+      }
 
-    return {
-      success: true,
-      message: 'Milestone completed and payment processed successfully',
-      payout: result.payout,
-    }
-  } catch (error) {
-    console.error('[completeMilestone]: Error completing milestone', error)
-    return {
-      error:
-        error instanceof Error ? error.message : 'Failed to complete milestone',
+      // Revalidate relevant pages
+      revalidatePath('/dashboard/submissions')
+      revalidatePath(`/dashboard/submissions/${milestone.submissionId}`)
+      revalidatePath('/dashboard/review')
+
+      return {
+        success: true,
+        message: 'Milestone completed and payment processed successfully',
+        payout: result.payout,
+      }
+    } catch (error) {
+      console.error('[completeMilestone]: Error completing milestone', error)
+      return {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to complete milestone',
+      }
     }
   }
-}
+)
 
 // eslint-disable-next-line @typescript-eslint/require-await
 export async function validateTransactionHash(
@@ -297,15 +278,24 @@ export const submitMilestone = validatedActionWithUser(
       const { getMilestonesBySubmission } = await import('@/lib/db/queries')
       const allMilestones = await getMilestonesBySubmission(submission.id)
 
-      // Sort milestones by creation order
-      const sortedMilestones = allMilestones.sort(
-        (a, b) =>
-          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
-      )
+      // Sort milestones by ID (which is auto-incrementing serial, representing creation order)
+      // This is more reliable than createdAt timestamps which can be affected by clock skew
+      const sortedMilestones = allMilestones.sort((a, b) => a.id - b.id)
 
       const targetMilestoneIndex = sortedMilestones.findIndex(
         m => m.id === data.milestoneId
       )
+
+      console.log('[submitMilestone]: Checking milestone order', {
+        targetMilestoneId: data.milestoneId,
+        targetMilestoneTitle: milestone.title,
+        targetIndex: targetMilestoneIndex,
+        allMilestones: sortedMilestones.map(m => ({
+          id: m.id,
+          title: m.title,
+          status: m.status,
+        })),
+      })
 
       // Check all previous milestones are completed
       for (let i = 0; i < targetMilestoneIndex; i++) {

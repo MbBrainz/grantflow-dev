@@ -38,11 +38,11 @@ const voteOptions = [
       'This submission meets the requirements and should be approved',
   },
   {
-    value: 'request_changes',
-    label: 'Request Changes',
+    value: 'abstain',
+    label: 'Abstain',
     icon: AlertCircle,
     color: 'bg-yellow-50 border-yellow-200 text-yellow-800 hover:bg-yellow-100',
-    description: 'This submission needs improvements before approval',
+    description: 'Abstain from voting on this submission',
   },
   {
     value: 'reject',
@@ -88,11 +88,7 @@ export function ReviewerVoting({
 
     startTransition(async () => {
       try {
-        // Create a vote message in the discussion
-        const content = `**${selectedVote.replace('_', ' ').toUpperCase()}** ${feedback ? `\n\n${feedback}` : ''}`
-
         console.log('[ReviewerVoting]: Submitting vote with data:', {
-          content,
           submissionId,
           milestoneId,
           selectedVote,
@@ -100,40 +96,34 @@ export function ReviewerVoting({
           currentUser: currentUser?.id,
         })
 
-        // Use the existing postMessageToSubmission or postMessageToMilestone action
-        const { postMessageToSubmission, postMessageToMilestone } =
-          await import(
-            '@/app/(dashboard)/dashboard/submissions/discussion-actions'
-          )
+        const { submitReview } = await import(
+          '@/app/(dashboard)/dashboard/submissions/actions'
+        )
 
-        let result
+        // Create FormData with the required fields
         const formData = new FormData()
-        formData.append('content', content)
-        formData.append('messageType', 'vote')
+        formData.append('submissionId', String(submissionId))
 
+        // milestoneId is optional - only add if present
         if (milestoneId) {
           formData.append('milestoneId', String(milestoneId))
-          console.log(
-            '[ReviewerVoting]: Calling postMessageToMilestone with FormData:',
-            {
-              content,
-              milestoneId,
-              messageType: 'vote',
-            }
-          )
-          result = await postMessageToMilestone({}, formData)
-        } else {
-          formData.append('submissionId', String(submissionId))
-          console.log(
-            '[ReviewerVoting]: Calling postMessageToSubmission with FormData:',
-            {
-              content,
-              submissionId,
-              messageType: 'vote',
-            }
-          )
-          result = await postMessageToSubmission({}, formData)
         }
+
+        formData.append('vote', selectedVote)
+
+        if (feedback) {
+          formData.append('feedback', feedback)
+        }
+
+        console.log('[ReviewerVoting]: Calling submitReview with FormData:', {
+          submissionId,
+          milestoneId: milestoneId ?? 'none',
+          vote: selectedVote,
+          feedback: feedback || 'none',
+        })
+
+        // Call the action with empty prevState and formData
+        const result = await submitReview({}, formData)
 
         console.log('[ReviewerVoting]: Action result:', result)
 
@@ -275,8 +265,8 @@ export function ReviewerVoting({
                       placeholder={
                         selectedVote === 'approve'
                           ? 'Any additional comments on this submission...'
-                          : selectedVote === 'request_changes'
-                            ? 'What changes are needed for approval?'
+                          : selectedVote === 'abstain'
+                            ? 'Reason for abstaining (optional)...'
                             : 'Why should this submission be rejected?'
                       }
                       value={feedback}

@@ -1,8 +1,8 @@
 #!/usr/bin/env sh
 
 # Run type-check
-echo "Running type-check..."
-pnpm type-check || exit 1
+echo "Running typecheck..."
+pnpm typecheck || exit 1
 
 # Run lint
 echo "Running lint..."

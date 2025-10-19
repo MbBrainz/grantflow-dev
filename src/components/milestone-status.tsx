@@ -244,10 +244,12 @@ export function MilestoneStatus({
         {showCompletionForm && (
           <div className="border-t pt-4">
             <MilestoneCompletionForm
-              milestoneId={milestone.id}
+              milestone={{
+                id: milestone.id,
+                title: milestone.title,
+                amount: milestone.amount,
+              }}
               committeeId={committeeId}
-              milestoneTitle={milestone.title}
-              milestoneAmount={milestone.amount ?? undefined}
               onSuccess={handleCompletionSuccess}
               onCancel={() => setShowCompletionForm(false)}
             />

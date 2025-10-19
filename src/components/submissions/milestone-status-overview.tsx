@@ -19,11 +19,13 @@ import {
   GitBranch,
   DollarSign,
   Calendar,
+  Send,
 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import type { Milestone, Submission } from '@/lib/db/schema'
 
 interface MilestoneStatusOverviewProps {
-  submission: Pick<Submission, 'id' | 'title' | 'status'> & {
+  submission: Pick<Submission, 'id' | 'title' | 'status' | 'submitterId'> & {
     milestones: Pick<
       Milestone,
       | 'id'
@@ -39,6 +41,8 @@ interface MilestoneStatusOverviewProps {
       | 'createdAt'
     >[]
   }
+  currentUserId?: number | null
+  onSubmitMilestone?: (milestoneId: number) => void
   className?: string
 }
 
@@ -142,9 +146,12 @@ function getCurrentActiveStep(
 
 export function MilestoneStatusOverview({
   submission,
+  currentUserId = null,
+  onSubmitMilestone,
   className = '',
 }: MilestoneStatusOverviewProps) {
   const milestones = submission.milestones ?? []
+  const isGrantee = currentUserId && submission.submitterId === currentUserId
 
   if (milestones.length === 0) {
     return (
@@ -253,6 +260,23 @@ export function MilestoneStatusOverview({
               </Badge>
             </div>
           </CardHeader>
+
+          {/* Submit for Review Button - Only show for grantee on in-progress milestones */}
+          {isGrantee &&
+            activeStep.milestone &&
+            (activeStep.milestone.status === 'pending' ||
+              activeStep.milestone.status === 'changes-requested') &&
+            onSubmitMilestone && (
+              <CardContent className="pt-0">
+                <Button
+                  onClick={() => onSubmitMilestone(activeStep.milestone.id)}
+                  className="flex w-full items-center justify-center gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  Submit Milestone for Review
+                </Button>
+              </CardContent>
+            )}
         </Card>
       )}
 

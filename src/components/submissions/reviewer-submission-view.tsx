@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { DiscussionThread } from '@/components/discussion/discussion-thread'
 import { ReviewerVoting } from '@/components/discussion/reviewer-voting'
+import Link from 'next/link'
 import {
   Vote,
   Clock,
@@ -45,6 +46,25 @@ export function ReviewerSubmissionView({
   const userHasVoted = reviews.some(r => r.reviewerId === currentUser?.id)
   const needsMyVote =
     !userHasVoted && submission.userContext?.isCommitteeReviewer
+
+  // Calculate milestone review status
+  const milestones = submission.milestones ?? []
+  const milestonesNeedingReview = milestones.filter(milestone => {
+    // Only consider milestones in 'in-review' status
+    // 'changes-requested' means committee has reviewed and grantee needs to make changes
+    if (milestone.status !== 'in-review') {
+      return false
+    }
+
+    // Check if current user has already reviewed this milestone
+    const milestoneReviews =
+      submission.reviews?.filter(r => r.milestoneId === milestone.id) ?? []
+    const userHasReviewedMilestone = milestoneReviews.some(
+      r => r.reviewerId === currentUser?.id
+    )
+
+    return !userHasReviewedMilestone
+  })
 
   return (
     <div className="space-y-6">
@@ -155,6 +175,86 @@ export function ReviewerSubmissionView({
           </div>
         )}
       </Card>
+
+      {/* Milestone Reviews Needed */}
+      {milestonesNeedingReview.length > 0 && (
+        <Card className="border-l-4 border-l-orange-500 bg-orange-50/50 p-6">
+          <div className="mb-4 flex items-start gap-4">
+            <div className="rounded-full bg-orange-100 p-3 text-orange-600">
+              <Target className="h-6 w-6" />
+            </div>
+            <div className="flex-1">
+              <div className="mb-2 flex items-center gap-3">
+                <h2 className="text-2xl font-bold">Milestone Reviews Needed</h2>
+                <Badge className="animate-pulse bg-orange-100 text-orange-800">
+                  {milestonesNeedingReview.length} Pending
+                </Badge>
+              </div>
+              <p className="text-lg text-gray-600">
+                The following milestones are awaiting your review.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {milestonesNeedingReview.map(milestone => (
+              <div
+                key={milestone.id}
+                className="rounded-lg border border-orange-200 bg-white p-4"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="mb-2 flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-500">
+                        Milestone{' '}
+                        {milestones.findIndex(m => m.id === milestone.id) + 1}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={
+                          milestone.status === 'in-review'
+                            ? 'border-purple-300 bg-purple-50 text-purple-700'
+                            : 'border-blue-300 bg-blue-50 text-blue-700'
+                        }
+                      >
+                        {milestone.status.replace('-', ' ')}
+                      </Badge>
+                    </div>
+                    <h3 className="mb-1 font-semibold">{milestone.title}</h3>
+                    {milestone.description && (
+                      <p className="mb-2 text-sm text-gray-600">
+                        {milestone.description}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-4 text-sm text-gray-500">
+                      {milestone.amount && (
+                        <div className="flex items-center gap-1">
+                          <DollarSign className="h-4 w-4" />$
+                          {milestone.amount.toLocaleString()}
+                        </div>
+                      )}
+                      {milestone.submittedAt && (
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-4 w-4" />
+                          Submitted{' '}
+                          {new Date(milestone.submittedAt).toLocaleDateString()}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <Link
+                    href={`/dashboard/submissions/${submission.id}#milestone-${milestone.id}`}
+                  >
+                    <Button variant="default" size="sm" className="ml-4">
+                      Review Milestone
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Tabbed Content */}
       <Card className="p-6">

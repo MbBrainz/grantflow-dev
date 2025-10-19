@@ -1,24 +1,59 @@
 'use server'
 
 import { z } from 'zod'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '@/lib/db/drizzle'
+import type { NewReview } from '@/lib/db/schema'
 import {
   submissions,
   milestones,
+  grantPrograms,
   type NewSubmission,
   type NewMilestone,
+  reviews,
+  insertReviewSchema,
 } from '@/lib/db/schema'
 import {
   getUser,
   ensureDiscussionForSubmission,
   ensureDiscussionForMilestone,
+  getSubmissionById,
 } from '@/lib/db/queries'
+import { getGroups } from '@/lib/db/queries/groups'
 import { revalidatePath } from 'next/cache'
 import {
   GITHUB_URL_REGEX,
   parseRequirements,
 } from '@/lib/validation/submission'
+import { validatedActionWithUser } from '@/lib/auth/middleware'
+
+// Fetch active grant programs with their committees for submission
+export async function getActiveGrantPrograms() {
+  try {
+    const committees = await getGroups('committee')
+
+    // Get all grant programs for all committees
+    const programsWithCommittees = await Promise.all(
+      committees.map(async committee => {
+        const programs = await db.query.grantPrograms.findMany({
+          where: eq(grantPrograms.isActive, true),
+          with: {
+            group: true,
+          },
+        })
+        return programs.filter(p => p.groupId === committee.id)
+      })
+    )
+
+    // Flatten the array and return programs with committee info
+    const allPrograms = programsWithCommittees.flat()
+
+    return { success: true, programs: allPrograms }
+  } catch (error) {
+    console.error('[actions]: Error fetching grant programs', error)
+    return { success: false, error: 'Failed to fetch grant programs' }
+  }
+}
 
 // Validation schemas (prefixed with _ to indicate unused but kept for future use)
 const _milestoneSchema = z.object({
@@ -370,5 +405,138 @@ export async function getUserSubmissions() {
     return []
   }
 }
+
+// Pure function: Check if user already has a review
+async function findExistingReview(params: NewReview) {
+  const conditions = [
+    eq(reviews.submissionId, params.submissionId),
+    eq(reviews.reviewerId, params.reviewerId),
+  ]
+
+  // If milestoneId is provided, include it in the check
+  if (params.milestoneId) {
+    conditions.push(eq(reviews.milestoneId, params.milestoneId))
+  }
+
+  return await db.query.reviews.findFirst({
+    where: and(...conditions),
+  })
+}
+
+// Pure function: Build review record
+function buildReviewRecord(params: NewReview): NewReview {
+  return {
+    submissionId: params.submissionId,
+    milestoneId: params.milestoneId ?? null,
+    reviewerId: params.reviewerId,
+    groupId: params.groupId,
+    vote: params.vote,
+    feedback: params.feedback ?? null,
+    reviewType: 'standard',
+    weight: 1,
+    isBinding: false,
+  }
+}
+
+// Pure function: Determine which paths to revalidate
+function getRevalidationPaths(
+  submissionId: number,
+  milestoneId?: number
+): string[] {
+  const paths = [
+    '/dashboard/submissions',
+    `/dashboard/submissions/${submissionId}`,
+    '/dashboard/review',
+  ]
+
+  // Add milestone-specific path if applicable
+  if (milestoneId) {
+    paths.push(
+      `/dashboard/submissions/${submissionId}/milestones/${milestoneId}`
+    )
+  }
+
+  return paths
+}
+
+/**
+ * Unified action for submitting reviews
+ * Handles both submission-level and milestone-level reviews
+ */
+export const submitReview = validatedActionWithUser(
+  insertReviewSchema,
+  async (data: NewReview, formData: FormData, user) => {
+    const reviewType = data.milestoneId ? 'milestone' : 'submission'
+
+    console.log(`[submitReview]: Submitting ${reviewType} review`, {
+      submissionId: data.submissionId,
+      milestoneId: data.milestoneId,
+      vote: data.vote,
+      userId: user.id,
+    })
+
+    try {
+      // Verify submission exists
+      const submission = await getSubmissionById(data.submissionId)
+      if (!submission) {
+        return { error: 'Submission not found' }
+      }
+
+      // Check if user already has a review for this submission/milestone
+      const existingReview = await findExistingReview({
+        groupId: submission.submitterGroupId,
+        submissionId: data.submissionId,
+        milestoneId: data.milestoneId,
+        reviewerId: user.id,
+      })
+
+      if (existingReview) {
+        const target = data.milestoneId ? 'milestone' : 'submission'
+        return { error: `You already have a review for this ${target}` }
+      }
+
+      // Build and create the review record
+      const newReview = buildReviewRecord({
+        submissionId: data.submissionId,
+        milestoneId: data.milestoneId,
+        reviewerId: user.id,
+        groupId: submission.reviewerGroupId ?? 1,
+        vote: data.vote,
+        feedback: data.feedback,
+      })
+
+      const [createdReview] = await db
+        .insert(reviews)
+        .values(newReview)
+        .returning()
+
+      if (!createdReview) {
+        return { error: 'Failed to create review' }
+      }
+
+      console.log(`[submitReview]: ${reviewType} review created successfully`, {
+        reviewId: createdReview.id,
+        submissionId: data.submissionId,
+        milestoneId: data.milestoneId,
+      })
+
+      // Revalidate all relevant paths
+      const paths = getRevalidationPaths(
+        data.submissionId,
+        data.milestoneId ?? undefined
+      )
+      paths.forEach(path => revalidatePath(path))
+
+      return {
+        success: true,
+        reviewId: createdReview.id,
+        message: `Review submitted successfully for ${reviewType}`,
+      }
+    } catch (error) {
+      console.error('[submitReview]: Error submitting review', error)
+      return { error: 'Failed to submit review. Please try again.' }
+    }
+  }
+)
 
 export type UserSubmissions = Awaited<ReturnType<typeof getUserSubmissions>>

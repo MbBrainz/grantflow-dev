@@ -16,7 +16,7 @@ import {
 
 config()
 
-const client = postgres(process.env.POSTGRES_URL!)
+const client = postgres(process.env.DATABASE_URL!)
 const db = drizzle(client)
 
 /**

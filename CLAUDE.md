@@ -404,7 +404,7 @@ npm run dev:turbo    # Start with Turbopack (faster)
 npm run build        # Production build
 npm run start        # Start production server
 npm run lint         # Run ESLint
-npm run type-check   # TypeScript validation
+npm run typecheck   # TypeScript validation
 ```
 
 npm install ai @ai-sdk/openai @ai-sdk/anthropic # Install core packages

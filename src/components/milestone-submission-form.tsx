@@ -152,12 +152,21 @@ export function MilestoneSubmissionForm({
       )
     }
 
-    if (!deliverables.trim()) {
+    const trimmedDeliverables = deliverables.trim()
+
+    if (!trimmedDeliverables) {
       setError(
         'Please provide a description of deliverables for this milestone'
       )
       throw new Error(
         'Please provide a description of deliverables for this milestone'
+      )
+    }
+
+    if (trimmedDeliverables.length < 10) {
+      setError('Deliverables description must be at least 10 characters long')
+      throw new Error(
+        'Deliverables description must be at least 10 characters long'
       )
     }
 
@@ -167,7 +176,7 @@ export function MilestoneSubmissionForm({
       await onSubmit({
         milestoneId: milestone.id,
         selectedCommits: Array.from(selectedCommits),
-        deliverables: deliverables.trim(),
+        deliverables: trimmedDeliverables,
         githubCommitHashes: Array.from(selectedCommits),
       })
 
@@ -183,7 +192,12 @@ export function MilestoneSubmissionForm({
         '[MilestoneSubmissionForm]: Error submitting milestone',
         err
       )
-      setError('Failed to submit milestone. Please try again.')
+      // Check if the error has a message from the server
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : 'Failed to submit milestone. Please try again.'
+      setError(errorMessage)
       throw err // Re-throw for AsyncButton
     }
   }
@@ -411,16 +425,34 @@ export function MilestoneSubmissionForm({
             </label>
             <textarea
               id="deliverables"
-              className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-[120px] w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              className={`border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring min-h-[120px] w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 ${
+                deliverables.trim().length > 0 &&
+                deliverables.trim().length < 10
+                  ? 'border-red-300 focus-visible:ring-red-500'
+                  : ''
+              }`}
               placeholder="Provide a detailed description of what you've delivered for this milestone. Explain how the selected commits demonstrate completion of the requirements..."
               value={deliverables}
               onChange={e => setDeliverables(e.target.value)}
               required
             />
-            <p className="text-xs text-gray-500">
-              Be specific about features implemented, bugs fixed, and
-              requirements addressed
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">
+                Be specific about features implemented, bugs fixed, and
+                requirements addressed
+              </p>
+              <p
+                className={`text-xs ${
+                  deliverables.trim().length === 0
+                    ? 'text-gray-400'
+                    : deliverables.trim().length < 10
+                      ? 'text-red-600'
+                      : 'text-green-600'
+                }`}
+              >
+                {deliverables.trim().length}/10 characters
+              </p>
+            </div>
           </div>
         </CardContent>
       </Card>

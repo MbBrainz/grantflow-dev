@@ -11,28 +11,25 @@ import {
   completeMilestone,
   validateTransactionHash,
 } from '@/app/(dashboard)/dashboard/submissions/milestone-actions'
+import type { Milestone } from '@/lib/db/schema'
 
 interface MilestoneCompletionFormProps {
-  milestoneId: number
+  milestone: Pick<Milestone, 'id' | 'title' | 'amount'>
   committeeId: number
-  milestoneTitle: string
-  milestoneAmount?: number
   onSuccess?: () => void
   onCancel?: () => void
 }
 
 export function MilestoneCompletionForm({
-  milestoneId,
+  milestone,
   committeeId,
-  milestoneTitle,
-  milestoneAmount,
   onSuccess,
   onCancel,
 }: MilestoneCompletionFormProps) {
   const [formData, setFormData] = useState({
     transactionHash: '',
     blockExplorerUrl: '',
-    amount: milestoneAmount ?? 0,
+    amount: milestone.amount ?? 0,
     walletFrom: '',
     walletTo: '',
   })
@@ -97,7 +94,7 @@ export function MilestoneCompletionForm({
 
     try {
       const formDataObj = new FormData()
-      formDataObj.append('milestoneId', milestoneId.toString())
+      formDataObj.append('milestoneId', milestone.id.toString())
       formDataObj.append('committeeId', committeeId.toString())
       formDataObj.append('transactionHash', formData.transactionHash)
       formDataObj.append('blockExplorerUrl', formData.blockExplorerUrl)
@@ -106,19 +103,22 @@ export function MilestoneCompletionForm({
         formDataObj.append('walletFrom', formData.walletFrom)
       if (formData.walletTo) formDataObj.append('walletTo', formData.walletTo)
 
-      const result = await completeMilestone(formDataObj)
+      // Call the action with empty prevState and formData (validatedActionWithUser pattern)
+      const result = await completeMilestone({}, formDataObj)
 
-      if (result.error) {
+      if ('error' in result && result.error) {
         toast({
           title: 'Error',
           description: result.error,
           variant: 'destructive',
         })
         throw new Error(result.error)
-      } else {
+      }
+
+      if ('success' in result && result.success) {
         toast({
           title: 'Success',
-          description: result.message ?? 'Milestone completed successfully!',
+          description: result.message,
           variant: 'default',
         })
         onSuccess?.()
@@ -140,7 +140,7 @@ export function MilestoneCompletionForm({
         <div>
           <h3 className="text-lg font-semibold">Complete Milestone</h3>
           <p className="mt-1 text-sm text-gray-600">
-            Mark "{milestoneTitle}" as completed by providing the multisig
+            Mark "{milestone.title}" as completed by providing the multisig
             transaction details.
           </p>
         </div>

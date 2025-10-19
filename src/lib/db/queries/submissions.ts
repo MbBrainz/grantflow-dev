@@ -481,6 +481,7 @@ export async function getSubmissionWithMilestones(
   id: number
 ): Promise<SubmissionWithMilestones | null> {
   try {
+    const user = await getUser()
     const submission = await db.query.submissions.findFirst({
       where: eq(submissions.id, id),
       with: {
@@ -514,7 +515,38 @@ export async function getSubmissionWithMilestones(
       },
     })
 
-    return submission ?? null
+    if (!submission) return null
+
+    // Calculate user context server-side
+    let userContext:
+      | { isSubmissionOwner: boolean; isCommitteeReviewer: boolean }
+      | undefined
+    if (user) {
+      const isSubmissionOwner = submission.submitterId === user.id
+
+      // Check if user is committee reviewer
+      let isCommitteeReviewer = false
+      if (submission.reviewerGroupId && user.primaryRole === 'committee') {
+        const membership = await db.query.groupMemberships.findFirst({
+          where: and(
+            eq(groupMemberships.userId, user.id),
+            eq(groupMemberships.groupId, submission.reviewerGroupId),
+            eq(groupMemberships.isActive, true)
+          ),
+        })
+        isCommitteeReviewer = !!membership
+      }
+
+      userContext = {
+        isSubmissionOwner,
+        isCommitteeReviewer,
+      }
+    }
+
+    return {
+      ...submission,
+      userContext,
+    } as unknown as SubmissionWithMilestones
   } catch (error) {
     console.error(
       '[getSubmissionWithMilestones]: Error fetching submission',

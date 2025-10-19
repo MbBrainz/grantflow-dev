@@ -20,7 +20,7 @@ import { hashPassword } from '@/lib/auth/session'
 
 config()
 
-const client = postgres(process.env.POSTGRES_URL!)
+const client = postgres(process.env.DATABASE_URL!)
 const db = drizzle(client)
 
 async function seed() {
@@ -1097,6 +1097,155 @@ async function seed() {
     .returning()
 
   // ============================================================================
+  // ALEX CHEN SCENARIOS - Infrastructure Committee submissions requiring action
+  // ============================================================================
+
+  console.log('Creating scenarios for Alex Chen (Infrastructure Committee)...')
+
+  // SCENARIO 1: NEW PENDING SUBMISSION - Requires Alex to start review process
+  const [infraPendingSubmission1] = await db
+    .insert(submissions)
+    .values({
+      grantProgramId: infraCoreProgram.id,
+      submitterGroupId: sdkTeam.id,
+      reviewerGroupId: infraCommittee.id,
+      submitterId: teamMember1.id,
+      title: 'Advanced Blockchain Testing Framework',
+      description:
+        'A comprehensive testing framework for smart contracts with fuzzing, property-based testing, and gas optimization analysis.',
+      executiveSummary:
+        'Build the most robust testing infrastructure for blockchain development, reducing bugs and security vulnerabilities.',
+      postGrantPlan:
+        'Integrate with major development frameworks and build enterprise support.',
+      labels: JSON.stringify([
+        'Testing',
+        'Smart Contracts',
+        'Security',
+        'Developer Tools',
+      ]),
+      githubRepoUrl: 'https://github.com/nextgen-sdk/testing-framework',
+      walletAddress: teamMember1.walletAddress,
+      status: 'pending',
+      totalAmount: 100000,
+      appliedAt: new Date('2024-02-10'),
+      createdAt: new Date('2024-02-10'),
+      updatedAt: new Date('2024-02-10'),
+    })
+    .returning()
+
+  // SCENARIO 2: PENDING SUBMISSION - Developer Tools Program
+  const [infraPendingSubmission2] = await db
+    .insert(submissions)
+    .values({
+      grantProgramId: _infraToolsProgram.id,
+      submitterGroupId: researchTeam.id,
+      reviewerGroupId: infraCommittee.id,
+      submitterId: teamMember3.id,
+      title: 'Real-time Blockchain Analytics Dashboard',
+      description:
+        'A real-time analytics and monitoring dashboard for blockchain networks with customizable alerts and performance metrics.',
+      executiveSummary:
+        'Provide developers with instant insights into blockchain performance, helping identify bottlenecks and optimize applications.',
+      postGrantPlan:
+        'Add support for more blockchain networks and build premium features.',
+      labels: JSON.stringify([
+        'Analytics',
+        'Monitoring',
+        'Dashboard',
+        'Real-time',
+      ]),
+      githubRepoUrl: 'https://github.com/l2-research-group/analytics-dash',
+      walletAddress: teamMember3.walletAddress,
+      status: 'pending',
+      totalAmount: 50000,
+      appliedAt: new Date('2024-02-12'),
+      createdAt: new Date('2024-02-12'),
+      updatedAt: new Date('2024-02-12'),
+    })
+    .returning()
+
+  // SCENARIO 3: IN-REVIEW SUBMISSION - Partial votes, needs Alex's vote
+  const [infraInReviewSubmission] = await db
+    .insert(submissions)
+    .values({
+      grantProgramId: _infraToolsProgram.id,
+      submitterGroupId: defiTeam.id,
+      reviewerGroupId: infraCommittee.id,
+      submitterId: teamMember4.id,
+      title: 'GraphQL API Generator for Smart Contracts',
+      description:
+        'Automatically generate type-safe GraphQL APIs from smart contract ABIs with built-in caching and subscription support.',
+      executiveSummary:
+        'Simplify smart contract integration by automatically generating GraphQL APIs, reducing development time by 70%.',
+      postGrantPlan: 'Expand to support REST APIs and WebSocket subscriptions.',
+      labels: JSON.stringify(['GraphQL', 'API', 'Code Generation', 'Tools']),
+      githubRepoUrl: 'https://github.com/yieldopt-protocol/graphql-gen',
+      walletAddress: teamMember4.walletAddress,
+      status: 'in-review',
+      totalAmount: 50000,
+      appliedAt: new Date('2024-01-28'),
+      createdAt: new Date('2024-01-28'),
+      updatedAt: new Date('2024-02-05'),
+    })
+    .returning()
+
+  // SCENARIO 4: IN-REVIEW SUBMISSION - Near approval threshold
+  const [infraInReviewSubmission2] = await db
+    .insert(submissions)
+    .values({
+      grantProgramId: infraCoreProgram.id,
+      submitterGroupId: educationTeam.id,
+      reviewerGroupId: infraCommittee.id,
+      submitterId: teamMember2.id,
+      title: 'Zero-Knowledge Proof Development Toolkit',
+      description:
+        'A comprehensive toolkit for building zero-knowledge proof applications with visual circuit designers and optimization tools.',
+      executiveSummary:
+        'Make ZK development accessible to all developers with intuitive tools and extensive documentation.',
+      postGrantPlan:
+        'Build enterprise features and integrate with major ZK frameworks.',
+      labels: JSON.stringify([
+        'Zero-Knowledge',
+        'Privacy',
+        'Cryptography',
+        'Tools',
+      ]),
+      githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
+      walletAddress: teamMember2.walletAddress,
+      status: 'in-review',
+      totalAmount: 100000,
+      appliedAt: new Date('2024-01-20'),
+      createdAt: new Date('2024-01-20'),
+      updatedAt: new Date('2024-02-08'),
+    })
+    .returning()
+
+  // SCENARIO 5: APPROVED SUBMISSION with milestones needing review
+  const [infraApprovedWithMilestones] = await db
+    .insert(submissions)
+    .values({
+      grantProgramId: _infraToolsProgram.id,
+      submitterGroupId: gamingTeam.id,
+      reviewerGroupId: infraCommittee.id,
+      submitterId: teamMember5.id,
+      title: 'Web3 State Management Library',
+      description:
+        'A React state management library optimized for Web3 applications with automatic wallet connection, transaction tracking, and caching.',
+      executiveSummary:
+        'Simplify Web3 frontend development with a powerful state management solution built specifically for blockchain applications.',
+      postGrantPlan: 'Add support for Vue and Svelte frameworks.',
+      labels: JSON.stringify(['React', 'State Management', 'Web3', 'Frontend']),
+      githubRepoUrl: 'https://github.com/nft-gaming-studio/web3-state',
+      walletAddress: teamMember5.walletAddress,
+      status: 'approved',
+      totalAmount: 50000,
+      appliedAt: new Date('2024-01-05'),
+      createdAt: new Date('2024-01-05'),
+      updatedAt: new Date('2024-01-15'),
+    })
+    .returning()
+
+  // ============================================================================
   // DISCUSSIONS - Create discussion threads for submissions
   // ============================================================================
 
@@ -1147,6 +1296,57 @@ async function seed() {
     .values({
       submissionId: pendingEducationSubmission.id,
       groupId: researchCommittee.id,
+      type: 'submission',
+      isPublic: true,
+    })
+    .returning()
+
+  // Discussions for Alex Chen's Infrastructure Committee scenarios
+  const [infraPending1Discussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: infraPendingSubmission1.id,
+      groupId: infraCommittee.id,
+      type: 'submission',
+      isPublic: true,
+    })
+    .returning()
+
+  const [infraPending2Discussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: infraPendingSubmission2.id,
+      groupId: infraCommittee.id,
+      type: 'submission',
+      isPublic: true,
+    })
+    .returning()
+
+  const [infraInReviewDiscussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: infraInReviewSubmission.id,
+      groupId: infraCommittee.id,
+      type: 'submission',
+      isPublic: true,
+    })
+    .returning()
+
+  const [infraInReview2Discussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: infraInReviewSubmission2.id,
+      groupId: infraCommittee.id,
+      type: 'submission',
+      isPublic: true,
+    })
+    .returning()
+
+  const [infraApprovedDiscussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: infraApprovedWithMilestones.id,
+      groupId: infraCommittee.id,
       type: 'submission',
       isPublic: true,
     })
@@ -1251,6 +1451,79 @@ async function seed() {
     },
   ] as NewMessage[])
 
+  // Messages for Alex Chen's Infrastructure Committee scenarios
+  await db.insert(messages).values([
+    // Pending submission 1 - No messages yet, awaiting review
+
+    // Pending submission 2 - Just submitted
+    {
+      discussionId: infraPending2Discussion.id,
+      authorId: teamMember3.id,
+      content:
+        'Excited to submit our analytics dashboard proposal! We have a working prototype and strong user feedback from beta testers.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-12T10:00:00Z'),
+    },
+
+    // In-review submission - Partial votes, needs Alex
+    {
+      discussionId: infraInReviewDiscussion.id,
+      authorId: reviewer2.id,
+      content:
+        'The GraphQL code generation approach is innovative. I like the automatic type safety features.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-01T11:00:00Z'),
+    },
+    {
+      discussionId: infraInReviewDiscussion.id,
+      authorId: teamMember4.id,
+      content:
+        "Thanks! We've also added support for subscriptions and real-time updates in the latest version.",
+      messageType: 'comment',
+      createdAt: new Date('2024-02-02T09:30:00Z'),
+    },
+
+    // In-review submission 2 - Near threshold
+    {
+      discussionId: infraInReview2Discussion.id,
+      authorId: reviewer2.id,
+      content:
+        'The ZK toolkit addresses a real pain point in the ecosystem. The visual circuit designer could be groundbreaking.',
+      messageType: 'comment',
+      createdAt: new Date('2024-01-25T14:00:00Z'),
+    },
+    {
+      discussionId: infraInReview2Discussion.id,
+      authorId: teamMember2.id,
+      content:
+        'We have partnerships with two major ZK frameworks already committed to integrating our toolkit.',
+      messageType: 'comment',
+      createdAt: new Date('2024-01-28T10:00:00Z'),
+    },
+    {
+      discussionId: infraInReview2Discussion.id,
+      authorId: reviewer2.id,
+      content:
+        "That's impressive! Looking forward to seeing this move forward. We need more votes for approval.",
+      messageType: 'comment',
+      createdAt: new Date('2024-02-08T16:00:00Z'),
+    },
+
+    // Approved submission with milestones
+    {
+      discussionId: infraApprovedDiscussion.id,
+      authorId: reviewer1.id,
+      content:
+        'Web3 state management is crucial for developer experience. Approved!',
+      messageType: 'status_change',
+      metadata: JSON.stringify({
+        newStatus: 'approved',
+        oldStatus: 'in-review',
+      }),
+      createdAt: new Date('2024-01-15T09:00:00Z'),
+    },
+  ] as NewMessage[])
+
   // ============================================================================
   // REVIEWS - Create reviewer reviews/votes
   // ============================================================================
@@ -1343,6 +1616,79 @@ async function seed() {
       weight: 1,
       isBinding: false,
       createdAt: new Date('2024-01-20T14:00:00Z'),
+    },
+  ])
+
+  // Reviews for Alex Chen's Infrastructure Committee scenarios
+  await db.insert(reviews).values([
+    // GraphQL API Generator - Has one approve vote from Maria, needs Alex's vote (and one more)
+    {
+      submissionId: infraInReviewSubmission.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer2.id,
+      discussionId: infraInReviewDiscussion.id,
+      vote: 'approve',
+      feedback:
+        'Innovative approach to GraphQL generation. The type safety features are excellent.',
+      reviewType: 'standard',
+      weight: 1,
+      isBinding: false,
+      createdAt: new Date('2024-02-05T11:30:00Z'),
+    },
+
+    // ZK Toolkit - Has two approve votes, needs Alex's final vote for approval (threshold is 3)
+    {
+      submissionId: infraInReviewSubmission2.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer2.id,
+      discussionId: infraInReview2Discussion.id,
+      vote: 'approve',
+      feedback:
+        'The visual circuit designer is a game changer for ZK development accessibility.',
+      reviewType: 'standard',
+      weight: 1,
+      isBinding: false,
+      createdAt: new Date('2024-02-01T14:00:00Z'),
+    },
+    {
+      submissionId: infraInReviewSubmission2.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer3.id,
+      discussionId: infraInReview2Discussion.id,
+      vote: 'approve',
+      feedback:
+        'Strong partnerships and clear market need. The team has the right expertise.',
+      reviewType: 'standard',
+      weight: 1,
+      isBinding: false,
+      createdAt: new Date('2024-02-07T10:00:00Z'),
+    },
+
+    // Web3 State Management - Already approved, Alex gave final approval
+    {
+      submissionId: infraApprovedWithMilestones.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer2.id,
+      discussionId: infraApprovedDiscussion.id,
+      vote: 'approve',
+      feedback:
+        'Essential tool for Web3 frontend developers. Well-scoped project.',
+      reviewType: 'standard',
+      weight: 1,
+      isBinding: false,
+      createdAt: new Date('2024-01-10T11:00:00Z'),
+    },
+    {
+      submissionId: infraApprovedWithMilestones.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer1.id,
+      discussionId: infraApprovedDiscussion.id,
+      vote: 'approve',
+      feedback: 'Excellent state management solution for Web3 apps. Approved!',
+      reviewType: 'final',
+      weight: 2,
+      isBinding: true,
+      createdAt: new Date('2024-01-15T09:00:00Z'),
     },
   ])
 
@@ -1475,6 +1821,100 @@ async function seed() {
     })
     .returning()
 
+  // Milestones for Web3 State Management Library (infraApprovedWithMilestones)
+  const [web3StateMilestone1] = await db
+    .insert(milestones)
+    .values({
+      submissionId: infraApprovedWithMilestones.id,
+      groupId: infraCommittee.id,
+      title: 'Core State Management Implementation',
+      description:
+        'Implement core state management hooks for wallet connection, transaction tracking, and blockchain state.',
+      requirements: [
+        'Wallet connection hooks',
+        'Transaction state management',
+        'Blockchain data caching',
+        'React 18+ compatibility',
+      ],
+      amount: 20000,
+      dueDate: new Date('2024-02-20'),
+      status: 'in-review',
+      deliverables: [
+        { description: 'Core hooks implementation' },
+        { description: 'Transaction tracking system' },
+        { description: 'Caching layer' },
+        { description: 'Unit tests' },
+      ],
+      githubRepoUrl: 'https://github.com/nft-gaming-studio/web3-state',
+      githubCommitHash: 'def789ghi012',
+      codeAnalysis: JSON.stringify({
+        filesChanged: 18,
+        linesAdded: 950,
+        testCoverage: 88,
+        components: ['Wallet hooks', 'Transaction manager', 'Cache system'],
+      }),
+      submittedAt: new Date('2024-02-18T10:00:00Z'),
+      createdAt: new Date('2024-01-15T09:00:00Z'),
+      updatedAt: new Date('2024-02-18T10:00:00Z'),
+    })
+    .returning()
+
+  const [_web3StateMilestone2] = await db
+    .insert(milestones)
+    .values({
+      submissionId: infraApprovedWithMilestones.id,
+      groupId: infraCommittee.id,
+      title: 'Advanced Features & Documentation',
+      description:
+        'Add advanced features including multi-chain support, optimistic updates, and comprehensive documentation.',
+      requirements: [
+        'Multi-chain support',
+        'Optimistic UI updates',
+        'API documentation',
+        'Usage examples',
+      ],
+      amount: 20000,
+      dueDate: new Date('2024-03-30'),
+      status: 'pending',
+      deliverables: [
+        { description: 'Multi-chain integration' },
+        { description: 'Optimistic update system' },
+        { description: 'API documentation' },
+        { description: 'Example applications' },
+      ],
+      githubRepoUrl: 'https://github.com/nft-gaming-studio/web3-state',
+      createdAt: new Date('2024-01-15T09:00:00Z'),
+    })
+    .returning()
+
+  const [_web3StateMilestone3] = await db
+    .insert(milestones)
+    .values({
+      submissionId: infraApprovedWithMilestones.id,
+      groupId: infraCommittee.id,
+      title: 'Production Release & Package Publishing',
+      description:
+        'Final production release with npm package publishing and community launch.',
+      requirements: [
+        'Production build',
+        'npm package',
+        'Release documentation',
+        'Community announcement',
+      ],
+      amount: 10000,
+      dueDate: new Date('2024-04-15'),
+      status: 'pending',
+      deliverables: [
+        { description: 'Production build' },
+        { description: 'npm package published' },
+        { description: 'Release notes' },
+        { description: 'Community launch plan' },
+      ],
+      githubRepoUrl: 'https://github.com/nft-gaming-studio/web3-state',
+      createdAt: new Date('2024-01-15T09:00:00Z'),
+    })
+    .returning()
+
   // ============================================================================
   // MILESTONE DISCUSSIONS - Create discussions for milestones
   // ============================================================================
@@ -1495,6 +1935,17 @@ async function seed() {
     .values({
       submissionId: approvedSubmission.id,
       milestoneId: milestone2.id,
+      groupId: infraCommittee.id,
+      type: 'milestone',
+      isPublic: true,
+    })
+    .returning()
+
+  const [web3Milestone1Discussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: infraApprovedWithMilestones.id,
+      milestoneId: web3StateMilestone1.id,
       groupId: infraCommittee.id,
       type: 'milestone',
       isPublic: true,
@@ -1530,6 +1981,22 @@ async function seed() {
       messageType: 'comment',
       createdAt: new Date('2024-03-15T14:00:00Z'),
     },
+    {
+      discussionId: web3Milestone1Discussion.id,
+      authorId: teamMember5.id,
+      content:
+        'Milestone 1 is complete! Core wallet hooks and transaction tracking are fully implemented with 88% test coverage.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-18T10:00:00Z'),
+    },
+    {
+      discussionId: web3Milestone1Discussion.id,
+      authorId: teamMember5.id,
+      content:
+        "The caching layer significantly improves performance - we're seeing 3x faster data retrieval compared to direct RPC calls.",
+      messageType: 'comment',
+      createdAt: new Date('2024-02-18T10:30:00Z'),
+    },
   ])
 
   // ============================================================================
@@ -1564,6 +2031,21 @@ async function seed() {
       weight: 1,
       isBinding: false,
       createdAt: new Date('2024-02-12T09:00:00Z'),
+    },
+    // Web3 State Management Milestone 1 - Needs Alex's review
+    {
+      submissionId: infraApprovedWithMilestones.id,
+      milestoneId: web3StateMilestone1.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer2.id,
+      discussionId: web3Milestone1Discussion.id,
+      vote: 'approve',
+      feedback:
+        'Impressive performance improvements with the caching layer. Code quality is excellent.',
+      reviewType: 'milestone',
+      weight: 1,
+      isBinding: false,
+      createdAt: new Date('2024-02-19T11:00:00Z'),
     },
   ])
 
@@ -1672,6 +2154,91 @@ async function seed() {
       priority: 'high',
       createdAt: new Date('2024-01-22T10:30:00Z'),
     },
+
+    // ============================================================================
+    // NOTIFICATIONS FOR ALEX CHEN - Infrastructure Committee Admin
+    // ============================================================================
+
+    // New pending submissions requiring initial review
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'new_submission',
+      submissionId: infraPendingSubmission1.id,
+      discussionId: infraPending1Discussion.id,
+      read: false,
+      content:
+        'New submission requiring review: "Advanced Blockchain Testing Framework" - $100,000',
+      priority: 'high',
+      createdAt: new Date('2024-02-10T09:00:00Z'),
+    },
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'new_submission',
+      submissionId: infraPendingSubmission2.id,
+      discussionId: infraPending2Discussion.id,
+      read: false,
+      content:
+        'New submission requiring review: "Real-time Blockchain Analytics Dashboard" - $50,000',
+      priority: 'high',
+      createdAt: new Date('2024-02-12T09:00:00Z'),
+    },
+
+    // In-review submissions needing Alex's vote
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'review_requested',
+      submissionId: infraInReviewSubmission.id,
+      discussionId: infraInReviewDiscussion.id,
+      read: false,
+      content:
+        'Your vote needed: "GraphQL API Generator for Smart Contracts" - 1 of 3 votes received',
+      priority: 'high',
+      createdAt: new Date('2024-02-05T12:00:00Z'),
+    },
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'review_requested',
+      submissionId: infraInReviewSubmission2.id,
+      discussionId: infraInReview2Discussion.id,
+      read: false,
+      content:
+        'Your vote needed for approval: "Zero-Knowledge Proof Development Toolkit" - 2 of 3 votes received',
+      priority: 'high',
+      createdAt: new Date('2024-02-08T16:30:00Z'),
+    },
+
+    // Milestone review needed
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'milestone_submitted',
+      submissionId: infraApprovedWithMilestones.id,
+      milestoneId: web3StateMilestone1.id,
+      discussionId: web3Milestone1Discussion.id,
+      read: false,
+      content:
+        'Milestone submitted for review: "Core State Management Implementation" - Web3 State Management Library',
+      priority: 'high',
+      createdAt: new Date('2024-02-18T10:00:00Z'),
+    },
+
+    // New activity on submissions
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'new_comment',
+      submissionId: infraInReviewSubmission2.id,
+      discussionId: infraInReview2Discussion.id,
+      read: false,
+      content:
+        'New comment on "Zero-Knowledge Proof Development Toolkit" by Maria Rodriguez',
+      priority: 'normal',
+      createdAt: new Date('2024-02-08T16:00:00Z'),
+    },
   ])
 
   // ============================================================================
@@ -1696,7 +2263,7 @@ async function seed() {
   console.log(`\n👤 Created ${9} users:`)
   console.log('   • 4 reviewers with committee primary role')
   console.log('   • 5 team members with team primary role')
-  console.log('   • All passwords: reviewer123, team123 respectively')
+  console.log('   • All passwords: reviewer123, team1234 respectively')
 
   console.log(`\n💼 Created ${6} grant programs across committees`)
   console.log('   • Infrastructure: Core Development ($100K), Tools ($50K)')
@@ -1704,16 +2271,17 @@ async function seed() {
   console.log('   • DeFi: Protocol Development ($150K)')
   console.log('   • Gaming: Platform Development ($80K)')
 
-  console.log(`\n📋 Created ${5} submissions in various states:`)
-  console.log('   • 1 APPROVED (with milestones and payouts)')
-  console.log('   • 1 in-review (partial reviewer votes)')
-  console.log('   • 2 PENDING (just submitted)')
+  console.log(`\n📋 Created ${10} submissions in various states:`)
+  console.log('   • 2 APPROVED (with milestones and payouts)')
+  console.log('   • 3 IN-REVIEW (partial reviewer votes)')
+  console.log('   • 4 PENDING (just submitted)')
   console.log('   • 1 REJECTED (with feedback)')
 
-  console.log(`\n🎯 Created ${4} milestones for approved submission:`)
+  console.log(`\n🎯 Created ${7} milestones across approved submissions:`)
   console.log('   • 1 COMPLETED (with payout)')
-  console.log('   • 1 IN_PROGRESS')
-  console.log('   • 2 PENDING')
+  console.log('   • 1 CHANGES-REQUESTED')
+  console.log('   • 1 IN-REVIEW (submitted, awaiting approval)')
+  console.log('   • 4 PENDING')
 
   console.log(`\n💬 Created active discussions with messages and reviews`)
   console.log(`💰 Created example payouts (completed and pending)`)
@@ -1729,7 +2297,26 @@ async function seed() {
   console.log('✅ Payout processing')
   console.log('✅ Notification system')
   console.log('✅ Cross-group comparisons')
-  console.log('✅ Role-based permissions and workflows\n')
+  console.log('✅ Role-based permissions and workflows')
+
+  console.log('\n🎯 ALEX CHEN (Infrastructure Committee Admin) SCENARIOS:')
+  console.log('📥 Pending Submissions (2):')
+  console.log('   • "Advanced Blockchain Testing Framework" - $100K')
+  console.log('   • "Real-time Blockchain Analytics Dashboard" - $50K')
+  console.log('🗳️  In-Review Submissions Needing Vote (2):')
+  console.log('   • "GraphQL API Generator" - 1/3 votes')
+  console.log(
+    '   • "Zero-Knowledge Proof Toolkit" - 2/3 votes (near approval!)'
+  )
+  console.log('✅ Milestone Review (1):')
+  console.log(
+    '   • "Core State Management Implementation" - Web3 State Library'
+  )
+  console.log('🔔 Unread Notifications (6):')
+  console.log('   • 2 new submissions')
+  console.log('   • 2 review requests')
+  console.log('   • 1 milestone submission')
+  console.log('   • 1 new comment\n')
 }
 
 seed()

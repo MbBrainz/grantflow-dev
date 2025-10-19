@@ -32,10 +32,11 @@ This milestone focuses on refining the existing POC features, fixing critical bu
   - Fix state transitions
   - Ensure proper permissions
 
-- [ ] **Fix milestone submission bugs**
+- [ ] **Fix milestone submission bugs** # test this!
   - Fix file upload issues
   - Ensure proper status tracking
   - Resolve submission validation
+  - implement review milestone button
 
 ### Platform Foundation (Priority 2)
 

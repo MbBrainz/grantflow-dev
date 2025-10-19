@@ -3,7 +3,7 @@ import { config } from 'dotenv'
 
 config()
 
-const client = postgres(process.env.POSTGRES_URL!)
+const client = postgres(process.env.DATABASE_URL!)
 
 /**
  * DATABASE CLEANUP - Drop all tables and clear everything

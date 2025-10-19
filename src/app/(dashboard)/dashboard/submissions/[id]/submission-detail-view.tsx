@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { ArrowLeft } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import { postMessageToSubmission } from '../discussion-actions'
 import type { SubmissionWithMilestones } from '@/lib/db/schema'
 import type { User } from '@/lib/db/schema'
@@ -88,7 +89,7 @@ export function SubmissionDetailView({
 
         <div className="flex-1">
           <h1 className="text-2xl font-bold">{displayTitle}</h1>
-          <div className="mt-2 flex items-center gap-4 text-sm text-gray-600">
+          <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-gray-600">
             <span>Submission #{submission.id}</span>
             <Badge className={getStatusColor(submission.status)}>
               {submission.status.replace('_', ' ').toUpperCase()}
@@ -97,6 +98,30 @@ export function SubmissionDetailView({
             <Badge variant="outline" className="text-xs">
               Viewing as: {context.viewType}
             </Badge>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            {submission.grantProgram && (
+              <Link
+                href={`/dashboard/programs/${submission.grantProgram.id}`}
+                className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+              >
+                <span className="font-medium">Program:</span>
+                <span className="text-blue-600 dark:text-blue-400">
+                  {submission.grantProgram.name}
+                </span>
+              </Link>
+            )}
+            {submission.reviewerGroup && (
+              <Link
+                href={`/dashboard/committees/${submission.reviewerGroup.id}`}
+                className="flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700"
+              >
+                <span className="font-medium">Committee:</span>
+                <span className="text-blue-600 dark:text-blue-400">
+                  {submission.reviewerGroup.name}
+                </span>
+              </Link>
+            )}
           </div>
         </div>
       </div>
