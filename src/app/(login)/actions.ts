@@ -4,7 +4,6 @@ import { eq } from 'drizzle-orm'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
 import {
-  validatedAction,
   validatedActionWithUser,
   validatedActionWithUserState,
 } from '@/lib/auth/middleware'
@@ -33,100 +32,162 @@ async function logActivity(userId: number, activityType: ActivityType) {
   console.log(`[Activity]: User ${userId} performed ${activityType}`)
 }
 
-export const signIn = validatedAction(
-  signInSchema,
-  async (data: SignInInput) => {
-    const { email, password } = data
+// ✅ State-compatible versions for useActionState
 
-    const foundUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1)
+export interface SignInState extends ActionState {
+  email?: string
+  password?: string
+  redirect?: string
+  priceId?: string
+  inviteId?: string
+}
 
-    if (foundUser.length === 0) {
-      return {
-        error: 'Invalid email or password. Please try again.',
-        email,
-        password,
-      }
+export interface SignUpState extends ActionState {
+  email?: string
+  password?: string
+  name?: string
+}
+
+async function signInStateHandler(data: SignInInput): Promise<SignInState> {
+  const { email, password } = data
+
+  const foundUser = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1)
+
+  if (foundUser.length === 0) {
+    return {
+      error: 'Invalid email or password. Please try again.',
+      email,
+      password,
     }
-
-    const user = foundUser[0]
-
-    // Check if user has a password hash (GitHub OAuth users might not have one)
-    if (!user.passwordHash) {
-      return {
-        error: 'Please sign in with GitHub for this account.',
-        email,
-        password,
-      }
-    }
-
-    const isPasswordValid = await comparePasswords(password, user.passwordHash)
-
-    if (!isPasswordValid) {
-      return {
-        error: 'Invalid email or password. Please try again.',
-        email,
-        password,
-      }
-    }
-
-    await Promise.all([
-      setSession(user),
-      logActivity(user.id, ActivityType.SIGN_IN),
-    ])
-
-    const redirectTo = data.redirect
-    if (redirectTo === 'checkout') {
-      // Redirect to pricing page instead (no Stripe integration)
-      redirect('/pricing')
-    }
-
-    redirect('/dashboard')
   }
-)
 
-export const signUp = validatedAction(
-  signUpSchema,
-  async (data: SignUpInput) => {
-    const { email, password, name } = data
+  const user = foundUser[0]
 
-    const existingUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1)
-
-    if (existingUser.length > 0) {
-      return { error: 'Failed to create user. Please try again.' }
+  // Check if user has a password hash (GitHub OAuth users might not have one)
+  if (!user.passwordHash) {
+    return {
+      error: 'Please sign in with GitHub for this account.',
+      email,
+      password,
     }
-
-    const passwordHash = await hashPassword(password)
-
-    const [newUser] = await db
-      .insert(users)
-      .values({
-        email,
-        passwordHash,
-        name,
-        primaryRole: 'team', // Default role for new users
-      })
-      .returning()
-
-    if (!newUser) {
-      return { error: 'Failed to create user. Please try again.' }
-    }
-
-    await Promise.all([
-      setSession(newUser),
-      logActivity(newUser.id, ActivityType.SIGN_UP),
-    ])
-
-    redirect('/dashboard')
   }
-)
+
+  const isPasswordValid = await comparePasswords(password, user.passwordHash)
+
+  if (!isPasswordValid) {
+    return {
+      error: 'Invalid email or password. Please try again.',
+      email,
+      password,
+    }
+  }
+
+  await Promise.all([
+    setSession(user),
+    logActivity(user.id, ActivityType.SIGN_IN),
+  ])
+
+  const redirectTo = data.redirect
+  if (redirectTo === 'checkout') {
+    // Redirect to pricing page instead (no Stripe integration)
+    redirect('/pricing')
+  }
+
+  redirect('/dashboard')
+}
+
+async function signUpStateHandler(data: SignUpInput): Promise<SignUpState> {
+  const { email, password, name } = data
+
+  const existingUser = await db
+    .select()
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1)
+
+  if (existingUser.length > 0) {
+    return { error: 'Failed to create user. Please try again.' }
+  }
+
+  const passwordHash = await hashPassword(password)
+
+  const [newUser] = await db
+    .insert(users)
+    .values({
+      email,
+      passwordHash,
+      name,
+      primaryRole: 'team', // Default role for new users
+    })
+    .returning()
+
+  if (!newUser) {
+    return { error: 'Failed to create user. Please try again.' }
+  }
+
+  await Promise.all([
+    setSession(newUser),
+    logActivity(newUser.id, ActivityType.SIGN_UP),
+  ])
+
+  redirect('/dashboard')
+}
+
+export async function signInState(
+  prevState: SignInState,
+  formData: FormData
+): Promise<SignInState> {
+  const data = Object.fromEntries(formData.entries())
+  const result = signInSchema.safeParse(data)
+
+  if (!result.success) {
+    console.error('[signInState]: Validation failed', result.error)
+    return {
+      ...prevState,
+      error: result.error?.issues[0]?.message ?? 'Validation failed',
+    }
+  }
+
+  try {
+    return await signInStateHandler(result.data)
+  } catch (error) {
+    console.error('[signInState]: Action failed', error)
+    return {
+      ...prevState,
+      error: error instanceof Error ? error.message : 'An error occurred',
+    }
+  }
+}
+
+export async function signUpState(
+  prevState: SignUpState,
+  formData: FormData
+): Promise<SignUpState> {
+  const data = Object.fromEntries(formData.entries())
+  const result = signUpSchema.safeParse(data)
+
+  if (!result.success) {
+    console.error('[signUpState]: Validation failed', result.error)
+    return {
+      ...prevState,
+      error: result.error?.issues[0]?.message ?? 'Validation failed',
+    }
+  }
+
+  try {
+    return await signUpStateHandler(result.data)
+  } catch (error) {
+    console.error('[signUpState]: Action failed', error)
+    return {
+      ...prevState,
+      error: error instanceof Error ? error.message : 'An error occurred',
+    }
+  }
+}
 
 export async function signOut() {
   const user = await getUser()

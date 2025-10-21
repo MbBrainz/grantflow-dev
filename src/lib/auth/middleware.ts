@@ -16,50 +16,6 @@ interface ZodLike {
   }
 }
 
-// ✅ NEW: Non-authenticated actions accept plain objects
-type ValidatedActionFunction<TInput, TOutput extends ActionState> = (
-  data: TInput
-) => Promise<TOutput>
-
-export function validatedAction<
-  TSchema extends ZodLike,
-  TOutput extends ActionState,
->(
-  schema: TSchema,
-  action: ValidatedActionFunction<
-    TSchema extends {
-      safeParse: (
-        data: unknown
-      ) => { success: true; data: infer TData } | { success: false }
-    }
-      ? TData
-      : never,
-    TOutput
-  >
-) {
-  return async (
-    data: Record<string, unknown>
-  ): Promise<TOutput | { error: string }> => {
-    // 🛡️ Validation
-    const result = schema.safeParse(data)
-    if (!result.success) {
-      console.error('[validatedAction]: Validation failed', result.error)
-      return { error: result.error?.issues[0]?.message ?? 'Validation failed' }
-    }
-
-    // ✅ Execute action with validated data
-    return action(
-      result.data as TSchema extends {
-        safeParse: (
-          data: unknown
-        ) => { success: true; data: infer TData } | { success: false }
-      }
-        ? TData
-        : never
-    )
-  }
-}
-
 // ✅ NEW: Authenticated actions accept plain objects
 type ValidatedActionWithUserFunction<TInput, TOutput extends ActionState> = (
   data: TInput,
@@ -121,7 +77,63 @@ export function validatedActionWithUser<
   }
 }
 
-// ✅ NEW: For useActionState compatibility
+// ✅ NEW: For useActionState compatibility (non-authenticated)
+type ValidatedActionStateFunction<TInput, TState extends ActionState> = (
+  data: TInput
+) => Promise<TState>
+
+export function validatedActionState<
+  TSchema extends ZodLike,
+  TState extends ActionState,
+>(
+  schema: TSchema,
+  action: ValidatedActionStateFunction<
+    TSchema extends {
+      safeParse: (
+        data: unknown
+      ) => { success: true; data: infer TData } | { success: false }
+    }
+      ? TData
+      : never,
+    TState
+  >
+) {
+  return async (prevState: TState, formData: FormData): Promise<TState> => {
+    // Convert FormData to object
+    const data = Object.fromEntries(formData.entries())
+
+    // 🛡️ Validation
+    const result = schema.safeParse(data)
+    if (!result.success) {
+      console.error('[validatedActionState]: Validation failed', result.error)
+      return {
+        ...prevState,
+        error: result.error?.issues[0]?.message ?? 'Validation failed',
+      } as TState
+    }
+
+    // ✅ Execute action with validated data
+    try {
+      return await action(
+        result.data as TSchema extends {
+          safeParse: (
+            data: unknown
+          ) => { success: true; data: infer TData } | { success: false }
+        }
+          ? TData
+          : never
+      )
+    } catch (error) {
+      console.error('[validatedActionState]: Action failed', error)
+      return {
+        ...prevState,
+        error: error instanceof Error ? error.message : 'An error occurred',
+      } as TState
+    }
+  }
+}
+
+// ✅ NEW: For useActionState compatibility (authenticated)
 type ValidatedActionWithUserStateFunction<
   TInput,
   TState extends ActionState,

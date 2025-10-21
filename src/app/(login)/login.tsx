@@ -9,17 +9,21 @@ import AsyncButton from '@/components/ui/async-button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { CircleIcon } from 'lucide-react'
-import { signIn, signUp } from './actions'
-import type { ActionState } from '@/lib/auth/middleware'
+import { signInState, signUpState } from './actions'
+import type { SignInState, SignUpState } from './actions'
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect')
   const priceId = searchParams.get('priceId')
   const inviteId = searchParams.get('inviteId')
-  const [state, formAction, pending] = useActionState<ActionState, FormData>(
-    mode === 'signin' ? signIn : signUp,
-    { error: '' }
+
+  type State = SignInState | SignUpState
+  const initialState: State = { error: '' }
+  const action = mode === 'signin' ? signInState : signUpState
+  const [state, formAction, pending] = useActionState<State, FormData>(
+    action as (prevState: State, formData: FormData) => Promise<State>,
+    initialState
   )
 
   const handleGitHubLogin = async () => {
@@ -79,6 +83,33 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
           <input type="hidden" name="redirect" value={redirect ?? ''} />
           <input type="hidden" name="priceId" value={priceId ?? ''} />
           <input type="hidden" name="inviteId" value={inviteId ?? ''} />
+
+          {mode === 'signup' && (
+            <div>
+              <Label
+                htmlFor="name"
+                className="block text-sm font-medium text-gray-700"
+              >
+                Name
+              </Label>
+              <div className="mt-1">
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  autoComplete="name"
+                  defaultValue={
+                    'name' in state ? (state.name as string | undefined) : ''
+                  }
+                  required
+                  maxLength={100}
+                  className="relative block w-full appearance-none rounded-full border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-orange-500 focus:ring-orange-500 focus:outline-none sm:text-sm"
+                  placeholder="Enter your name"
+                />
+              </div>
+            </div>
+          )}
+
           <div>
             <Label
               htmlFor="email"
@@ -92,7 +123,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 name="email"
                 type="email"
                 autoComplete="email"
-                defaultValue={state.email as string | undefined}
+                defaultValue={'email' in state ? (state.email ?? '') : ''}
                 required
                 maxLength={50}
                 className="relative block w-full appearance-none rounded-full border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 focus:z-10 focus:border-orange-500 focus:ring-orange-500 focus:outline-none sm:text-sm"
@@ -116,7 +147,7 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
                 autoComplete={
                   mode === 'signin' ? 'current-password' : 'new-password'
                 }
-                defaultValue={state.password as string | undefined}
+                defaultValue={'password' in state ? (state.password ?? '') : ''}
                 required
                 minLength={8}
                 maxLength={100}
