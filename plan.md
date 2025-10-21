@@ -45,6 +45,7 @@ The GrantFlow platform has been successfully transformed from a SaaS template to
   - **Server Actions:** Implemented type-safe server actions using validatedActionWithUser pattern for all management operations
   - **Multisig Configuration Section:** Added "Coming Soon" section for future multisig wallet configuration
   - **Real-time Updates:** All changes immediately reflect in the UI with proper revalidation and toast notifications
+- **✅ Fully Allocated Grant Programs:** Grant programs now show their funding allocation status on the new submission page. When all funds are allocated (remaining budget ≤ 0), programs are still visible but disabled with clear "Fully Allocated" badge and visual indicators (grayed out, not clickable). The selection page displays remaining budget in red when fully allocated and green when funds are available. Financial data is fetched and displayed using the existing `getGrantProgramFinancials()` query system.
 
 ## Terminology Migration Completed
 

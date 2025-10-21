@@ -29,8 +29,18 @@ import {
 import type { GrantProgram, Group } from '@/lib/db/schema'
 import { GrantProgramCard } from '@/components/committee/grant-program-card'
 
+interface ProgramFinancials {
+  programId: number
+  totalBudget: number
+  allocated: number
+  spent: number
+  remaining: number
+  available: number
+}
+
 type GrantProgramWithCommittee = GrantProgram & {
   group: Group
+  financials?: ProgramFinancials | null
 }
 
 export default function NewSubmissionPage() {
@@ -421,7 +431,7 @@ export default function NewSubmissionPage() {
       try {
         const result = await getActiveGrantPrograms()
         if (result.success && result.programs) {
-          setGrantPrograms(result.programs)
+          setGrantPrograms(result.programs as GrantProgramWithCommittee[])
         } else {
           toast({
             title: 'Error',
@@ -616,6 +626,7 @@ export default function NewSubmissionPage() {
                   <GrantProgramCard
                     key={program.id}
                     program={program}
+                    financials={program.financials}
                     variant="selection"
                     onClick={() => {
                       setSelectedProgram(program)

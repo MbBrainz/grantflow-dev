@@ -98,17 +98,17 @@ export function UserCommittees({ userId }: UserCommitteesProps) {
                 href={`/dashboard/committees/${committee.id}`}
               >
                 <div className="group flex items-center justify-between rounded-lg border border-gray-200 bg-white p-3 transition-all hover:border-blue-300 hover:shadow-md">
-                  <div className="flex items-center gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-3">
                     {committee.logoUrl ? (
                       <Image
                         src={committee.logoUrl}
                         alt={`${committee.name} logo`}
-                        className="h-10 w-10 rounded-full object-cover"
+                        className="h-10 w-10 flex-shrink-0 rounded-full object-cover"
                         width={40}
                         height={40}
                       />
                     ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">
+                      <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-blue-100">
                         <Users className="h-5 w-5 text-blue-600" />
                       </div>
                     )}
@@ -121,14 +121,17 @@ export function UserCommittees({ userId }: UserCommitteesProps) {
                           {committee.description}
                         </p>
                       )}
-                      <div className="mt-1 flex items-center gap-2">
-                        <Badge variant="outline" className="text-xs capitalize">
+                      <div className="mt-1 flex min-w-0 items-center gap-2">
+                        <Badge
+                          variant="outline"
+                          className="flex-shrink-0 text-xs capitalize"
+                        >
                           {role}
                         </Badge>
                         {committee.focusAreas &&
                           Array.isArray(committee.focusAreas) &&
                           committee.focusAreas.length > 0 && (
-                            <span className="text-xs text-gray-500">
+                            <span className="truncate text-xs text-gray-500">
                               {committee.focusAreas.slice(0, 2).join(', ')}
                               {committee.focusAreas.length > 2 &&
                                 ` +${committee.focusAreas.length - 2}`}
@@ -137,7 +140,7 @@ export function UserCommittees({ userId }: UserCommitteesProps) {
                       </div>
                     </div>
                   </div>
-                  <ArrowRight className="h-4 w-4 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-600" />
+                  <ArrowRight className="h-4 w-4 flex-shrink-0 text-gray-400 transition-transform group-hover:translate-x-1 group-hover:text-blue-600" />
                 </div>
               </Link>
             ))}

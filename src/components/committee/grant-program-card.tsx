@@ -45,6 +45,7 @@ interface GrantProgramCardProps {
   isEditing?: boolean
   showAdminActions?: boolean
   onClick?: () => void
+  isDisabled?: boolean
   editState?: {
     name: string
     description: string
@@ -79,6 +80,7 @@ export function GrantProgramCard({
   isEditing = false,
   showAdminActions = false,
   onClick,
+  isDisabled = false,
   editState,
   onEdit,
   onSave,
@@ -92,6 +94,8 @@ export function GrantProgramCard({
     (financials.totalBudget > 0 ||
       financials.allocated > 0 ||
       financials.spent > 0)
+
+  const isFullyAllocated = !!(financials && financials.remaining <= 0)
 
   if (isEditing && editState) {
     return (
@@ -204,15 +208,24 @@ export function GrantProgramCard({
 
   // Selection variant - for choosing a program
   if (variant === 'selection') {
+    const shouldDisable = isDisabled || isFullyAllocated
+
     return (
       <button
-        onClick={onClick}
-        className="group relative w-full rounded-xl border border-gray-200 bg-white p-5 text-left shadow-sm transition-all hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600"
+        onClick={shouldDisable ? undefined : onClick}
+        disabled={shouldDisable}
+        className={`group relative w-full rounded-xl border p-5 text-left shadow-sm transition-all ${
+          shouldDisable
+            ? 'cursor-not-allowed border-gray-200 bg-gray-50 opacity-75 dark:border-gray-700 dark:bg-gray-800/50'
+            : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-md dark:border-gray-700 dark:bg-gray-800 dark:hover:border-blue-600'
+        }`}
       >
         <div className="space-y-3">
           <div className="flex items-start justify-between">
             <div className="flex-1">
-              <h3 className="text-lg font-semibold group-hover:text-blue-600 dark:group-hover:text-blue-400">
+              <h3
+                className={`text-lg font-semibold ${shouldDisable ? 'text-gray-500 dark:text-gray-500' : 'group-hover:text-blue-600 dark:group-hover:text-blue-400'}`}
+              >
                 {program.name}
               </h3>
               {committee && (
@@ -221,26 +234,52 @@ export function GrantProgramCard({
                 </p>
               )}
             </div>
-            <Badge variant={program.isActive ? 'default' : 'secondary'}>
-              {program.isActive ? 'Active' : 'Inactive'}
-            </Badge>
+            <div className="flex flex-col items-end gap-1">
+              <Badge variant={program.isActive ? 'default' : 'secondary'}>
+                {program.isActive ? 'Active' : 'Inactive'}
+              </Badge>
+              {isFullyAllocated && (
+                <Badge
+                  variant="outline"
+                  className="bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400"
+                >
+                  Fully Allocated
+                </Badge>
+              )}
+            </div>
           </div>
 
           {program.description && (
-            <p className="line-clamp-2 text-sm text-gray-600 dark:text-gray-400">
+            <p
+              className={`line-clamp-2 text-sm ${shouldDisable ? 'text-gray-500 dark:text-gray-500' : 'text-gray-600 dark:text-gray-400'}`}
+            >
               {program.description}
             </p>
           )}
 
           <div className="flex flex-wrap items-center gap-2">
-            {program.fundingAmount && (
+            {financials ? (
               <Badge
                 variant="outline"
-                className="bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                className={
+                  isFullyAllocated
+                    ? 'bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400'
+                    : 'bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400'
+                }
               >
                 <DollarSign className="mr-1 h-3 w-3" />$
-                {(program.fundingAmount / 1000).toFixed(0)}k available
+                {(financials.remaining / 1000).toFixed(0)}k remaining
               </Badge>
+            ) : (
+              program.fundingAmount && (
+                <Badge
+                  variant="outline"
+                  className="bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
+                >
+                  <DollarSign className="mr-1 h-3 w-3" />$
+                  {(program.fundingAmount / 1000).toFixed(0)}k available
+                </Badge>
+              )
             )}
             {(program.minGrantSize !== null ||
               program.maxGrantSize !== null) && (

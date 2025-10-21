@@ -21,6 +21,8 @@ import {
   getSubmissionById,
 } from '@/lib/db/queries'
 import { getGroups } from '@/lib/db/queries/groups'
+import type { GrantProgramFinancial } from '@/lib/db/queries/grant-programs'
+import { getGrantProgramsFinancials } from '@/lib/db/queries/grant-programs'
 import { revalidatePath } from 'next/cache'
 import {
   GITHUB_URL_REGEX,
@@ -53,7 +55,31 @@ export async function getActiveGrantPrograms() {
     // Flatten the array and return programs with committee info
     const allPrograms = programsWithCommittees.flat()
 
-    return { success: true, programs: allPrograms }
+    // Get financial data for all programs
+    const programIds = allPrograms.map(p => p.id)
+    let financials: GrantProgramFinancial[] = []
+    try {
+      financials = await getGrantProgramsFinancials(programIds ?? [])
+    } catch (error) {
+      console.error(
+        error,
+        `[getActiveGrantPrograms]: Failed to fetch grant program financials for programIds: ${JSON.stringify(programIds, null, 2)}`
+      )
+      financials = []
+    }
+
+    // Create a map of program ID to financials for easy lookup
+    const financialsMap = new Map(
+      Array.isArray(financials) ? financials.map(f => [f?.programId, f]) : []
+    )
+
+    // Combine programs with their financial data
+    const programsWithFinancials = allPrograms.map(program => ({
+      ...program,
+      financials: financialsMap.get(program.id) ?? null,
+    }))
+
+    return { success: true, programs: programsWithFinancials }
   } catch (error) {
     console.error('[actions]: Error fetching grant programs', error)
     return { success: false, error: 'Failed to fetch grant programs' }

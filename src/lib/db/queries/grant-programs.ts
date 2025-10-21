@@ -103,11 +103,22 @@ export type GrantProgramWithDetails = Awaited<
   ReturnType<typeof getGrantProgramWithDetails>
 >
 
+export interface GrantProgramFinancial {
+  programId: number
+  totalBudget: number
+  allocated: number
+  spent: number
+  remaining: number
+  available: number
+}
+
 /**
  * Get financial metrics for a grant program
  * Returns total budget, allocated funds (approved grants), and spent funds (completed milestones)
  */
-export async function getGrantProgramFinancials(programId: number) {
+export async function getGrantProgramFinancials(
+  programId: number
+): Promise<GrantProgramFinancial | null> {
   // Get the program to access fundingAmount
   const program = await db.query.grantPrograms.findFirst({
     where: eq(grantPrograms.id, programId),
