@@ -1,0 +1,230 @@
+---
+description: "UX Feedback Requirements: All user actions must have immediate, clear feedback. Buttons must disable, show loaders, and provide success/error toasts."
+globs: ["src/components/**/*.tsx", "src/app/**/*.tsx"]
+---
+
+# UX Feedback Requirements
+
+UX is extremely important. When a user performs an action like clicking a button, there must **ALWAYS** be clear and simple user feedback.
+
+## Good UX Example Scenario
+
+1. User fills in form
+2. User clicks submit button
+3. **Button disabled immediately**
+4. **Button shows a loader to inform user**
+5. **Successful submit shows toast and redirect**
+
+## The Principle
+
+**The user needs to know what's going on at all times.**
+
+## Implementation Patterns
+
+### Pattern 1: Form Submit with AsyncButton
+
+```typescript
+'use client'
+
+import { AsyncButton } from '@/components/ui/async-button'
+import { useToast } from '@/lib/hooks/use-toast'
+
+export function MyForm() {
+  const { toast } = useToast()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const result = await myAction(formData)
+      
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive'
+        })
+      } else {
+        toast({
+          title: 'Success',
+          description: 'Form submitted successfully'
+        })
+        // Redirect or update UI
+      }
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* Form fields */}
+      <AsyncButton 
+        type="submit" 
+        loading={isSubmitting}
+        disabled={isSubmitting}
+      >
+        Submit
+      </AsyncButton>
+    </form>
+  )
+}
+```
+
+### Pattern 2: Server Action with Optimistic UI
+
+```typescript
+'use client'
+
+export function ActionButton() {
+  const [isPending, startTransition] = useTransition()
+  const { toast } = useToast()
+
+  function handleClick() {
+    startTransition(async () => {
+      const result = await myAction()
+      
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive'
+        })
+      } else {
+        toast({
+          title: 'Success'
+        })
+      }
+    })
+  }
+
+  return (
+    <button 
+      onClick={handleClick}
+      disabled={isPending}
+      className={isPending ? 'opacity-50 cursor-not-allowed' : ''}
+    >
+      {isPending ? (
+        <>
+          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          Processing...
+        </>
+      ) : (
+        'Submit'
+      )}
+    </button>
+  )
+}
+```
+
+## Required Feedback Elements
+
+### 1. Visual State Changes
+- ✅ Button becomes disabled
+- ✅ Cursor changes to `cursor-not-allowed` or `cursor-wait`
+- ✅ Opacity change or visual indication of disabled state
+
+### 2. Loading Indicators
+- ✅ Spinner or loading animation
+- ✅ Text change (e.g., "Submit" → "Submitting...")
+- ✅ Progress indicator if operation takes time
+
+### 3. Result Feedback
+- ✅ Success toast with clear message
+- ✅ Error toast with actionable error message
+- ✅ Redirect or UI update on success
+- ✅ Form reset or next step indication
+
+## Common Mistakes to Avoid
+
+### ❌ BAD: No feedback
+```typescript
+<button onClick={() => myAction()}>
+  Submit
+</button>
+```
+
+### ❌ BAD: No loading state
+```typescript
+<button onClick={handleSubmit} disabled={isLoading}>
+  Submit  {/* User doesn't know why it's disabled */}
+</button>
+```
+
+### ❌ BAD: No error handling
+```typescript
+async function handleSubmit() {
+  const result = await myAction()
+  // No feedback to user if it fails!
+}
+```
+
+### ✅ GOOD: Complete feedback
+```typescript
+<AsyncButton
+  onClick={handleSubmit}
+  loading={isLoading}
+  disabled={isLoading}
+>
+  {isLoading ? 'Submitting...' : 'Submit'}
+</AsyncButton>
+```
+
+## Toast Guidelines
+
+### Success Toasts
+```typescript
+toast({
+  title: 'Success',
+  description: 'Your changes have been saved',
+})
+```
+
+### Error Toasts
+```typescript
+toast({
+  title: 'Error',
+  description: error.message || 'Something went wrong',
+  variant: 'destructive'
+})
+```
+
+### Info Toasts
+```typescript
+toast({
+  title: 'Processing',
+  description: 'This may take a few moments...',
+})
+```
+
+## Loading States for Different Operations
+
+### Quick Operations (< 1 second)
+- Show inline spinner
+- Disable button immediately
+- Brief success toast
+
+### Medium Operations (1-5 seconds)
+- Show spinner with progress text
+- Disable form during operation
+- Detailed success message
+
+### Long Operations (> 5 seconds)
+- Show progress indicator if possible
+- Allow user to cancel if appropriate
+- Provide estimated time remaining
+- Success notification with summary
+
+## Checklist
+
+Before marking a feature complete, verify:
+
+- [ ] All buttons have loading states
+- [ ] All buttons are disabled during operations
+- [ ] Success feedback is shown
+- [ ] Error feedback is shown
+- [ ] User is never left wondering what's happening
+- [ ] Loading indicators are visible and clear
+- [ ] Toasts have appropriate timing (not too fast, not too slow)

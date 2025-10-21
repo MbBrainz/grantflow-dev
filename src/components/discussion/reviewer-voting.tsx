@@ -5,7 +5,13 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { CheckCircle, XCircle, MessageSquare, AlertCircle } from 'lucide-react'
+import {
+  CheckCircle,
+  XCircle,
+  MessageSquare,
+  AlertCircle,
+  Loader2,
+} from 'lucide-react'
 import type { User } from '@/lib/db/schema'
 import {
   submitReviewSchema,
@@ -69,6 +75,7 @@ export function ReviewerVoting({
 }: ReviewerVotingProps) {
   const [isPending, startTransition] = useTransition()
   const [showVotingInterface, setShowVotingInterface] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
 
   // Initialize react-hook-form
   const {
@@ -209,11 +216,28 @@ export function ReviewerVoting({
           <div className="space-y-4">
             {!showVotingInterface ? (
               <Button
-                onClick={() => setShowVotingInterface(true)}
+                onClick={() => {
+                  setIsLoading(true)
+                  // Add a small delay for smooth transition
+                  setTimeout(() => {
+                    setShowVotingInterface(true)
+                    setIsLoading(false)
+                  }, 300)
+                }}
+                disabled={isLoading}
                 className="flex items-center gap-2"
               >
-                <MessageSquare className="h-4 w-4" />
-                Cast Your Vote
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="h-4 w-4" />
+                    Cast Your Vote
+                  </>
+                )}
               </Button>
             ) : (
               <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
@@ -304,7 +328,14 @@ export function ReviewerVoting({
                     disabled={!selectedVote || isPending}
                     className="flex items-center gap-2"
                   >
-                    {isPending ? 'Submitting...' : 'Submit Review'}
+                    {isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Submitting...
+                      </>
+                    ) : (
+                      'Submit Review'
+                    )}
                   </Button>
                 </div>
               </form>

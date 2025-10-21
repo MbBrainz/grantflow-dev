@@ -178,6 +178,22 @@ export const submitMilestone = validatedActionWithUser(
         return { error: 'You are not authorized to submit this milestone' }
       }
 
+      // Verify submission is approved before allowing milestone submission
+      if (submission.status !== 'approved') {
+        console.log(
+          '[submitMilestone]: Submission must be approved before submitting milestones',
+          {
+            submissionId: submission.id,
+            submissionStatus: submission.status,
+            milestoneId: data.milestoneId,
+          }
+        )
+        return {
+          error:
+            'Your submission must be approved before you can submit milestones',
+        }
+      }
+
       // Verify milestone can be submitted (status should be 'pending' or 'in_progress')
       if (!['pending', 'in_progress'].includes(milestone.status ?? '')) {
         console.log(

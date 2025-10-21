@@ -124,6 +124,10 @@ export async function createGrantProgram(data: {
   name: string
   description?: string
   fundingAmount?: number
+  minGrantSize?: number
+  maxGrantSize?: number
+  minMilestoneSize?: number
+  maxMilestoneSize?: number
   requirements?: Record<string, unknown>
   applicationTemplate?: Record<string, unknown>
   milestoneStructure?: Record<string, unknown>
@@ -135,6 +139,10 @@ export async function createGrantProgram(data: {
       name: data.name,
       description: data.description,
       fundingAmount: data.fundingAmount,
+      minGrantSize: data.minGrantSize,
+      maxGrantSize: data.maxGrantSize,
+      minMilestoneSize: data.minMilestoneSize,
+      maxMilestoneSize: data.maxMilestoneSize,
       requirements: data.requirements
         ? JSON.stringify(data.requirements)
         : null,
@@ -157,6 +165,10 @@ export async function updateGrantProgram(
     name: string
     description: string
     fundingAmount: number
+    minGrantSize: number
+    maxGrantSize: number
+    minMilestoneSize: number
+    maxMilestoneSize: number
     requirements: Record<string, unknown>
     applicationTemplate: Record<string, unknown>
     milestoneStructure: Record<string, unknown>
@@ -167,6 +179,10 @@ export async function updateGrantProgram(
     name: string
     description: string
     fundingAmount: number
+    minGrantSize: number
+    maxGrantSize: number
+    minMilestoneSize: number
+    maxMilestoneSize: number
     requirements: string
     applicationTemplate: string
     milestoneStructure: string
@@ -180,6 +196,14 @@ export async function updateGrantProgram(
   if (data.description !== undefined) updateData.description = data.description
   if (data.fundingAmount !== undefined)
     updateData.fundingAmount = data.fundingAmount
+  if (data.minGrantSize !== undefined)
+    updateData.minGrantSize = data.minGrantSize
+  if (data.maxGrantSize !== undefined)
+    updateData.maxGrantSize = data.maxGrantSize
+  if (data.minMilestoneSize !== undefined)
+    updateData.minMilestoneSize = data.minMilestoneSize
+  if (data.maxMilestoneSize !== undefined)
+    updateData.maxMilestoneSize = data.maxMilestoneSize
   if (data.requirements !== undefined)
     updateData.requirements = JSON.stringify(data.requirements)
   if (data.applicationTemplate !== undefined)

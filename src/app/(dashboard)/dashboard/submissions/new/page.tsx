@@ -27,7 +27,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import type { GrantProgram, Group } from '@/lib/db/schema'
-import Image from 'next/image'
+import { GrantProgramCard } from '@/components/committee/grant-program-card'
 
 type GrantProgramWithCommittee = GrantProgram & {
   group: Group
@@ -613,66 +613,21 @@ export default function NewSubmissionPage() {
             ) : (
               <div className="grid gap-4">
                 {grantPrograms.map(program => (
-                  <button
+                  <GrantProgramCard
                     key={program.id}
+                    program={program}
+                    variant="selection"
                     onClick={() => {
                       setSelectedProgram(program)
                       setStep('details')
                     }}
-                    className="group hover:border-primary relative flex items-start gap-4 rounded-lg border p-4 text-left transition-all hover:shadow-md"
-                  >
-                    {program.group.logoUrl && (
-                      <Image
-                        src={program.group.logoUrl}
-                        alt={program.group.name}
-                        className="h-16 w-16 rounded-lg object-cover"
-                        width={64}
-                        height={64}
-                      />
-                    )}
-                    <div className="flex-1">
-                      <h3 className="group-hover:text-primary font-semibold">
-                        {program.name}
-                      </h3>
-                      <p className="text-muted-foreground text-xs">
-                        by {program.group.name}
-                      </p>
-                      {program.description && (
-                        <p className="text-muted-foreground mt-2 line-clamp-2 text-sm">
-                          {program.description}
-                        </p>
-                      )}
-                      <div className="mt-2 flex flex-wrap items-center gap-2">
-                        {program.fundingAmount && (
-                          <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                            ${(program.fundingAmount / 1000).toFixed(0)}k
-                            available
-                          </span>
-                        )}
-                        {program.group.focusAreas &&
-                          Array.isArray(program.group.focusAreas) &&
-                          program.group.focusAreas.length > 0 && (
-                            <>
-                              {program.group.focusAreas
-                                .slice(0, 2)
-                                .map((area, idx) => (
-                                  <span
-                                    key={idx}
-                                    className="bg-primary/10 text-primary rounded-full px-2 py-0.5 text-xs"
-                                  >
-                                    {area}
-                                  </span>
-                                ))}
-                              {program.group.focusAreas.length > 2 && (
-                                <span className="text-muted-foreground rounded-full px-2 py-0.5 text-xs">
-                                  +{program.group.focusAreas.length - 2} more
-                                </span>
-                              )}
-                            </>
-                          )}
-                      </div>
-                    </div>
-                  </button>
+                    committee={program.group}
+                    focusAreas={
+                      Array.isArray(program.group.focusAreas)
+                        ? program.group.focusAreas
+                        : []
+                    }
+                  />
                 ))}
               </div>
             )}

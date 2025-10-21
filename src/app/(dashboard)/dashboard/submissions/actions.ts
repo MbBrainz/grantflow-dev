@@ -1,7 +1,7 @@
 'use server'
 
 import { z } from 'zod'
-import { and, eq } from 'drizzle-orm'
+import { and, eq, isNull } from 'drizzle-orm'
 import { db } from '@/lib/db/drizzle'
 import type { NewReview } from '@/lib/db/schema'
 import {
@@ -11,6 +11,8 @@ import {
   type NewSubmission,
   type NewMilestone,
   reviews,
+  groups,
+  groupMemberships,
 } from '@/lib/db/schema'
 import {
   getUser,
@@ -463,6 +465,169 @@ function getRevalidationPaths(
 }
 
 /**
+ * Check if quorum is reached and update submission/milestone status
+ * Called after each review submission
+ */
+async function checkQuorumAndUpdateStatus(params: {
+  submissionId: number
+  milestoneId: number | null | undefined
+  reviewerGroupId: number
+}) {
+  const { submissionId, milestoneId, reviewerGroupId } = params
+
+  try {
+    // Get the committee/group with settings
+    const committee = await db.query.groups.findFirst({
+      where: eq(groups.id, reviewerGroupId),
+      with: {
+        members: {
+          where: eq(groupMemberships.isActive, true),
+        },
+      },
+    })
+
+    if (!committee) {
+      console.warn(
+        '[checkQuorumAndUpdateStatus]: Committee not found',
+        reviewerGroupId
+      )
+      return
+    }
+
+    // Get active committee member count
+    const activeMemberCount = committee.members?.length ?? 0
+    if (activeMemberCount === 0) {
+      console.warn(
+        '[checkQuorumAndUpdateStatus]: No active members in committee',
+        reviewerGroupId
+      )
+      return
+    }
+
+    // Get voting settings from committee (with defaults)
+    const votingThreshold = committee.settings?.votingThreshold ?? 0.5 // Default 50% quorum
+    const requiredApprovalPercentage =
+      committee.settings?.requiredApprovalPercentage ?? 0.6 // Default 60% approval
+
+    const requiredVoteCount = Math.ceil(activeMemberCount * votingThreshold)
+
+    console.log('[checkQuorumAndUpdateStatus]: Voting parameters', {
+      activeMemberCount,
+      votingThreshold,
+      requiredApprovalPercentage,
+      requiredVoteCount,
+      milestoneId: milestoneId ?? 'none',
+    })
+
+    // Get all reviews for this submission/milestone
+    const conditions = [eq(reviews.submissionId, submissionId)]
+    if (milestoneId) {
+      conditions.push(eq(reviews.milestoneId, milestoneId))
+    } else {
+      // For submission reviews, only count reviews WITHOUT milestoneId
+      conditions.push(isNull(reviews.milestoneId))
+    }
+
+    const allReviews = await db.query.reviews.findMany({
+      where: and(...conditions),
+    })
+
+    const totalVotes = allReviews.length
+    const approveVotes = allReviews.filter(r => r.vote === 'approve').length
+    const rejectVotes = allReviews.filter(r => r.vote === 'reject').length
+
+    console.log('[checkQuorumAndUpdateStatus]: Vote counts', {
+      totalVotes,
+      approveVotes,
+      rejectVotes,
+      requiredVoteCount,
+    })
+
+    // Check if quorum is reached
+    if (totalVotes < requiredVoteCount) {
+      console.log('[checkQuorumAndUpdateStatus]: Quorum not yet reached')
+      return
+    }
+
+    console.log(
+      '[checkQuorumAndUpdateStatus]: Quorum reached! Checking outcome...'
+    )
+
+    // Calculate approval percentage
+    const approvalPercentage = approveVotes / totalVotes
+
+    // Determine new status based on votes
+    if (milestoneId) {
+      // Milestone status: 'completed', 'rejected', or 'changes-requested'
+      let milestoneStatus: 'completed' | 'rejected' | 'changes-requested'
+
+      if (approvalPercentage >= requiredApprovalPercentage) {
+        milestoneStatus = 'completed'
+      } else if (rejectVotes > approveVotes) {
+        milestoneStatus = 'rejected'
+      } else {
+        milestoneStatus = 'changes-requested'
+      }
+
+      console.log('[checkQuorumAndUpdateStatus]: Outcome determined', {
+        approvalPercentage,
+        requiredApprovalPercentage,
+        newStatus: milestoneStatus,
+      })
+
+      // Update milestone status
+      await db
+        .update(milestones)
+        .set({
+          status: milestoneStatus,
+          reviewedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(milestones.id, milestoneId))
+
+      console.log('[checkQuorumAndUpdateStatus]: Updated milestone status', {
+        milestoneId,
+        newStatus: milestoneStatus,
+      })
+    } else {
+      // Submission status: 'approved', 'rejected', or 'changes-requested'
+      let submissionStatus: 'approved' | 'rejected' | 'changes-requested'
+
+      if (approvalPercentage >= requiredApprovalPercentage) {
+        submissionStatus = 'approved'
+      } else if (rejectVotes > approveVotes) {
+        submissionStatus = 'rejected'
+      } else {
+        submissionStatus = 'changes-requested'
+      }
+
+      console.log('[checkQuorumAndUpdateStatus]: Outcome determined', {
+        approvalPercentage,
+        requiredApprovalPercentage,
+        newStatus: submissionStatus,
+      })
+
+      // Update submission status
+      await db
+        .update(submissions)
+        .set({
+          status: submissionStatus,
+          updatedAt: new Date(),
+        })
+        .where(eq(submissions.id, submissionId))
+
+      console.log('[checkQuorumAndUpdateStatus]: Updated submission status', {
+        submissionId,
+        newStatus: submissionStatus,
+      })
+    }
+  } catch (error) {
+    console.error('[checkQuorumAndUpdateStatus]: Error', error)
+    // Don't throw - we don't want to fail the review submission if status update fails
+  }
+}
+
+/**
  * Unified action for submitting reviews
  * Handles both submission-level and milestone-level reviews
  * Client sends: submissionId, milestoneId?, vote, feedback?
@@ -524,6 +689,13 @@ export const submitReview = validatedActionWithUser(
         reviewId: createdReview.id,
         submissionId: data.submissionId,
         milestoneId: data.milestoneId,
+      })
+
+      // Check if quorum is reached and update status accordingly
+      await checkQuorumAndUpdateStatus({
+        submissionId: data.submissionId,
+        milestoneId: data.milestoneId,
+        reviewerGroupId: submission.reviewerGroupId,
       })
 
       // Revalidate all relevant paths

@@ -25,11 +25,26 @@ The GrantFlow platform has been successfully transformed from a SaaS template to
 - **✅ Submission Detail UX Redesign:** Completely redesigned submission detail page with prominent "Active Step Hero" component that shows current stage (approval/milestone) with relevant chat and actionable interface - no more vague status cards
 - **✅ Role-Based Views Implementation:** Complete role-based routing system with specialized views for Curator (voting, workflow, analytics), Grantee (progress tracking, response interface), and Public (transparency, accountability) - each user sees exactly what they need
 - **✅ Committee Context & Membership:** Curators can now see which committee a submission belongs to and all their committee memberships. Added CommitteeInfoCard showing focus areas, voting thresholds, and membership status. Added CuratorCommitteesDropdown for switching between committee contexts. Enhanced UserContext with committee role detection.
-- **✅ UX Bug Fixes & Improvements:** Fixed voting status bug where "Vote Required" showed even after voting. Simplified committee display in submission detail to show only relevant committee. Added committee badges and milestone progress indicators (like "3/5") to submission lists for better overview and context.
+- **✅ UX Bug Fixes & Improvements:** Fixed voting status bug where "Vote Required" showed even after voting. Simplified committee display in submission detail to show only relevant committee. Added committee badges and milestone progress indicators (like "3/5") to submission lists for better overview and context. Fixed critical bug where grantees could submit milestones even when submission was still in review - added submission approval check on both client and server side.
 - **✅ Curator Priority Actions Dashboard:** Added dedicated "My Actions Required" section to curator dashboard showing all submissions and milestones specifically awaiting the current curator's response/approval with direct clickable links. Features urgency indicators (critical 14+ days, urgent 7+ days) and clear action types (submission votes vs milestone reviews). Includes smart filtering to only show items where curator hasn't voted/reviewed yet.
 - **✅ Enhanced Milestone Status & Removed Private Discussions:** Replaced generic "review in progress" information with detailed milestone-specific status showing current active step (e.g., "building milestone 1", "milestone 2 under review"). Added comprehensive MilestoneStatusOverview component with progress tracking, status indicators, and action-required badges. Removed private curator discussions to streamline the review process - all communication now happens in public threads for transparency.
+- **✅ Grantee Submission Filtering:** Added smart filtering to the submissions list page with default view showing only active grants (approved, in-review, pending, changes-requested) while hiding rejected submissions. Filter buttons include "Active" (default), "All", and "Rejected" with count badges. Milestone progress (x/y format) already displayed on each card via MilestoneProgressBadge component in compact variant.
+- **✅ Reviewer Dashboard Filtering:** Updated reviewer dashboard to match the same filtering pattern with "Active" as default view (showing pending, in-review, changes-requested, approved submissions). Replaced previous multi-filter system with simplified "Active", "All", and "Rejected" filters. Added consistent count badge styling and improved empty state messaging with "View All Submissions" button.
 - **✅ PostgreSQL Schema Error Fix:** Resolved critical `column milestones.reviewer_group_id does not exist` error that was preventing the Review Dashboard from loading. Fixed Drizzle ORM relation confusion by adding explicit relation names in schema (`milestoneGroup`) and refactoring complex subqueries in `getAllSubmissionsForReview()` and `getReviewerPendingActions()` functions. Review Dashboard now loads successfully with proper statistics and submission data.
 - **✅ Discussion Permission Bug Fix:** Fixed critical permission logic bug in `DiscussionThread` component where `isPublic={true}` was incorrectly preventing authenticated users from posting messages. Updated permission logic to allow posting when discussion is public OR user has reviewer/submission owner permissions. Enhanced component to accept `submissionContext` for more sophisticated permission checking.
+- **✅ Committee Management Interface:** Built comprehensive committee management page allowing committee admins to manage their committees with the following features:
+  - **Committee Information Editing:** Update name, description, website URL, GitHub organization, and focus areas
+  - **Member Management:** Search and add users by email, assign roles (admin/member), update member roles, and remove members
+  - **Grant Program Management:** Create, edit, activate/deactivate grant programs with inline editing and financial tracking
+  - **Financial Metrics Display:** Each grant program shows total budget, allocated funds (approved grants), spent funds (completed milestones), with percentage calculations and visual indicators
+  - **Reusable Grant Program Card Component:** Created `GrantProgramCard` component used across committee pages, grant program pages, and management interface with conditional admin actions
+  - **Grant Program Detail Page:** Dedicated page for each grant program showing financial metrics, committee members, and recent submissions
+  - **User Search Functionality:** Added database queries to search users by email or name for easy member addition
+  - **Role-Based Access Control:** Only committee admins can access the management interface, enforced at both page and action level
+  - **UX Components:** Created new Dialog and Textarea UI components following shadcn/ui patterns
+  - **Server Actions:** Implemented type-safe server actions using validatedActionWithUser pattern for all management operations
+  - **Multisig Configuration Section:** Added "Coming Soon" section for future multisig wallet configuration
+  - **Real-time Updates:** All changes immediately reflect in the UI with proper revalidation and toast notifications
 
 ## Terminology Migration Completed
 
@@ -563,10 +578,12 @@ platformMetrics: {
 ### F. Committee Onboarding & Management 🆕
 
 - [ ] Committee registration and profile creation
-- [ ] Grant program setup and configuration
-- [ ] Curator team management and permissions
-- [ ] Multi-sig wallet integration
-- [ ] Committee workflow customization
+- [x] **Grant program setup and configuration** - Create, edit, and manage grant programs
+- [x] **Committee management interface** - Admin dashboard for committee settings and members
+- [x] **Member management** - Add, remove, and update roles for committee members
+- [x] **User search functionality** - Search users by email or name for member addition
+- [ ] Multi-sig wallet integration (UI section created, awaiting implementation)
+- [ ] Committee workflow customization (voting thresholds, approval rules)
 
 ### G. Marketplace & Discovery Features 🆕
 
@@ -621,11 +638,11 @@ platformMetrics: {
 1. **✅ Committee Database Architecture:** Enhanced queries for marketplace features
 2. **✅ Milestone Completion System:** Multisig transaction verification for payments
 3. **✅ Comprehensive Test Data:** Full database seeding with realistic scenarios
-4. **Committee Onboarding:** Registration, profile creation, and program setup (NEXT)
-5. **Marketplace Interface:** Committee discovery and comparison features
-6. **Multi-Committee Submissions:** Dynamic forms and committee-specific workflows
-7. **Committee Management:** Curator permissions and voting configuration
-8. **Wallet Integration:** Committee multi-sig setup for automated payouts
+4. **✅ Committee Management Interface:** Admin dashboard with member management and settings
+5. **Committee Onboarding:** Registration, profile creation, and program setup (NEXT)
+6. **Marketplace Interface:** Committee discovery and comparison features
+7. **Multi-Committee Submissions:** Dynamic forms and committee-specific workflows
+8. **Wallet Integration:** Committee multi-sig setup for automated payouts (UI ready, integration pending)
 
 ### Phase 5 (Enhanced Platform Features)
 

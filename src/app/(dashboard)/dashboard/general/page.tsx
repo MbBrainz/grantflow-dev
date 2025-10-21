@@ -6,17 +6,15 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Loader2 } from 'lucide-react'
-import { updateAccount } from '@/app/(login)/actions'
+import {
+  updateAccountState,
+  type AccountFormState,
+} from '@/app/(login)/actions'
 import type { User } from '@/lib/db/schema'
-import type { ActionState } from '@/lib/auth/middleware'
 import useSWR from 'swr'
 import { Suspense } from 'react'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
-
-interface AccountFormState extends ActionState {
-  name?: string
-}
 
 interface AccountFormProps {
   state: AccountFormState
@@ -39,7 +37,7 @@ function AccountForm({
           id="name"
           name="name"
           placeholder="Enter your name"
-          defaultValue={state.name ?? nameValue}
+          defaultValue={(state.name ?? nameValue) || ''}
           required
         />
       </div>
@@ -52,7 +50,7 @@ function AccountForm({
           name="email"
           type="email"
           placeholder="Enter your email"
-          defaultValue={emailValue}
+          defaultValue={emailValue || ''}
           disabled
           className="bg-muted cursor-not-allowed"
         />
@@ -69,17 +67,17 @@ function AccountFormWithData({ state }: { state: AccountFormState }) {
   return (
     <AccountForm
       state={state}
-      nameValue={user?.name ?? ''}
-      emailValue={user?.email ?? ''}
+      nameValue={(user?.name ?? '') || ''}
+      emailValue={(user?.email ?? '') || ''}
     />
   )
 }
 
 export default function GeneralPage() {
-  const [state, formAction, isPending] = useActionState<
-    AccountFormState,
-    FormData
-  >(updateAccount, {})
+  const [state, formAction, isPending] = useActionState(
+    updateAccountState,
+    {} as AccountFormState
+  )
 
   return (
     <section className="flex-1 p-4 lg:p-8">
@@ -100,7 +98,11 @@ export default function GeneralPage() {
               <p className="text-sm text-red-500">{state.error}</p>
             )}
             {state.success && (
-              <p className="text-sm text-green-500">{state.success}</p>
+              <p className="text-sm text-green-500">
+                {typeof state.success === 'string'
+                  ? state.success
+                  : (state.message ?? 'Account updated successfully.')}
+              </p>
             )}
             <Button
               type="submit"

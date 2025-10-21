@@ -598,6 +598,10 @@ async function seed() {
       description:
         'Large grants for building essential infrastructure components and developer tools',
       fundingAmount: 100000,
+      minGrantSize: 50000,
+      maxGrantSize: 100000,
+      minMilestoneSize: 10000,
+      maxMilestoneSize: 30000,
       requirements: JSON.stringify({
         minExperience: '2 years',
         requiredSkills: ['Rust', 'Go', 'TypeScript', 'System Design'],
@@ -659,6 +663,10 @@ async function seed() {
       description:
         'Medium grants for developer productivity tools, libraries, and utilities',
       fundingAmount: 50000,
+      minGrantSize: 10000,
+      maxGrantSize: 50000,
+      minMilestoneSize: 2500,
+      maxMilestoneSize: 15000,
       requirements: JSON.stringify({
         minExperience: '1 year',
         requiredSkills: ['JavaScript/TypeScript', 'React', 'Node.js'],
@@ -714,6 +722,10 @@ async function seed() {
       description:
         'Funding for academic research, white papers, and theoretical work',
       fundingAmount: 75000,
+      minGrantSize: 25000,
+      maxGrantSize: 75000,
+      minMilestoneSize: 5000,
+      maxMilestoneSize: 20000,
       requirements: JSON.stringify({
         minExperience: 'PhD or equivalent research experience',
         requiredSkills: [
@@ -777,6 +789,10 @@ async function seed() {
       description:
         'Creating tutorials, courses, and educational materials for the community',
       fundingAmount: 25000,
+      minGrantSize: 5000,
+      maxGrantSize: 25000,
+      minMilestoneSize: 1000,
+      maxMilestoneSize: 8000,
       requirements: JSON.stringify({
         minExperience: '6 months teaching/content creation',
         requiredSkills: [
@@ -829,6 +845,10 @@ async function seed() {
       description:
         'Building new DeFi protocols, AMMs, and financial primitives',
       fundingAmount: 150000,
+      minGrantSize: 75000,
+      maxGrantSize: 150000,
+      minMilestoneSize: 15000,
+      maxMilestoneSize: 50000,
       requirements: JSON.stringify({
         minExperience: '2 years DeFi development',
         requiredSkills: [
@@ -890,6 +910,10 @@ async function seed() {
       description:
         'Building gaming platforms, NFT marketplaces, and virtual world infrastructure',
       fundingAmount: 80000,
+      minGrantSize: 20000,
+      maxGrantSize: 80000,
+      minMilestoneSize: 5000,
+      maxMilestoneSize: 25000,
       requirements: JSON.stringify({
         minExperience: '1.5 years game development',
         requiredSkills: [
@@ -1912,6 +1936,125 @@ async function seed() {
       ],
       githubRepoUrl: 'https://github.com/nft-gaming-studio/web3-state',
       createdAt: new Date('2024-01-15T09:00:00Z'),
+    })
+    .returning()
+
+  // Milestones for Zero-Knowledge Proof Development Toolkit (infraInReviewSubmission2)
+  const [_zkToolkitMilestone1] = await db
+    .insert(milestones)
+    .values({
+      submissionId: infraInReviewSubmission2.id,
+      groupId: infraCommittee.id,
+      title: 'Core ZK Circuit Designer & Compiler',
+      description:
+        'Develop the visual circuit designer interface and core ZK circuit compiler with support for multiple proof systems.',
+      requirements: [
+        'Visual circuit designer UI',
+        'Circuit compiler for Groth16',
+        'Circuit compiler for PLONK',
+        'Basic optimization algorithms',
+        'Unit tests with >85% coverage',
+      ],
+      amount: 30000,
+      dueDate: new Date('2024-04-15'),
+      status: 'pending',
+      deliverables: [
+        { description: 'Visual circuit designer web application' },
+        { description: 'Multi-proof system compiler' },
+        { description: 'Optimization tooling' },
+        { description: 'Test suite' },
+      ],
+      githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
+      createdAt: new Date('2024-01-20T09:00:00Z'),
+    })
+    .returning()
+
+  const [_zkToolkitMilestone2] = await db
+    .insert(milestones)
+    .values({
+      submissionId: infraInReviewSubmission2.id,
+      groupId: infraCommittee.id,
+      title: 'Developer SDK & Framework Integrations',
+      description:
+        'Build developer SDKs for JavaScript, Rust, and Python with integrations for popular ZK frameworks.',
+      requirements: [
+        'JavaScript/TypeScript SDK',
+        'Rust SDK',
+        'Python SDK',
+        'Circom integration',
+        'Noir integration',
+        'API documentation',
+      ],
+      amount: 25000,
+      dueDate: new Date('2024-05-30'),
+      status: 'pending',
+      deliverables: [
+        { description: 'Multi-language SDK suite' },
+        { description: 'Framework integration plugins' },
+        { description: 'Comprehensive API docs' },
+        { description: 'Integration examples' },
+      ],
+      githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
+      createdAt: new Date('2024-01-20T09:00:00Z'),
+    })
+    .returning()
+
+  const [_zkToolkitMilestone3] = await db
+    .insert(milestones)
+    .values({
+      submissionId: infraInReviewSubmission2.id,
+      groupId: infraCommittee.id,
+      title: 'Performance Optimization & Benchmarking Suite',
+      description:
+        'Implement advanced optimization algorithms and create comprehensive benchmarking tools for circuit performance analysis.',
+      requirements: [
+        'Advanced circuit optimization',
+        'Proof generation benchmarking',
+        'Memory usage profiling',
+        'Performance comparison dashboard',
+        'Optimization recommendations engine',
+      ],
+      amount: 25000,
+      dueDate: new Date('2024-07-15'),
+      status: 'pending',
+      deliverables: [
+        { description: 'Optimization engine' },
+        { description: 'Benchmarking suite' },
+        { description: 'Performance dashboard' },
+        { description: 'Optimization guide' },
+      ],
+      githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
+      createdAt: new Date('2024-01-20T09:00:00Z'),
+    })
+    .returning()
+
+  const [_zkToolkitMilestone4] = await db
+    .insert(milestones)
+    .values({
+      submissionId: infraInReviewSubmission2.id,
+      groupId: infraCommittee.id,
+      title: 'Documentation, Tutorials & Enterprise Features',
+      description:
+        'Create comprehensive documentation, interactive tutorials, and enterprise-grade features including team collaboration and audit logging.',
+      requirements: [
+        'Complete documentation site',
+        'Interactive tutorials (5+)',
+        'Video walkthrough series',
+        'Team collaboration features',
+        'Audit logging system',
+        'Enterprise support portal',
+      ],
+      amount: 20000,
+      dueDate: new Date('2024-08-30'),
+      status: 'pending',
+      deliverables: [
+        { description: 'Documentation website' },
+        { description: 'Tutorial content' },
+        { description: 'Video series' },
+        { description: 'Enterprise features' },
+      ],
+      githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
+      createdAt: new Date('2024-01-20T09:00:00Z'),
     })
     .returning()
 

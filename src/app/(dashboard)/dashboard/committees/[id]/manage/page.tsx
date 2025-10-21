@@ -1,17 +1,17 @@
-import { notFound } from 'next/navigation'
+import { notFound, redirect } from 'next/navigation'
 import { getCommitteeById, isCommitteeAdmin } from '@/lib/db/queries'
 import { getGrantProgramsFinancials } from '@/lib/db/queries/grant-programs'
-import { CommitteeDetailView } from './committee-detail-view'
+import { ManageCommitteeView } from './manage-committee-view'
 
-interface CommitteeDetailPageProps {
+interface ManageCommitteePageProps {
   params: Promise<{
     id: string
   }>
 }
 
-export default async function CommitteeDetailPage({
+export default async function ManageCommitteePage({
   params,
-}: CommitteeDetailPageProps) {
+}: ManageCommitteePageProps) {
   const { id } = await params
   const committeeId = parseInt(id)
 
@@ -28,6 +28,11 @@ export default async function CommitteeDetailPage({
     notFound()
   }
 
+  // Only admins can access this page
+  if (!isAdmin) {
+    redirect(`/dashboard/committees/${committeeId}`)
+  }
+
   // Get financial metrics for all grant programs
   const programIds = committee.grantPrograms?.map(p => p.id) ?? []
   const financials = await getGrantProgramsFinancials(programIds)
@@ -37,9 +42,8 @@ export default async function CommitteeDetailPage({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <CommitteeDetailView
+      <ManageCommitteeView
         committee={committee}
-        isAdmin={isAdmin}
         financialsMap={financialsMap}
       />
     </div>

@@ -8,15 +8,27 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { CommitteeWithDetails } from '@/lib/db/queries/committees'
 import Image from 'next/image'
+import { GrantProgramCard } from '@/components/committee/grant-program-card'
+
+interface ProgramFinancials {
+  programId: number
+  totalBudget: number
+  allocated: number
+  spent: number
+  remaining: number
+  available: number
+}
 
 interface CommitteeDetailViewProps {
   committee: NonNullable<CommitteeWithDetails>
   isAdmin: boolean
+  financialsMap: Map<number | undefined, ProgramFinancials | null | undefined>
 }
 
 export function CommitteeDetailView({
   committee,
   isAdmin,
+  financialsMap,
 }: CommitteeDetailViewProps) {
   const router = useRouter()
 
@@ -73,61 +85,72 @@ export function CommitteeDetailView({
         )}
       </div>
 
-      {/* Description */}
-      {committee.description && (
+      {/* Overview Card - Combined About, Links, and Focus Areas */}
+      {(Boolean(committee.description) ||
+        Boolean(committee.websiteUrl) ||
+        Boolean(committee.githubOrg) ||
+        (committee.focusAreas && Array.isArray(committee.focusAreas))) && (
         <Card className="p-6">
-          <h2 className="mb-3 text-lg font-semibold">About</h2>
-          <p className="text-gray-700 dark:text-gray-300">
-            {committee.description}
-          </p>
-        </Card>
-      )}
-
-      {/* Links */}
-      {(committee.websiteUrl ?? committee.githubOrg) && (
-        <Card className="p-6">
-          <h2 className="mb-3 text-lg font-semibold">Links</h2>
-          <div className="flex flex-wrap gap-3">
-            {committee.websiteUrl && (
-              <Button variant="outline" size="sm" asChild>
-                <a
-                  href={committee.websiteUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2"
-                >
-                  <ExternalLink className="h-4 w-4" />
-                  Website
-                </a>
-              </Button>
+          <div className="space-y-5">
+            {/* About */}
+            {committee.description && (
+              <div>
+                <h2 className="mb-2 text-lg font-semibold">About</h2>
+                <p className="text-gray-700 dark:text-gray-300">
+                  {committee.description}
+                </p>
+              </div>
             )}
-            {committee.githubOrg && (
-              <Button variant="outline" size="sm" asChild>
-                <a
-                  href={`https://github.com/${committee.githubOrg}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-2"
-                >
-                  <Github className="h-4 w-4" />
-                  GitHub
-                </a>
-              </Button>
-            )}
-          </div>
-        </Card>
-      )}
 
-      {/* Focus Areas */}
-      {committee.focusAreas && Array.isArray(committee.focusAreas) && (
-        <Card className="p-6">
-          <h2 className="mb-3 text-lg font-semibold">Focus Areas</h2>
-          <div className="flex flex-wrap gap-2">
-            {committee.focusAreas.map((area, idx) => (
-              <Badge key={idx} variant="secondary">
-                {typeof area === 'string' ? area : String(area)}
-              </Badge>
-            ))}
+            {/* Links */}
+            {(Boolean(committee.websiteUrl) ||
+              Boolean(committee.githubOrg)) && (
+              <div>
+                <h2 className="mb-2 text-lg font-semibold">Links</h2>
+                <div className="flex flex-wrap gap-3">
+                  {committee.websiteUrl && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href={committee.websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2"
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Website
+                      </a>
+                    </Button>
+                  )}
+                  {committee.githubOrg && (
+                    <Button variant="outline" size="sm" asChild>
+                      <a
+                        href={`https://github.com/${committee.githubOrg}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2"
+                      >
+                        <Github className="h-4 w-4" />
+                        GitHub
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Focus Areas */}
+            {committee.focusAreas && Array.isArray(committee.focusAreas) && (
+              <div>
+                <h2 className="mb-2 text-lg font-semibold">Focus Areas</h2>
+                <div className="flex flex-wrap gap-2">
+                  {committee.focusAreas.map((area, idx) => (
+                    <Badge key={idx} variant="secondary">
+                      {typeof area === 'string' ? area : String(area)}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </Card>
       )}
@@ -137,29 +160,22 @@ export function CommitteeDetailView({
         <Card className="p-6">
           <h2 className="mb-4 text-lg font-semibold">Grant Programs</h2>
           <div className="space-y-3">
-            {committee.grantPrograms.map(program => (
-              <Link
-                key={program.id}
-                href={`/dashboard/programs/${program.id}`}
-                className="block rounded-lg border border-gray-200 p-4 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold">{program.name}</h3>
-                    {program.description && (
-                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                        {program.description}
-                      </p>
-                    )}
-                  </div>
-                  {program.fundingAmount && (
-                    <Badge variant="outline">
-                      ${program.fundingAmount.toLocaleString()}
-                    </Badge>
-                  )}
-                </div>
-              </Link>
-            ))}
+            {committee.grantPrograms
+              .filter(program => program.isActive)
+              .map(program => (
+                <Link
+                  key={program.id}
+                  href={`/dashboard/programs/${program.id}`}
+                  className="block transition-transform hover:scale-[1.01]"
+                >
+                  <GrantProgramCard
+                    program={program}
+                    variant="compact"
+                    financials={financialsMap.get(program.id) ?? null}
+                    showAdminActions={false}
+                  />
+                </Link>
+              ))}
           </div>
         </Card>
       )}

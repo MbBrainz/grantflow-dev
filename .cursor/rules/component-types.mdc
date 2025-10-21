@@ -1,0 +1,246 @@
+---
+description: "Component Type Safety: Always use Pick<> and Omit<> from database schema types. Never duplicate types that exist in the schema."
+globs: ["src/components/**/*.tsx", "src/app/**/*.tsx"]
+---
+
+# Component Type Safety Convention
+
+## Always Use `Pick<>` and `Omit<>` from Database Schema Types
+
+Components should NEVER manually define types for database entities. Always derive component prop types from the existing database schema using TypeScript's `Pick<>` and `Omit<>` utilities.
+
+## Why This Matters
+
+✅ **Single Source of Truth** - Database schema is the authoritative type definition
+✅ **Automatic Updates** - Schema changes propagate to all components automatically
+✅ **Type Safety** - Compiler ensures required fields actually exist in the database
+✅ **No Duplication** - Avoid maintaining the same types in multiple places
+✅ **Explicit Dependencies** - Clear which fields the component actually needs
+
+## Pattern
+
+### ❌ DON'T DO THIS (Manual Type Definition)
+
+```typescript
+// components/committee-badge.tsx
+interface Committee {
+  id: number
+  name: string
+  description: string
+  logoUrl: string
+  // Duplicating types that already exist in the schema!
+}
+
+interface CommitteeBadgeProps {
+  committee: Committee
+  className?: string
+}
+```
+
+### ✅ DO THIS (Derive from Schema)
+
+```typescript
+// components/committee-badge.tsx
+import type { Committee } from '@/lib/db/schema'
+
+interface CommitteeBadgeProps {
+  committee: Pick<Committee, 'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'>
+  className?: string
+}
+```
+
+## Examples in Codebase
+
+### Excellent Examples
+
+**`src/components/submissions/milestone-status-overview.tsx:27-47`** - Model implementation
+```typescript
+import type { Milestone, Submission } from '@/lib/db/schema'
+
+interface MilestoneStatusOverviewProps {
+  submission: Pick<Submission, 'id' | 'title' | 'status' | 'submitterId'> & {
+    milestones: Pick<
+      Milestone,
+      | 'id'
+      | 'title'
+      | 'description'
+      | 'status'
+      | 'amount'
+      | 'dueDate'
+      | 'deliverables'
+      | 'githubRepoUrl'
+      | 'submittedAt'
+      | 'reviewedAt'
+      | 'createdAt'
+    >[]
+  }
+  currentUserId?: number | null
+  onSubmitMilestone?: (milestoneId: number) => void
+  className?: string
+}
+```
+
+**`src/components/milestone-submission-form.tsx:34-57`**
+```typescript
+import type { Milestone } from '@/lib/db/schema'
+
+interface MilestoneSubmissionFormProps {
+  milestone: Pick<
+    Milestone,
+    | 'id'
+    | 'title'
+    | 'description'
+    | 'requirements'
+    | 'amount'
+    | 'dueDate'
+    | 'status'
+    | 'deliverables'
+    | 'githubRepoUrl'
+    | 'githubCommitHash'
+  >
+  submissionRepoUrl: string | null
+  previousMilestoneCommitSha?: string | null
+  onSubmit: (data: SubmitData) => Promise<void>
+  onCancel: () => void
+}
+```
+
+**`src/components/milestone-completion-form.tsx:16-21`**
+```typescript
+import type { Milestone } from '@/lib/db/schema'
+
+interface MilestoneCompletionFormProps {
+  milestone: Pick<Milestone, 'id' | 'title' | 'amount'>
+  committeeId: number
+  onSuccess?: () => void
+  onCancel?: () => void
+}
+```
+
+**`src/app/(dashboard)/dashboard/page.tsx:24-28`**
+```typescript
+import type { User } from '@/lib/db/schema'
+
+type UserData = Pick<User, 'id' | 'name' | 'email' | 'primaryRole'> & {
+  role: string // API-specific field for compatibility
+}
+```
+
+## When Component-Local Types Are OK
+
+You CAN define types locally when they are:
+
+- **UI-specific state** (not database entities)
+- **Component configuration options**
+- **Derived/computed types** that don't exist in the schema
+- **API response wrappers** that add fields to schema types
+
+### Example: UI-Specific Types (OK)
+
+```typescript
+// This is fine - it's UI state, not a database entity
+interface FilterState {
+  searchTerm: string
+  selectedCategory: string | null
+  sortOrder: 'asc' | 'desc'
+}
+```
+
+### Example: API Response Wrapper (OK)
+
+```typescript
+import type { Group } from '@/lib/db/schema'
+
+// This is fine - wrapping schema type with API metadata
+interface UserCommitteesResponse {
+  success: boolean
+  memberships: {
+    committee: Group  // ✅ Reusing schema type
+    role: string
+    isActive: boolean
+  }[]
+  totalMemberships: number
+  activeMemberships: number
+}
+```
+
+## Common Patterns
+
+### Pattern 1: Simple Pick
+
+```typescript
+import type { User } from '@/lib/db/schema'
+
+type UserSummary = Pick<User, 'id' | 'name' | 'email'>
+```
+
+### Pattern 2: Pick with Extension
+
+```typescript
+import type { Submission } from '@/lib/db/schema'
+
+type SubmissionWithMeta = Pick<Submission, 'id' | 'title' | 'status'> & {
+  isOwner: boolean  // Add UI-specific field
+  canEdit: boolean
+}
+```
+
+### Pattern 3: Nested Picks
+
+```typescript
+import type { Submission, Milestone } from '@/lib/db/schema'
+
+interface SubmissionDetailProps {
+  submission: Pick<Submission, 'id' | 'title' | 'status'> & {
+    milestones: Pick<Milestone, 'id' | 'title' | 'status' | 'amount'>[]
+  }
+}
+```
+
+### Pattern 4: Omit (When Excluding Fields)
+
+```typescript
+import type { User } from '@/lib/db/schema'
+
+// Public profile excludes sensitive fields
+type PublicUserProfile = Omit<User, 'passwordHash' | 'deletedAt' | 'githubId'>
+```
+
+## Helper Types for Complex Picks
+
+For frequently used combinations, create type aliases:
+
+```typescript
+// lib/types/common.ts
+import type { User, Milestone, Submission } from '@/lib/db/schema'
+
+export type UserSummary = Pick<User, 'id' | 'name' | 'email' | 'avatarUrl'>
+
+export type MilestoneSummary = Pick<Milestone, 'id' | 'title' | 'status' | 'amount' | 'dueDate'>
+
+export type SubmissionSummary = Pick<Submission, 'id' | 'title' | 'status' | 'totalAmount' | 'createdAt'>
+```
+
+Then use in components:
+
+```typescript
+import type { MilestoneSummary } from '@/lib/types/common'
+
+interface MilestoneListProps {
+  milestones: MilestoneSummary[]
+}
+```
+
+## Migration Checklist
+
+When updating existing components:
+
+1. ✅ Import the schema type: `import type { Entity } from '@/lib/db/schema'`
+2. ✅ Replace interface with `Pick<Entity, 'field1' | 'field2' | ...>`
+3. ✅ Update component destructuring if prop names changed
+4. ✅ Verify TypeScript compilation passes
+5. ✅ Test component functionality
+
+## Rule of Thumb
+
+**If it comes from the database, import and derive the type. Don't recreate it.**

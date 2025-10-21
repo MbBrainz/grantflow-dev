@@ -21,6 +21,10 @@ export const grantPrograms = pgTable('grant_programs', {
   name: varchar('name', { length: 100 }).notNull(),
   description: text('description'),
   fundingAmount: bigint('funding_amount', { mode: 'number' }),
+  minGrantSize: bigint('min_grant_size', { mode: 'number' }), // Minimum total grant size per submission
+  maxGrantSize: bigint('max_grant_size', { mode: 'number' }), // Maximum total grant size per submission
+  minMilestoneSize: bigint('min_milestone_size', { mode: 'number' }), // Minimum payout per milestone
+  maxMilestoneSize: bigint('max_milestone_size', { mode: 'number' }), // Maximum payout per milestone
   requirements: text('requirements'), // JSON structured requirements
   applicationTemplate: text('application_template'), // JSON form template
   milestoneStructure: text('milestone_structure'), // JSON milestone template

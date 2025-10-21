@@ -1,0 +1,23 @@
+---
+description: "Notifications system requirements: Multi-channel notifications (webapp, PWA, email, optional Telegram) to help grant committees process proposals and milestone approvals efficiently."
+globs: ["src/lib/notifications/**/*", "src/app/**/notifications/**/*"]
+---
+
+# Notifications
+
+A essential part of grantflow.dev's value proposition is that the grant committee are helped to quickly process grant proposals and milestone approvals, by the notification system. The notification system needs to send pings and updates to the committee members, whenever a step in the grant process is awaiting their action and subsequent reminders when a step has been pending or inactive for a couple of days.
+
+The notifications should happen in multiple configurable ways, meaning they can be switched on and off based on the users preference. The intended notification methods are the following:
+
+- **Platform webapp notifications** (like how a webapp can ask you for verification)
+- **PWA notifications** when installed on a mobile phone as a pwa (both android and apple compatible)
+- **Email notifications**
+- **(Optional, per group) Telegram bot notifications** (this is a feature that is not essential for now)
+
+## Key Requirements
+
+1. **Action-triggered notifications** - Send notifications when committee action is required
+2. **Reminder system** - Follow-up notifications for pending items after a few days
+3. **User preferences** - Each notification channel can be toggled on/off per user
+4. **Real-time delivery** - Immediate notifications for urgent actions
+5. **Graceful degradation** - System should work even if some channels fail

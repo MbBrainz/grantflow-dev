@@ -188,6 +188,14 @@ export function GranteeSubmissionView({
   const canSubmitMilestone = (
     milestone: Pick<Milestone, 'id' | 'status' | 'createdAt'>
   ) => {
+    // Check if submission is approved first
+    if (submission.status !== 'approved') {
+      return {
+        canSubmit: false,
+        reason: 'Submission must be approved first',
+      }
+    }
+
     // Check basic requirements
     if (
       !['pending', 'in_progress'].includes(milestone.status) ||

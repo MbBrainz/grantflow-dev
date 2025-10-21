@@ -1,19 +1,19 @@
 import { notFound } from 'next/navigation'
 import {
   getGrantProgramWithDetails,
-  isGrantProgramAdmin,
-} from '@/lib/db/queries'
-import { GrantProgramDetailView } from './program-detail-view'
+  getGrantProgramFinancials,
+} from '@/lib/db/queries/grant-programs'
+import { GrantProgramDetailView } from './grant-program-detail-view'
 
-interface GrantProgramDetailPageProps {
+interface GrantProgramPageProps {
   params: Promise<{
     id: string
   }>
 }
 
-export default async function GrantProgramDetailPage({
+export default async function GrantProgramPage({
   params,
-}: GrantProgramDetailPageProps) {
+}: GrantProgramPageProps) {
   const { id } = await params
   const programId = parseInt(id)
 
@@ -21,9 +21,9 @@ export default async function GrantProgramDetailPage({
     notFound()
   }
 
-  const [program, isAdmin] = await Promise.all([
+  const [program, financials] = await Promise.all([
     getGrantProgramWithDetails(programId),
-    isGrantProgramAdmin(programId),
+    getGrantProgramFinancials(programId),
   ])
 
   if (!program) {
@@ -32,7 +32,7 @@ export default async function GrantProgramDetailPage({
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <GrantProgramDetailView program={program} isAdmin={isAdmin} />
+      <GrantProgramDetailView program={program} financials={financials} />
     </div>
   )
 }

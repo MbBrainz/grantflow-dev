@@ -261,8 +261,9 @@ export function MilestoneStatusOverview({
             </div>
           </CardHeader>
 
-          {/* Submit for Review Button - Only show for grantee on in-progress milestones */}
+          {/* Submit for Review Button - Only show for grantee on approved submissions with in-progress milestones */}
           {isGrantee &&
+            submission.status === 'approved' &&
             activeStep.milestone &&
             (activeStep.milestone.status === 'pending' ||
               activeStep.milestone.status === 'changes-requested') &&

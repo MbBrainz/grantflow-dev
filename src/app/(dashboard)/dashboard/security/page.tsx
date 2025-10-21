@@ -6,23 +6,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Lock, Trash2, Loader2 } from 'lucide-react'
 import { useActionState } from 'react'
-import { updatePassword, deleteAccount } from '@/app/(login)/actions'
-import type { ActionState } from '@/lib/auth/middleware'
+import {
+  updatePasswordState,
+  deleteAccountState,
+  type PasswordState,
+  type DeleteState,
+} from '@/app/(login)/actions'
 import type { User } from '@/lib/db/schema'
 import useSWR from 'swr'
 import { Suspense } from 'react'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
-
-interface PasswordState extends ActionState {
-  currentPassword?: string
-  newPassword?: string
-  confirmPassword?: string
-}
-
-interface DeleteState extends ActionState {
-  password?: string
-}
 
 function PasswordSection({
   passwordState,
@@ -52,7 +46,7 @@ function PasswordSection({
               required
               minLength={8}
               maxLength={100}
-              defaultValue={passwordState.currentPassword}
+              defaultValue={passwordState.currentPassword ?? ''}
             />
           </div>
           <div>
@@ -67,7 +61,7 @@ function PasswordSection({
               required
               minLength={8}
               maxLength={100}
-              defaultValue={passwordState.newPassword}
+              defaultValue={passwordState.newPassword ?? ''}
             />
           </div>
           <div>
@@ -81,14 +75,18 @@ function PasswordSection({
               required
               minLength={8}
               maxLength={100}
-              defaultValue={passwordState.confirmPassword}
+              defaultValue={passwordState.confirmPassword ?? ''}
             />
           </div>
           {passwordState.error && (
             <p className="text-sm text-red-500">{passwordState.error}</p>
           )}
           {passwordState.success && (
-            <p className="text-sm text-green-500">{passwordState.success}</p>
+            <p className="text-sm text-green-500">
+              {typeof passwordState.success === 'string'
+                ? passwordState.success
+                : passwordState.message}
+            </p>
           )}
           <Button
             type="submit"
@@ -146,7 +144,7 @@ function DeleteAccountSection({
                 required
                 minLength={8}
                 maxLength={100}
-                defaultValue={deleteState.password}
+                defaultValue={deleteState.password ?? ''}
               />
             </div>
             {deleteState.error && (
@@ -199,7 +197,7 @@ function SecurityContent({
 }) {
   const { data: user } = useSWR<User>('/api/user', fetcher)
 
-  const hasPassword = Boolean(user?.passwordHash)
+  const hasPassword = Boolean(user?.passwordHash ?? false)
 
   return (
     <>
@@ -234,15 +232,15 @@ function SecurityContent({
 }
 
 export default function SecurityPage() {
-  const [passwordState, passwordAction, isPasswordPending] = useActionState<
-    PasswordState,
-    FormData
-  >(updatePassword, {})
+  const [passwordState, passwordAction, isPasswordPending] = useActionState(
+    updatePasswordState,
+    {} as PasswordState
+  )
 
-  const [deleteState, deleteAction, isDeletePending] = useActionState<
-    DeleteState,
-    FormData
-  >(deleteAccount, {})
+  const [deleteState, deleteAction, isDeletePending] = useActionState(
+    deleteAccountState,
+    {} as DeleteState
+  )
 
   return (
     <section className="flex-1 p-4 lg:p-8">

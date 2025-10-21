@@ -51,8 +51,9 @@ interface Submission {
 function StatusBadge({ status }: { status: string }) {
   const colors = {
     draft: 'bg-gray-100 text-gray-800',
-    submitted: 'bg-blue-100 text-blue-800',
-    under_review: 'bg-yellow-100 text-yellow-800',
+    pending: 'bg-blue-100 text-blue-800',
+    'in-review': 'bg-yellow-100 text-yellow-800',
+    'changes-requested': 'bg-orange-100 text-orange-800',
     approved: 'bg-green-100 text-green-800',
     rejected: 'bg-red-100 text-red-800',
   }
@@ -63,7 +64,7 @@ function StatusBadge({ status }: { status: string }) {
         colors[status as keyof typeof colors] ?? colors.draft
       }`}
     >
-      {status.replace('_', ' ').toUpperCase()}
+      {status.replace(/_|-/g, ' ').toUpperCase()}
     </span>
   )
 }
@@ -200,30 +201,42 @@ export function ReviewDashboardClient({
   stats,
   pendingActions,
 }: ReviewDashboardClientProps) {
-  const [selectedFilter, setSelectedFilter] = useState<string>('all')
+  // Default filter is 'active' (pending, in-review, changes-requested, approved)
+  const [selectedFilter, setSelectedFilter] = useState<string>('active')
 
   const filteredSubmissions = useMemo(() => {
-    if (selectedFilter === 'all') return initialSubmissions
-
-    const statusMap = {
-      pending: ['submitted'],
-      under_review: ['under_review'],
-      approved: ['approved'],
-      rejected: ['rejected'],
+    if (selectedFilter === 'all') {
+      return initialSubmissions
+    } else if (selectedFilter === 'active') {
+      // Active = pending, in-review, changes-requested, approved (not rejected)
+      return initialSubmissions.filter(
+        s =>
+          s.status === 'pending' ||
+          s.status === 'in-review' ||
+          s.status === 'changes-requested' ||
+          s.status === 'approved'
+      )
+    } else if (selectedFilter === 'rejected') {
+      return initialSubmissions.filter(s => s.status === 'rejected')
     }
 
-    const targetStatuses =
-      statusMap[selectedFilter as keyof typeof statusMap] ?? []
-    return initialSubmissions.filter(submission =>
-      targetStatuses.includes(submission.status)
-    )
+    return initialSubmissions
   }, [initialSubmissions, selectedFilter])
+
+  // Calculate active count
+  const activeCount = initialSubmissions.filter(
+    s =>
+      s.status === 'pending' ||
+      s.status === 'in-review' ||
+      s.status === 'changes-requested' ||
+      s.status === 'approved'
+  ).length
 
   const filterButtons = [
     {
-      key: 'all',
-      label: 'All',
-      count: stats.total,
+      key: 'active',
+      label: 'Active',
+      count: activeCount,
       variant: 'default' as const,
     },
     {
@@ -248,6 +261,12 @@ export function ReviewDashboardClient({
       key: 'rejected',
       label: 'Rejected',
       count: stats.rejected,
+      variant: 'outline' as const,
+    },
+    {
+      key: 'all',
+      label: 'All',
+      count: stats.total,
       variant: 'outline' as const,
     },
   ]
@@ -344,7 +363,12 @@ export function ReviewDashboardClient({
             onClick={() => setSelectedFilter(filter.key)}
             className="transition-all duration-200"
           >
-            {filter.label} ({filter.count})
+            {filter.label}
+            {filter.count > 0 && (
+              <span className="ml-1.5 rounded-full bg-white/20 px-1.5 py-0.5 text-xs">
+                {filter.count}
+              </span>
+            )}
           </Button>
         ))}
       </div>
@@ -354,11 +378,22 @@ export function ReviewDashboardClient({
         {filteredSubmissions.length === 0 ? (
           <Card className="p-8 text-center">
             <FileText className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-            <p className="text-gray-500 dark:text-gray-400">
+            <p className="text-muted-foreground mb-4">
               {selectedFilter === 'all'
                 ? 'No submissions found. Check back later for new grant applications.'
-                : `No ${selectedFilter.replace('_', ' ')} submissions found.`}
+                : selectedFilter === 'active'
+                  ? 'No active submissions found.'
+                  : `No ${selectedFilter.replace('_', ' ')} submissions found.`}
             </p>
+            {selectedFilter !== 'all' && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setSelectedFilter('all')}
+              >
+                View All Submissions
+              </Button>
+            )}
           </Card>
         ) : (
           <div className="grid gap-4">

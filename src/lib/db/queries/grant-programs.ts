@@ -1,6 +1,11 @@
-import { eq, and } from 'drizzle-orm'
+import { eq, and, sql } from 'drizzle-orm'
 import { db } from '../drizzle'
-import { grantPrograms, groupMemberships } from '../schema'
+import {
+  grantPrograms,
+  groupMemberships,
+  submissions,
+  milestones,
+} from '../schema'
 import { getUser } from './users'
 
 /**
@@ -97,3 +102,72 @@ export async function getActiveGrantPrograms() {
 export type GrantProgramWithDetails = Awaited<
   ReturnType<typeof getGrantProgramWithDetails>
 >
+
+/**
+ * Get financial metrics for a grant program
+ * Returns total budget, allocated funds (approved grants), and spent funds (completed milestones)
+ */
+export async function getGrantProgramFinancials(programId: number) {
+  // Get the program to access fundingAmount
+  const program = await db.query.grantPrograms.findFirst({
+    where: eq(grantPrograms.id, programId),
+  })
+
+  if (!program) {
+    return null
+  }
+
+  // Calculate allocated: sum of totalAmount for approved submissions
+  const allocatedResult = await db
+    .select({
+      total: sql<number>`COALESCE(SUM(${submissions.totalAmount}), 0)`,
+    })
+    .from(submissions)
+    .where(
+      and(
+        eq(submissions.grantProgramId, programId),
+        eq(submissions.status, 'approved')
+      )
+    )
+
+  const allocated = Number(allocatedResult[0]?.total ?? 0)
+
+  // Calculate spent: sum of amount for completed milestones
+  // Join milestones with submissions to filter by program
+  const spentResult = await db
+    .select({
+      total: sql<number>`COALESCE(SUM(${milestones.amount}), 0)`,
+    })
+    .from(milestones)
+    .innerJoin(submissions, eq(milestones.submissionId, submissions.id))
+    .where(
+      and(
+        eq(submissions.grantProgramId, programId),
+        eq(milestones.status, 'completed')
+      )
+    )
+
+  const spent = Number(spentResult[0]?.total ?? 0)
+
+  return {
+    programId,
+    totalBudget: program.fundingAmount ?? 0,
+    allocated,
+    spent,
+    remaining: (program.fundingAmount ?? 0) - allocated,
+    available: allocated - spent,
+  }
+}
+
+/**
+ * Get financial metrics for multiple grant programs
+ */
+export async function getGrantProgramsFinancials(programIds: number[]) {
+  if (programIds.length === 0) return []
+
+  const financials = await Promise.all(
+    programIds.map(id => getGrantProgramFinancials(id))
+  )
+
+  return financials.filter(f => f !== null)
+}

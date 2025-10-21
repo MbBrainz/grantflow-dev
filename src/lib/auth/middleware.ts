@@ -83,7 +83,13 @@ export function validatedActionWithUser<
   >
 ) {
   return async (
-    data: Record<string, unknown>
+    data: TSchema extends {
+      safeParse: (
+        data: unknown
+      ) => { success: true; data: infer TData } | { success: false }
+    }
+      ? TData
+      : never
   ): Promise<TOutput | { error: string }> => {
     // 🛡️ Authentication
     const user = await getUser()
@@ -112,5 +118,75 @@ export function validatedActionWithUser<
         : never,
       user
     )
+  }
+}
+
+// ✅ NEW: For useActionState compatibility
+type ValidatedActionWithUserStateFunction<
+  TInput,
+  TState extends ActionState,
+> = (data: TInput, user: User) => Promise<TState>
+
+export function validatedActionWithUserState<
+  TSchema extends ZodLike,
+  TState extends ActionState,
+>(
+  schema: TSchema,
+  action: ValidatedActionWithUserStateFunction<
+    TSchema extends {
+      safeParse: (
+        data: unknown
+      ) => { success: true; data: infer TData } | { success: false }
+    }
+      ? TData
+      : never,
+    TState
+  >
+) {
+  return async (prevState: TState, formData: FormData): Promise<TState> => {
+    // 🛡️ Authentication
+    const user = await getUser()
+    if (!user) {
+      return {
+        ...prevState,
+        error: 'User is not authenticated',
+      } as TState
+    }
+
+    // Convert FormData to object
+    const data = Object.fromEntries(formData.entries())
+
+    // 🛡️ Validation
+    const result = schema.safeParse(data)
+    if (!result.success) {
+      console.error(
+        '[validatedActionWithUserState]: Validation failed',
+        result.error
+      )
+      return {
+        ...prevState,
+        error: result.error?.issues[0]?.message ?? 'Validation failed',
+      } as TState
+    }
+
+    // ✅ Execute action with validated data and user
+    try {
+      return await action(
+        result.data as TSchema extends {
+          safeParse: (
+            data: unknown
+          ) => { success: true; data: infer TData } | { success: false }
+        }
+          ? TData
+          : never,
+        user
+      )
+    } catch (error) {
+      console.error('[validatedActionWithUserState]: Action failed', error)
+      return {
+        ...prevState,
+        error: error instanceof Error ? error.message : 'An error occurred',
+      } as TState
+    }
   }
 }
