@@ -150,16 +150,8 @@ export function GranteeSubmissionView({
     githubCommitHashes: string[]
   }) => {
     try {
-      const formData = new FormData()
-      formData.append('milestoneId', data.milestoneId.toString())
-      formData.append('selectedCommits', JSON.stringify(data.selectedCommits))
-      formData.append('deliverables', data.deliverables)
-      formData.append(
-        'githubCommitHashes',
-        JSON.stringify(data.githubCommitHashes)
-      )
-
-      const result = await submitMilestone({}, formData)
+      // Call the action with typed data object
+      const result = await submitMilestone(data)
 
       if (result.error) {
         throw new Error(result.error)

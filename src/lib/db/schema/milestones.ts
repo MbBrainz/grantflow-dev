@@ -10,12 +10,20 @@ import {
   jsonb,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+import { createSchemaFactory } from 'drizzle-zod'
 import { submissions } from './submissions'
 import { groups } from './groups'
 import { discussions } from './discussions'
 import { reviews } from './reviews'
 import { payouts } from './payouts'
+
+const { createInsertSchema, createSelectSchema } = createSchemaFactory({
+  coerce: {
+    number: true, // Handle form inputs
+    date: true,
+    boolean: true,
+  },
+})
 
 const MILESTONE_STATUS_OPTIONS = [
   'pending',

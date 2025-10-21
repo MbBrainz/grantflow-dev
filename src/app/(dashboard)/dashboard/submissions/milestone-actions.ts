@@ -1,7 +1,6 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import { z } from 'zod'
 import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db/drizzle'
 import { milestones } from '@/lib/db/schema'
@@ -15,35 +14,17 @@ import {
   createMessage,
 } from '@/lib/db/queries'
 import { validatedActionWithUser } from '@/lib/auth/middleware'
-
-/**
- * Schema for completing a milestone with payout
- * Note: Defined manually due to drizzle-zod .extend() type inference issues
- * Matches insertPayoutSchema structure with FormData-specific fields
- */
-const CompleteMilestoneSchema = z.object({
-  milestoneId: z.coerce.number().min(1, 'Invalid milestone ID'),
-  committeeId: z.coerce.number().min(1, 'Invalid committee ID'),
-  transactionHash: z
-    .string()
-    .min(1, 'Transaction hash is required')
-    .max(128, 'Transaction hash is too long'),
-  blockExplorerUrl: z
-    .string()
-    .url('Must be a valid URL')
-    .max(500, 'URL is too long'),
-  amount: z.coerce.number().min(0, 'Amount must be positive'),
-  walletFrom: z.string().optional(),
-  walletTo: z.string().optional(),
-})
-
-type CompleteMilestoneData = z.infer<typeof CompleteMilestoneSchema>
+import {
+  completeMilestoneSchema,
+  submitMilestoneSchema,
+  type CompleteMilestoneInput,
+  type SubmitMilestoneInput,
+} from '@/lib/db/schema/actions'
 
 export const completeMilestone = validatedActionWithUser(
-  CompleteMilestoneSchema,
+  completeMilestoneSchema,
   async (
-    data: CompleteMilestoneData,
-    formData: FormData,
+    data: CompleteMilestoneInput,
     user: { id: number; email: string | null }
   ) => {
     console.log('[completeMilestone]: Starting milestone completion process', {
@@ -153,73 +134,10 @@ export async function validateTransactionHash(
   return { valid: true }
 }
 
-// Schema for milestone submission validation
-const submitMilestoneSchema = z.object({
-  milestoneId: z.coerce.number().min(1, 'Invalid milestone ID'),
-  selectedCommits: z.string().transform((str, ctx) => {
-    try {
-      const parsed: unknown = JSON.parse(str)
-      if (!Array.isArray(parsed)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'selectedCommits must be an array',
-        })
-        return z.NEVER
-      }
-      if (parsed.length === 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'At least one commit must be selected',
-        })
-        return z.NEVER
-      }
-      return parsed as string[]
-    } catch {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Invalid JSON for selectedCommits',
-      })
-      return z.NEVER
-    }
-  }),
-  deliverables: z
-    .string()
-    .min(10, 'Deliverables description must be at least 10 characters'),
-  githubCommitHashes: z.string().transform((str, ctx) => {
-    try {
-      const parsed: unknown = JSON.parse(str)
-      if (!Array.isArray(parsed)) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'githubCommitHashes must be an array',
-        })
-        return z.NEVER
-      }
-      if (parsed.length === 0) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'GitHub commit hashes are required',
-        })
-        return z.NEVER
-      }
-      return parsed as string[]
-    } catch {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Invalid JSON for githubCommitHashes',
-      })
-      return z.NEVER
-    }
-  }),
-})
-
-type SubmitMilestoneData = z.infer<typeof submitMilestoneSchema>
-
 export const submitMilestone = validatedActionWithUser(
   submitMilestoneSchema,
   async (
-    data: SubmitMilestoneData,
-    formData: FormData,
+    data: SubmitMilestoneInput,
     user: { id: number; email: string | null }
   ) => {
     console.log('[submitMilestone]: Starting milestone submission', {

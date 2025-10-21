@@ -9,12 +9,20 @@ import {
   pgEnum,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { submissions } from './submissions'
 import { milestones } from './milestones'
 import { groups } from './groups'
 import { users } from './users'
 import { discussions } from './discussions'
+import { createSchemaFactory } from 'drizzle-zod'
+
+const { createInsertSchema, createSelectSchema } = createSchemaFactory({
+  coerce: {
+    number: true, // FormData sends numbers as strings
+    date: true,
+    boolean: true,
+  },
+})
 
 const VOTE_OPTIONS = ['approve', 'reject', 'abstain'] as const
 export const voteEnum = pgEnum('vote', VOTE_OPTIONS)
@@ -66,9 +74,8 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
     references: [discussions.id],
   }),
 }))
-
-export const insertReviewSchema = createInsertSchema(reviews)
 export const selectReviewSchema = createSelectSchema(reviews)
+export const insertReviewSchema = createInsertSchema(reviews)
 
 export type Vote = (typeof VOTE_OPTIONS)[number]
 export type Review = typeof reviews.$inferSelect

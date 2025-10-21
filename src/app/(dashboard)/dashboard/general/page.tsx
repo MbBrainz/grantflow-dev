@@ -53,8 +53,12 @@ function AccountForm({
           type="email"
           placeholder="Enter your email"
           defaultValue={emailValue}
-          required
+          disabled
+          className="bg-muted cursor-not-allowed"
         />
+        <p className="text-muted-foreground mt-1 text-xs">
+          Email addresses cannot be changed
+        </p>
       </div>
     </>
   )

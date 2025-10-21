@@ -1,10 +1,16 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { CheckCircle, XCircle, MessageSquare, AlertCircle } from 'lucide-react'
 import type { User } from '@/lib/db/schema'
+import {
+  submitReviewSchema,
+  type SubmitReviewInput,
+} from '@/lib/db/schema/actions'
 
 interface Vote {
   id: number
@@ -61,10 +67,28 @@ export function ReviewerVoting({
   onVoteSubmitted,
   isOpen = true,
 }: ReviewerVotingProps) {
-  const [selectedVote, setSelectedVote] = useState<string>('')
-  const [feedback, setFeedback] = useState('')
   const [isPending, startTransition] = useTransition()
   const [showVotingInterface, setShowVotingInterface] = useState(false)
+
+  // Initialize react-hook-form
+  const {
+    register,
+    handleSubmit,
+    watch,
+    reset,
+    setValue,
+    formState: { errors },
+  } = useForm<SubmitReviewInput>({
+    resolver: zodResolver(submitReviewSchema),
+    defaultValues: {
+      submissionId,
+      milestoneId,
+      vote: undefined,
+      feedback: '',
+    },
+  })
+
+  const selectedVote = watch('vote')
 
   // Check if current user is a reviewer
   const isReviewer = currentUser && currentUser.primaryRole === 'committee'
@@ -83,16 +107,13 @@ export function ReviewerVoting({
     {} as Record<string, number>
   )
 
-  const handleVoteSubmit = () => {
-    if (!selectedVote || !currentUser) return
+  const onSubmit = (data: SubmitReviewInput) => {
+    if (!currentUser) return
 
     startTransition(async () => {
       try {
         console.log('[ReviewerVoting]: Submitting vote with data:', {
-          submissionId,
-          milestoneId,
-          selectedVote,
-          feedback,
+          ...data,
           currentUser: currentUser?.id,
         })
 
@@ -100,30 +121,8 @@ export function ReviewerVoting({
           '@/app/(dashboard)/dashboard/submissions/actions'
         )
 
-        // Create FormData with the required fields
-        const formData = new FormData()
-        formData.append('submissionId', String(submissionId))
-
-        // milestoneId is optional - only add if present
-        if (milestoneId) {
-          formData.append('milestoneId', String(milestoneId))
-        }
-
-        formData.append('vote', selectedVote)
-
-        if (feedback) {
-          formData.append('feedback', feedback)
-        }
-
-        console.log('[ReviewerVoting]: Calling submitReview with FormData:', {
-          submissionId,
-          milestoneId: milestoneId ?? 'none',
-          vote: selectedVote,
-          feedback: feedback || 'none',
-        })
-
-        // Call the action with empty prevState and formData
-        const result = await submitReview({}, formData)
+        // Call the action with typed data object (no FormData!)
+        const result = await submitReview(data)
 
         console.log('[ReviewerVoting]: Action result:', result)
 
@@ -132,8 +131,7 @@ export function ReviewerVoting({
         }
 
         // Reset form
-        setSelectedVote('')
-        setFeedback('')
+        reset()
         setShowVotingInterface(false)
         onVoteSubmitted()
       } catch (error) {
@@ -218,7 +216,7 @@ export function ReviewerVoting({
                 Cast Your Vote
               </Button>
             ) : (
-              <div className="space-y-4">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
                 <div>
                   <div className="mb-3 block text-sm font-medium">
                     Select your review decision:
@@ -230,7 +228,12 @@ export function ReviewerVoting({
                         <button
                           key={option.value}
                           type="button"
-                          onClick={() => setSelectedVote(option.value)}
+                          onClick={() =>
+                            setValue(
+                              'vote',
+                              option.value as 'approve' | 'reject' | 'abstain'
+                            )
+                          }
                           className={`rounded-lg border-2 p-3 text-left transition-colors ${
                             selectedVote === option.value
                               ? option.color
@@ -250,6 +253,11 @@ export function ReviewerVoting({
                       )
                     })}
                   </div>
+                  {errors.vote && (
+                    <p className="mt-1 text-sm text-red-600">
+                      {errors.vote.message}
+                    </p>
+                  )}
                 </div>
 
                 {selectedVote && (
@@ -269,33 +277,37 @@ export function ReviewerVoting({
                             ? 'Reason for abstaining (optional)...'
                             : 'Why should this submission be rejected?'
                       }
-                      value={feedback}
-                      onChange={e => setFeedback(e.target.value)}
+                      {...register('feedback')}
                       className="mt-2 min-h-[100px] w-full resize-y rounded-lg border border-gray-300 p-3"
                     />
+                    {errors.feedback && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {errors.feedback.message}
+                      </p>
+                    )}
                   </div>
                 )}
 
                 <div className="flex justify-between">
                   <Button
+                    type="button"
                     variant="outline"
                     onClick={() => {
                       setShowVotingInterface(false)
-                      setSelectedVote('')
-                      setFeedback('')
+                      reset()
                     }}
                   >
                     Cancel
                   </Button>
                   <Button
-                    onClick={handleVoteSubmit}
+                    type="submit"
                     disabled={!selectedVote || isPending}
                     className="flex items-center gap-2"
                   >
                     {isPending ? 'Submitting...' : 'Submit Review'}
                   </Button>
                 </div>
-              </div>
+              </form>
             )}
           </div>
         )}

@@ -18,16 +18,17 @@ import {
   notifyVoteCast,
   notifyStatusChange,
 } from '@/lib/notifications/server'
-import { insertMessageSchema } from '@/lib/db/schema'
-
-/**
- * Schema for posting messages in discussions
- * Extends insertMessageSchema with validation for FormData
- */
+import { insertMessageSchema, type NewMessage } from '@/lib/db/schema'
+import {
+  postMessageToSubmissionSchema,
+  postMessageToMilestoneSchema,
+  type PostMessageToSubmissionInput,
+  type PostMessageToMilestoneInput,
+} from '@/lib/db/schema/actions'
 
 export const postMessage = validatedActionWithUser(
   insertMessageSchema,
-  async (data, formData, user) => {
+  async (data: NewMessage, user) => {
     console.log('[postMessage]: Creating new message', {
       userId: user.id,
       discussionId: data.discussionId,
@@ -147,15 +148,8 @@ export async function getSubmissionReviews(submissionId: number) {
 
 // Helper function to post a message with automatic discussion creation
 export const postMessageToSubmission = validatedActionWithUser(
-  z.object({
-    content: z.string().min(1).max(2000),
-    submissionId: z.coerce.number(),
-    messageType: z
-      .enum(['comment', 'status_change', 'vote'])
-      .default('comment'),
-    metadata: z.string().optional(),
-  }),
-  async (data, formData, user) => {
+  postMessageToSubmissionSchema,
+  async (data: PostMessageToSubmissionInput, user) => {
     try {
       // Ensure discussion exists
       const discussion = await ensureDiscussionForSubmission(data.submissionId)
@@ -218,9 +212,9 @@ export const postMessageToSubmission = validatedActionWithUser(
 // Enhanced server actions for reviewer review interface
 export const getSubmissionForReviewerReviewAction = validatedActionWithUser(
   z.object({
-    submissionId: z.coerce.number(),
+    submissionId: z.number(),
   }),
-  async (data, formData, user) => {
+  async (data: { submissionId: number }, user) => {
     try {
       console.log(
         '[getSubmissionForReviewerReview]: Fetching comprehensive submission data',
@@ -257,9 +251,9 @@ export const getSubmissionForReviewerReviewAction = validatedActionWithUser(
 
 export const getSubmissionCurrentState = validatedActionWithUser(
   z.object({
-    submissionId: z.coerce.number(),
+    submissionId: z.number(),
   }),
-  async (data, formData, user) => {
+  async (data: { submissionId: number }, user) => {
     try {
       console.log('[getSubmissionCurrentState]: Fetching current state data', {
         submissionId: data.submissionId,
@@ -289,15 +283,8 @@ export const getSubmissionCurrentState = validatedActionWithUser(
 
 // Helper function to post a message to a milestone discussion
 export const postMessageToMilestone = validatedActionWithUser(
-  z.object({
-    content: z.string().min(1).max(2000),
-    milestoneId: z.coerce.number(),
-    messageType: z
-      .enum(['comment', 'status_change', 'vote'])
-      .default('comment'),
-    metadata: z.string().optional(),
-  }),
-  async (data, formData, user) => {
+  postMessageToMilestoneSchema,
+  async (data: PostMessageToMilestoneInput, user) => {
     try {
       // Ensure discussion exists for milestone
       const discussion = await ensureDiscussionForMilestone(data.milestoneId)

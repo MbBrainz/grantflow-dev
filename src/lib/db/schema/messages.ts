@@ -7,9 +7,17 @@ import {
   timestamp,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+import { createSchemaFactory } from 'drizzle-zod'
 import { discussions } from './discussions'
 import { users } from './users'
+
+const { createInsertSchema, createSelectSchema } = createSchemaFactory({
+  coerce: {
+    number: true, // Handle form inputs
+    date: true,
+    boolean: true,
+  },
+})
 
 export const messages = pgTable('messages', {
   id: serial('id').primaryKey(),

@@ -7,11 +7,19 @@ import {
   bigint,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
-import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
+import { createSchemaFactory } from 'drizzle-zod'
 import { submissions } from './submissions'
 import { milestones } from './milestones'
 import { groups } from './groups'
 import { users } from './users'
+
+const { createInsertSchema, createSelectSchema } = createSchemaFactory({
+  coerce: {
+    number: true, // Handle form inputs
+    date: true,
+    boolean: true,
+  },
+})
 
 export const payouts = pgTable('payouts', {
   id: serial('id').primaryKey(),

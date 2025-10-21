@@ -11,7 +11,6 @@ import {
   type NewSubmission,
   type NewMilestone,
   reviews,
-  insertReviewSchema,
 } from '@/lib/db/schema'
 import {
   getUser,
@@ -26,6 +25,10 @@ import {
   parseRequirements,
 } from '@/lib/validation/submission'
 import { validatedActionWithUser } from '@/lib/auth/middleware'
+import {
+  submitReviewSchema,
+  type SubmitReviewInput,
+} from '@/lib/db/schema/actions'
 
 // Fetch active grant programs with their committees for submission
 export async function getActiveGrantPrograms() {
@@ -462,10 +465,12 @@ function getRevalidationPaths(
 /**
  * Unified action for submitting reviews
  * Handles both submission-level and milestone-level reviews
+ * Client sends: submissionId, milestoneId?, vote, feedback?
+ * Server adds: reviewerId (from user), groupId (from submission)
  */
 export const submitReview = validatedActionWithUser(
-  insertReviewSchema,
-  async (data: NewReview, formData: FormData, user) => {
+  submitReviewSchema,
+  async (data: SubmitReviewInput, user) => {
     const reviewType = data.milestoneId ? 'milestone' : 'submission'
 
     console.log(`[submitReview]: Submitting ${reviewType} review`, {
@@ -496,11 +501,12 @@ export const submitReview = validatedActionWithUser(
       }
 
       // Build and create the review record
+      // Server determines groupId and reviewerId - client doesn't send these
       const newReview = buildReviewRecord({
         submissionId: data.submissionId,
         milestoneId: data.milestoneId,
-        reviewerId: user.id,
-        groupId: submission.reviewerGroupId ?? 1,
+        reviewerId: user.id, // From authenticated user
+        groupId: submission.reviewerGroupId ?? 1, // From submission
         vote: data.vote,
         feedback: data.feedback,
       })

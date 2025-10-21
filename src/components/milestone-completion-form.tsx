@@ -93,18 +93,16 @@ export function MilestoneCompletionForm({
     }
 
     try {
-      const formDataObj = new FormData()
-      formDataObj.append('milestoneId', milestone.id.toString())
-      formDataObj.append('committeeId', committeeId.toString())
-      formDataObj.append('transactionHash', formData.transactionHash)
-      formDataObj.append('blockExplorerUrl', formData.blockExplorerUrl)
-      formDataObj.append('amount', formData.amount.toString())
-      if (formData.walletFrom)
-        formDataObj.append('walletFrom', formData.walletFrom)
-      if (formData.walletTo) formDataObj.append('walletTo', formData.walletTo)
-
-      // Call the action with empty prevState and formData (validatedActionWithUser pattern)
-      const result = await completeMilestone({}, formDataObj)
+      // Call the action with typed data object
+      const result = await completeMilestone({
+        milestoneId: milestone.id,
+        committeeId,
+        transactionHash: formData.transactionHash,
+        blockExplorerUrl: formData.blockExplorerUrl,
+        amount: formData.amount,
+        walletFrom: formData.walletFrom || undefined,
+        walletTo: formData.walletTo || undefined,
+      })
 
       if ('error' in result && result.error) {
         toast({

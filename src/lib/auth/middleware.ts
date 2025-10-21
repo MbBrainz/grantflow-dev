@@ -16,9 +16,9 @@ interface ZodLike {
   }
 }
 
+// ✅ NEW: Non-authenticated actions accept plain objects
 type ValidatedActionFunction<TInput, TOutput extends ActionState> = (
-  data: TInput,
-  formData: FormData
+  data: TInput
 ) => Promise<TOutput>
 
 export function validatedAction<
@@ -38,14 +38,16 @@ export function validatedAction<
   >
 ) {
   return async (
-    _prevState: ActionState,
-    formData: FormData
+    data: Record<string, unknown>
   ): Promise<TOutput | { error: string }> => {
-    const result = schema.safeParse(Object.fromEntries(formData))
+    // 🛡️ Validation
+    const result = schema.safeParse(data)
     if (!result.success) {
+      console.error('[validatedAction]: Validation failed', result.error)
       return { error: result.error?.issues[0]?.message ?? 'Validation failed' }
     }
 
+    // ✅ Execute action with validated data
     return action(
       result.data as TSchema extends {
         safeParse: (
@@ -53,15 +55,14 @@ export function validatedAction<
         ) => { success: true; data: infer TData } | { success: false }
       }
         ? TData
-        : never,
-      formData
+        : never
     )
   }
 }
 
+// ✅ NEW: Authenticated actions accept plain objects
 type ValidatedActionWithUserFunction<TInput, TOutput extends ActionState> = (
   data: TInput,
-  formData: FormData,
   user: User
 ) => Promise<TOutput>
 
@@ -82,19 +83,25 @@ export function validatedActionWithUser<
   >
 ) {
   return async (
-    _prevState: ActionState,
-    formData: FormData
+    data: Record<string, unknown>
   ): Promise<TOutput | { error: string }> => {
+    // 🛡️ Authentication
     const user = await getUser()
     if (!user) {
       throw new Error('User is not authenticated')
     }
 
-    const result = schema.safeParse(Object.fromEntries(formData))
+    // 🛡️ Validation
+    const result = schema.safeParse(data)
     if (!result.success) {
+      console.error(
+        '[validatedActionWithUser]: Validation failed',
+        result.error
+      )
       return { error: result.error?.issues[0]?.message ?? 'Validation failed' }
     }
 
+    // ✅ Execute action with validated data and user
     return action(
       result.data as TSchema extends {
         safeParse: (
@@ -103,18 +110,7 @@ export function validatedActionWithUser<
       }
         ? TData
         : never,
-      formData,
       user
     )
-  }
-}
-
-// Legacy function for backwards compatibility - now just returns user
-export function withTeam<T>(
-  action: (formData: FormData, user: User | null) => Promise<T>
-) {
-  return async (formData: FormData) => {
-    const user = await getUser()
-    return action(formData, user)
   }
 }

@@ -12,15 +12,10 @@ This milestone focuses on refining the existing POC features, fixing critical bu
 
 ### Core Bug Fixes (Priority 1)
 
-- [ ] **Review and understand existing POC features and bugs**
-  - Document current functionality
-  - Identify and catalog all known bugs
-  - Prioritize fixes based on impact
-
 - [ ] **Fix account creation and management bugs**
   - Resolve authentication issues
   - Fix user profile updates
-  - Ensure proper session management
+  - Ensure proper session management (done)
 
 - [ ] **Fix grant submission form validation and error handling**
   - Address form validation issues
@@ -39,11 +34,6 @@ This milestone focuses on refining the existing POC features, fixing critical bu
   - implement review milestone button
 
 ### Platform Foundation (Priority 2)
-
-- [ ] **Improve database schema for better data integrity**
-  - Add proper constraints and indexes
-  - Ensure referential integrity
-  - Optimize for performance
 
 - [ ] **Enhance authentication flow and session management**
   - Stabilize GitHub OAuth integration

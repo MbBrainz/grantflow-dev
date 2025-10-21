@@ -48,12 +48,11 @@ export function SubmissionDetailView({
         ? type
         : 'comment'
 
-    const fd = new FormData()
-    fd.append('content', content)
-    fd.append('submissionId', String(submission.id))
-    fd.append('messageType', messageType)
-
-    const result = await postMessageToSubmission({}, fd)
+    const result = await postMessageToSubmission({
+      content,
+      submissionId: submission.id,
+      messageType,
+    })
 
     if (result.error) {
       throw new Error(result.error)

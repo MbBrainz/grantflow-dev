@@ -43,7 +43,8 @@ export function ReviewerSubmissionView({
   const rejectVotes = reviews.filter(
     r => r.vote === 'reject' || r.vote === 'abstain'
   ).length
-  const userHasVoted = reviews.some(r => r.reviewerId === currentUser?.id)
+  const userVote = reviews.find(r => r.reviewerId === currentUser?.id)
+  const userHasVoted = !!userVote
   const needsMyVote =
     !userHasVoted && submission.userContext?.isCommitteeReviewer
 
@@ -95,11 +96,38 @@ export function ReviewerSubmissionView({
                   Action Required
                 </Badge>
               )}
+              {userHasVoted && userVote && (
+                <Badge
+                  className={`flex items-center gap-1.5 ${
+                    userVote.vote === 'approve'
+                      ? 'border-green-300 bg-green-100 text-green-800'
+                      : userVote.vote === 'reject'
+                        ? 'border-red-300 bg-red-100 text-red-800'
+                        : 'border-yellow-300 bg-yellow-100 text-yellow-800'
+                  }`}
+                  variant="outline"
+                >
+                  {userVote.vote === 'approve' && (
+                    <CheckCircle className="h-3.5 w-3.5" />
+                  )}
+                  {userVote.vote === 'reject' && (
+                    <XCircle className="h-3.5 w-3.5" />
+                  )}
+                  {userVote.vote === 'abstain' && (
+                    <Clock className="h-3.5 w-3.5" />
+                  )}
+                  You voted:{' '}
+                  {userVote.vote.charAt(0).toUpperCase() +
+                    userVote.vote.slice(1)}
+                </Badge>
+              )}
             </div>
             <p className="text-lg text-gray-600">
               {needsMyVote
                 ? 'Your vote is needed to proceed with this submission review.'
-                : 'Review the submission details and collaborate with other reviewers.'}
+                : userHasVoted
+                  ? 'Thank you for submitting your review. Continue collaborating with other reviewers below.'
+                  : 'Review the submission details and collaborate with other reviewers.'}
             </p>
           </div>
         </div>
