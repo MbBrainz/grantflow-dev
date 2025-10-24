@@ -103,6 +103,18 @@ export function ManageCommitteeView({
   const [programMaxMilestoneSize, setProgramMaxMilestoneSize] = useState('')
   const [showInactivePrograms, setShowInactivePrograms] = useState(true)
 
+  // Multisig Configuration State
+  const [isEditingMultisig, setIsEditingMultisig] = useState(false)
+  const [multisigAddress, setMultisigAddress] = useState(committee.multisigAddress ?? '')
+  const [multisigThreshold, setMultisigThreshold] = useState(committee.multisigThreshold ?? 2)
+  const [multisigSignatories, setMultisigSignatories] = useState<string[]>(
+    (committee.multisigSignatories as string[]) ?? []
+  )
+  const [multisigApprovalPattern, setMultisigApprovalPattern] = useState<'combined' | 'separated'>(
+    committee.multisigApprovalPattern ?? 'combined'
+  )
+  const [newSignatory, setNewSignatory] = useState('')
+
   const handleUpdateInfo = async () => {
     const focusAreasArray = focusAreasText
       .split(',')
@@ -132,6 +144,83 @@ export function ManageCommitteeView({
       setIsEditingInfo(false)
       router.refresh()
     }
+  }
+
+  const handleUpdateMultisig = async () => {
+    // Validate inputs
+    if (multisigAddress && multisigSignatories.length === 0) {
+      toast({
+        title: 'Error',
+        description: 'Please add at least one signatory address',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (multisigThreshold > multisigSignatories.length) {
+      toast({
+        title: 'Error',
+        description: 'Threshold cannot exceed number of signatories',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Import the write function
+    const { updateCommitteeMultisigConfig } = await import('@/lib/db/writes/multisig')
+
+    try {
+      await updateCommitteeMultisigConfig(committee.id, {
+        multisigAddress: multisigAddress || undefined,
+        multisigThreshold,
+        multisigSignatories,
+        multisigApprovalPattern,
+      })
+
+      toast({
+        title: 'Success',
+        description: 'Multisig configuration updated successfully',
+      })
+      setIsEditingMultisig(false)
+      router.refresh()
+    } catch (error) {
+      console.error('[handleUpdateMultisig]: Error:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to update multisig configuration',
+        variant: 'destructive',
+      })
+    }
+  }
+
+  const handleAddSignatory = () => {
+    if (!newSignatory.trim()) return
+
+    // Basic validation for Polkadot address (starts with 1-5, 47-48 chars)
+    if (!/^[1-5][a-km-zA-HJ-NP-Z1-9]{46,47}$/.test(newSignatory.trim())) {
+      toast({
+        title: 'Invalid Address',
+        description: 'Please enter a valid Polkadot SS58 address',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (multisigSignatories.includes(newSignatory.trim())) {
+      toast({
+        title: 'Duplicate Address',
+        description: 'This address is already in the signatory list',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setMultisigSignatories([...multisigSignatories, newSignatory.trim()])
+    setNewSignatory('')
+  }
+
+  const handleRemoveSignatory = (address: string) => {
+    setMultisigSignatories(multisigSignatories.filter(addr => addr !== address))
   }
 
   const handleSearchUsers = async () => {
@@ -707,22 +796,225 @@ export function ManageCommitteeView({
 
       {/* Multisig Configuration */}
       <Card className="p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <Shield className="h-5 w-5 text-gray-600" />
-          <h2 className="text-xl font-semibold">Multisig Account</h2>
-          <Badge variant="secondary">Coming Soon</Badge>
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-gray-600" />
+            <h2 className="text-xl font-semibold">Multisig Account</h2>
+            {committee.multisigAddress && (
+              <Badge variant="default">Configured</Badge>
+            )}
+          </div>
+          {!isEditingMultisig && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditingMultisig(true)}
+            >
+              {committee.multisigAddress ? 'Edit Configuration' : 'Configure Multisig'}
+            </Button>
+          )}
         </div>
 
-        <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center dark:border-gray-700 dark:bg-gray-800">
-          <AlertCircle className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-          <h3 className="mb-2 text-lg font-medium text-gray-700 dark:text-gray-300">
-            Multisig Configuration
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Configure your committee&apos;s multisig account for secure grant
-            payouts. This feature will be available soon.
-          </p>
-        </div>
+        {isEditingMultisig ? (
+          <div className="space-y-6">
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+              <p className="text-sm text-blue-800">
+                <strong>ℹ️ Important:</strong> Multisig addresses should be created externally 
+                (e.g., via PolkadotJS Apps) and imported here. Never generate private keys in the web app.
+              </p>
+            </div>
+
+            <div>
+              <Label htmlFor="multisigAddress">Multisig Address (Optional)</Label>
+              <Input
+                id="multisigAddress"
+                value={multisigAddress}
+                onChange={e => setMultisigAddress(e.target.value)}
+                placeholder="5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"
+              />
+              <p className="mt-1 text-xs text-gray-500">
+                SS58 format Polkadot address for the multisig account
+              </p>
+            </div>
+
+            <div>
+              <Label>Signatories ({multisigSignatories.length})</Label>
+              <div className="mt-2 space-y-2">
+                {multisigSignatories.map((address, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between rounded border bg-white p-2"
+                  >
+                    <code className="text-xs">{address}</code>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleRemoveSignatory(address)}
+                    >
+                      <Trash2 className="h-4 w-4 text-red-500" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-2 flex gap-2">
+                <Input
+                  value={newSignatory}
+                  onChange={e => setNewSignatory(e.target.value)}
+                  placeholder="Add signatory address"
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      handleAddSignatory()
+                    }
+                  }}
+                />
+                <Button onClick={handleAddSignatory} size="sm">
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="multisigThreshold">
+                Approval Threshold ({multisigThreshold})
+              </Label>
+              <div className="flex items-center gap-4">
+                <Input
+                  id="multisigThreshold"
+                  type="number"
+                  min="1"
+                  max={multisigSignatories.length || 10}
+                  value={multisigThreshold}
+                  onChange={e => setMultisigThreshold(parseInt(e.target.value) || 2)}
+                  className="w-24"
+                />
+                <span className="text-sm text-gray-600">
+                  of {multisigSignatories.length} signatories required
+                </span>
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                Number of signatures required to execute a transaction
+              </p>
+            </div>
+
+            <div>
+              <Label>Approval Pattern</Label>
+              <div className="mt-2 space-y-2">
+                <label className="flex items-start gap-3 rounded border p-3 cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="approvalPattern"
+                    value="combined"
+                    checked={multisigApprovalPattern === 'combined'}
+                    onChange={e => setMultisigApprovalPattern(e.target.value as 'combined')}
+                    className="mt-1"
+                  />
+                  <div>
+                    <strong className="text-sm">Combined Approval & Payment</strong>
+                    <p className="text-xs text-gray-600">
+                      Milestone approval automatically triggers payment when threshold is met.
+                      Faster execution, atomic transaction.
+                    </p>
+                  </div>
+                </label>
+                <label className="flex items-start gap-3 rounded border p-3 cursor-pointer hover:bg-gray-50">
+                  <input
+                    type="radio"
+                    name="approvalPattern"
+                    value="separated"
+                    checked={multisigApprovalPattern === 'separated'}
+                    onChange={e => setMultisigApprovalPattern(e.target.value as 'separated')}
+                    className="mt-1"
+                  />
+                  <div>
+                    <strong className="text-sm">Separated Approval then Payment</strong>
+                    <p className="text-xs text-gray-600">
+                      Approval recorded first, payment requires separate authorization.
+                      More control, explicit payment execution.
+                    </p>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <AsyncButton onClick={handleUpdateMultisig} className="flex-1">
+                Save Configuration
+              </AsyncButton>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsEditingMultisig(false)
+                  // Reset to original values
+                  setMultisigAddress(committee.multisigAddress ?? '')
+                  setMultisigThreshold(committee.multisigThreshold ?? 2)
+                  setMultisigSignatories((committee.multisigSignatories as string[]) ?? [])
+                  setMultisigApprovalPattern(committee.multisigApprovalPattern ?? 'combined')
+                }}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {committee.multisigAddress ? (
+              <>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm text-gray-500">Multisig Address</Label>
+                    <code className="block text-sm">{committee.multisigAddress}</code>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500">Approval Pattern</Label>
+                    <p className="text-sm capitalize">
+                      {committee.multisigApprovalPattern?.replace('_', ' ') ?? 'Combined'}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500">Threshold</Label>
+                    <p className="text-sm">
+                      {committee.multisigThreshold} of{' '}
+                      {(committee.multisigSignatories as string[] ?? []).length} signatories
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm text-gray-500">Signatories</Label>
+                    <p className="text-sm">
+                      {(committee.multisigSignatories as string[] ?? []).length} configured
+                    </p>
+                  </div>
+                </div>
+                {(committee.multisigSignatories as string[] ?? []).length > 0 && (
+                  <div>
+                    <Label className="text-sm text-gray-500">Signatory List</Label>
+                    <div className="mt-2 space-y-1">
+                      {(committee.multisigSignatories as string[] ?? []).map((addr, idx) => (
+                        <code key={idx} className="block text-xs text-gray-700">
+                          {addr}
+                        </code>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center">
+                <AlertCircle className="mx-auto mb-3 h-12 w-12 text-gray-400" />
+                <h3 className="mb-2 text-lg font-medium text-gray-700">
+                  No Multisig Configured
+                </h3>
+                <p className="mb-4 text-sm text-gray-600">
+                  Configure your committee&apos;s multisig account for secure,
+                  on-chain grant payouts with committee approval.
+                </p>
+                <Button onClick={() => setIsEditingMultisig(true)}>
+                  Configure Multisig
+                </Button>
+              </div>
+            )}
+          </div>
+        )}
       </Card>
 
       {/* Add Member Dialog */}

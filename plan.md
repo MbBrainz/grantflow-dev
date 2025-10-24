@@ -350,12 +350,17 @@ When submitting milestone completion review requests:
 - [x] **Enhanced: Milestone-specific messaging and discussion**
 - [x] **Enhanced: Real-time activity tracking across submission and milestones**
 
-### F. Milestone & Payout Management (Future Phase)
+### F. Milestone & Payout Management (Polkadot Integration - January 2025)
 
 - [ ] Milestone submission forms with GitHub links
 - [ ] Progress tracking interface with discussion per milestone
-- [ ] Payout approval workflow (Stripe features temporarily disabled)
-- [ ] On-chain integration (contracts TBD)
+- [ ] **Polkadot Multi-Sig Payout Integration** (See: `src/docs/polkadot-multisig-integration.md`)
+  - [ ] Atomic approval-and-payout workflows using `utility.batchAll`
+  - [ ] First-signatory-votes pattern (publishes + votes in one transaction)
+  - [ ] Committee preference settings (combined vs separated approval patterns)
+  - [ ] Multisig transaction tracking with timepoints
+  - [ ] Sequential milestone dependencies and validation
+- [ ] On-chain integration with Polkadot/Kusama networks
 
 ### G. Public Transparency Features (Future Phase)
 
@@ -583,7 +588,12 @@ platformMetrics: {
 - [x] **Committee management interface** - Admin dashboard for committee settings and members
 - [x] **Member management** - Add, remove, and update roles for committee members
 - [x] **User search functionality** - Search users by email or name for member addition
-- [ ] Multi-sig wallet integration (UI section created, awaiting implementation)
+- [ ] **Multi-sig wallet integration** (UI section created, comprehensive integration docs ready)
+  - 📄 **Documentation**: `src/docs/polkadot-multisig-integration.md` - Complete guide for Polkadot multi-sig integration
+  - [ ] Implementation using `polkadot-api: ^1.15.0`
+  - [ ] Committee multisig address configuration
+  - [ ] Signatory management and threshold settings
+  - [ ] Approval pattern preferences (combined/separated)
 - [ ] Committee workflow customization (voting thresholds, approval rules)
 
 ### G. Marketplace & Discovery Features 🆕
@@ -599,7 +609,14 @@ platformMetrics: {
 - [ ] Committee-specific milestone workflows
 - [ ] AI-assisted GitHub code analysis
 - [ ] Automated file change detection
-- [ ] Committee-configured payout triggers
+- [ ] **Committee-configured payout triggers** (Polkadot Multi-Sig Integration)
+  - 📄 **Full Documentation**: `src/docs/polkadot-multisig-integration.md`
+  - [ ] First-signatory-votes pattern implementation
+  - [ ] Atomic `batchAll` transactions for approval + payout
+  - [ ] Flexible approval patterns (combined vs separated)
+  - [ ] React hooks for milestone voting UI
+  - [ ] Timepoint tracking and sequential approvals
+  - [ ] On-chain verification and transaction history
 - [ ] Multi-committee milestone comparison
 
 ### I. Platform Analytics & Transparency
@@ -640,10 +657,29 @@ platformMetrics: {
 2. **✅ Milestone Completion System:** Multisig transaction verification for payments
 3. **✅ Comprehensive Test Data:** Full database seeding with realistic scenarios
 4. **✅ Committee Management Interface:** Admin dashboard with member management and settings
-5. **Committee Onboarding:** Registration, profile creation, and program setup (NEXT)
-6. **Marketplace Interface:** Committee discovery and comparison features
-7. **Multi-Committee Submissions:** Dynamic forms and committee-specific workflows
-8. **Wallet Integration:** Committee multi-sig setup for automated payouts (UI ready, integration pending)
+5. **✅ Polkadot Multi-Sig Integration Documentation:** Comprehensive guide for milestone-based payouts
+   - Complete implementation patterns for atomic approval-and-payout workflows
+   - First-signatory-votes pattern with timepoint tracking
+   - Flexible committee approval patterns (combined/separated)
+   - React hooks and UI components for milestone voting
+   - Reference documentation and code examples
+6. **✅ Polkadot Multi-Sig Foundation Implementation:** Core infrastructure built and fully integrated!
+   - ✅ Complete Polkadot API client with network configuration
+   - ✅ Utility functions for multisig operations (address sorting, hashing, weights)
+   - ✅ Transaction functions (initiate, approve, execute milestone payments)
+   - ✅ Extended database schema (multisigApprovals, signatoryVotes tables)
+   - ✅ Database queries and writes for approval workflows
+   - ✅ React hook (useMillestoneApprovals) with real-time state management
+   - ✅ Complete MilestoneVotingPanel UI component
+   - ✅ API routes for approval initiation, voting, and execution
+   - ✅ **INTEGRATED**: Multisig voting in reviewer-submission-view.tsx
+   - ✅ **INTEGRATED**: Multisig configuration UI in manage-committee-view.tsx
+   - ✅ **READY TO TEST**: Complete end-to-end workflow (see: `POLKADOT_INTEGRATION_GUIDE.md`)
+   - 🔜 **Next**: Wallet connection and real blockchain transactions
+7. **Committee Onboarding:** Registration, profile creation, and program setup (NEXT)
+8. **Marketplace Interface:** Committee discovery and comparison features
+9. **Multi-Committee Submissions:** Dynamic forms and committee-specific workflows
+10. **Complete Wallet Integration:** Polkadot wallet connection and real transaction execution
 
 ### Phase 5 (Enhanced Platform Features)
 
