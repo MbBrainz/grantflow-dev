@@ -20,6 +20,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { CommitteeInfoCard } from '@/components/committee/committee-info-card'
+import { MilestoneVotingPanel } from '@/components/milestone/milestone-voting-panel'
 import type { Milestone, SubmissionWithMilestones, User } from '@/lib/db/schema'
 
 interface ReviewerSubmissionViewProps {
@@ -750,6 +751,20 @@ export function ReviewerSubmissionView({
                           )}
                         </div>
                       )}
+
+                      {/* Multisig Payment Voting - Only show for approved milestones with multisig configured */}
+                      {milestoneApproves >= votesNeeded &&
+                        committee.multisigAddress &&
+                        milestone.status !== 'completed' && (
+                          <div className="mt-4">
+                            <MilestoneVotingPanel
+                              milestone={milestone}
+                              committee={committee}
+                              userAddress={currentUser?.walletAddress ?? null}
+                              onVoteComplete={() => onVoteSubmitted()}
+                            />
+                          </div>
+                        )}
                     </div>
                   )}
                 </div>

@@ -12,6 +12,7 @@ export * from './schema/payouts'
 export * from './schema/notifications'
 export * from './schema/group-analytics'
 export * from './schema/platform-metrics'
+export * from './schema/multisig-approvals'
 
 // Activity types for logging
 export enum ActivityType {

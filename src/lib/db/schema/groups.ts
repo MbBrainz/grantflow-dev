@@ -6,6 +6,7 @@ import {
   timestamp,
   boolean,
   jsonb,
+  integer,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
@@ -33,6 +34,13 @@ export const groups = pgTable('groups', {
   walletAddress: varchar('wallet_address', { length: 64 }),
   isActive: boolean('is_active').notNull().default(true),
   settings: jsonb('settings').$type<GroupSettings>(), // JSON configuration (voting thresholds, approval workflows, etc.)
+  
+  // Multisig Configuration (for committees with on-chain payouts)
+  multisigAddress: varchar('multisig_address', { length: 64 }), // SS58 multisig address
+  multisigThreshold: integer('multisig_threshold'), // Number of required signatures
+  multisigSignatories: jsonb('multisig_signatories').$type<string[]>(), // Array of signatory addresses
+  multisigApprovalPattern: varchar('multisig_approval_pattern', { length: 20 }).$type<'combined' | 'separated'>().default('combined'), // Approval workflow pattern
+  
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
