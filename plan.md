@@ -46,22 +46,24 @@ The GrantFlow platform has been successfully transformed from a SaaS template to
   - **Multisig Configuration Section:** Added "Coming Soon" section for future multisig wallet configuration
   - **Real-time Updates:** All changes immediately reflect in the UI with proper revalidation and toast notifications
 - **✅ Fully Allocated Grant Programs:** Grant programs now show their funding allocation status on the new submission page. When all funds are allocated (remaining budget ≤ 0), programs are still visible but disabled with clear "Fully Allocated" badge and visual indicators (grayed out, not clickable). The selection page displays remaining budget in red when fully allocated and green when funds are available. Financial data is fetched and displayed using the existing `getGrantProgramFinancials()` query system.
-- **✅ Polkadot Multisig Integration (COMPLETE):** Fully implemented Polkadot multisig wallet integration for milestone-based grant payouts with UI:
+- **✅ Polkadot Multisig Integration (INFRASTRUCTURE READY):** Fully implemented Polkadot multisig wallet integration for milestone-based grant payouts:
   - **Database Schema:** New `milestone_approvals` and `multisig_signatures` tables to track on-chain execution process
   - **Dual Workflow Support:** Committees can configure "merged" (decision + execution combined) or "separated" (two-phase approval then payment) workflows via MultisigConfig in GroupSettings
-  - **Polkadot Client:** WebSocket connection to Polkadot/Kusama/Paseo networks (`src/lib/polkadot/client.ts`)
-  - **Multisig Functions:** First-signatory-votes pattern implementation (asMulti publishes + votes), intermediate approvals (approveAsMulti), and final execution (`src/lib/polkadot/multisig.ts` - ready for API integration)
+  - **✨ Polkadot API Setup (NEW):** Successfully installed `polkadot-api` package and generated chain descriptors for Paseo testnet using `papi` CLI - TypeScript types now available via `@polkadot-api/descriptors`
+  - **Polkadot Client:** WebSocket connection to Polkadot/Kusama/Paseo networks (`src/lib/polkadot/client.ts`) with typed API using generated descriptors
+  - **Multisig Functions:** First-signatory-votes pattern implementation (asMulti publishes + votes), intermediate approvals (approveAsMulti), and final execution (`src/lib/polkadot/multisig.ts` - functions stubbed, ready for implementation)
   - **Server Actions:** Type-safe validated actions for initiating approvals, recording signatures, and finalizing payments (`src/app/(dashboard)/dashboard/submissions/multisig-actions.ts`)
   - **Wallet Provider:** React context (`PolkadotProvider`) for connecting Polkadot.js, Talisman, SubWallet, and Nova wallet extensions
   - **Atomic Execution:** Uses utility.batchAll() to combine transfer + on-chain remark for data integrity
   - **Review Integration:** `multisig_signatures` table links to `reviews` table via `reviewId` for merged workflow, connecting off-chain decisions to on-chain execution
   - **UI Components:** 
-    - `MilestoneVotingPanel`: Committee voting interface integrated into reviewer submission view, shown when milestone is approved
+    - `MilestoneVotingPanel`: Committee voting interface integrated into reviewer submission view, shown for 'completed' milestones (separated workflow) or after user has reviewed (merged workflow)
     - `MultisigConfigForm`: Admin interface for configuring multisig (address, signatories, threshold, workflow, network) in committee management page
     - `PolkadotWalletSelector`: Header dropdown for connecting Polkadot wallets (appears in main dashboard layout)
     - `SignatoryVoteList`: Display component for showing voting status of all committee members with transaction links
   - **Committee Management:** Multisig configuration section fully integrated into `/dashboard/committees/[id]/manage` with edit/view modes
-  - **Status:** ✅ UI complete, ready for Polkadot API package installation (`polkadot-api`) and chain descriptor generation to enable actual blockchain transactions
+  - **Seed Data:** Infrastructure Committee seeded with merged workflow configuration using environment variables for multisig addresses
+  - **Status:** ✅ Infrastructure complete, packages installed, types generated | ⏳ Implementation of blockchain functions pending
 
 ## Terminology Migration Completed
 

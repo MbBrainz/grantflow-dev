@@ -37,6 +37,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# polkadot-api generated files
+.papi/
+
 # Docker
 postgres_data/
 .env*.local

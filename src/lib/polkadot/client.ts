@@ -7,8 +7,7 @@
 
 import { createClient } from 'polkadot-api'
 import { getWsProvider } from 'polkadot-api/ws-provider/web'
-// Note: @polkadot-api/descriptors may need to be generated for your specific chain
-// For now, we'll use a generic approach without typed descriptors
+import { paseo } from '@polkadot-api/descriptors'
 
 // Network endpoints
 const NETWORK_ENDPOINTS = {
@@ -53,10 +52,13 @@ export function getPolkadotClient() {
 }
 
 // Create API instance
-// Note: For typed APIs, you'll need to generate descriptors for your specific chain
-// See: https://papi.how/recipes/codegen
 export function getPolkadotApi() {
   return getPolkadotClient()
+}
+
+// Export typed API for Paseo testnet with full type safety
+export function getPaseoTypedApi() {
+  return getPolkadotClient().getTypedApi(paseo)
 }
 
 // Cleanup function
