@@ -28,8 +28,8 @@ importers:
         specifier: ^22.0.0
         version: 22.0.0
       '@polkadot-api/descriptors':
-        specifier: ^0.0.1
-        version: 0.0.1
+        specifier: file:.papi/descriptors
+        version: file:.papi/descriptors(polkadot-api@1.15.0(jiti@2.4.2)(postcss@8.5.3)(rxjs@7.8.2)(yaml@2.8.1))
       '@polkadot/util-crypto':
         specifier: ^13.5.7
         version: 13.5.7(@polkadot/util@13.5.7)
@@ -978,8 +978,10 @@ packages:
   '@polkadot-api/codegen@0.17.0':
     resolution: {integrity: sha512-qtEQBlskp+K/FCFcpRqB+Kk394Cr3jdQ9FX7gLxBeZL0v7xhzuK2nIV9E4hBhLiNJ2hRge4mEmlcJOwc9T6yeA==}
 
-  '@polkadot-api/descriptors@0.0.1':
-    resolution: {integrity: sha512-p9esC+idLWlaeLy2V0z3x45xwRdAcNdiUSEeJaDDw6LJxj/WiyIOuhm3ki6gzl4oOZ0wAMuay3zhpVBDFgSEeQ==}
+  '@polkadot-api/descriptors@file:.papi/descriptors':
+    resolution: {directory: .papi/descriptors, type: directory}
+    peerDependencies:
+      polkadot-api: '>=1.11.2'
 
   '@polkadot-api/ink-contracts@0.3.6':
     resolution: {integrity: sha512-xYMH1DDcijdhzvhWK6YFS9Z0gB42kyi/efyhuGLEMAUk7VOGh5/iieQp5a/hI9c2kx6OQNs4iUnmqwws/qtr1A==}
@@ -5507,7 +5509,9 @@ snapshots:
       '@polkadot-api/substrate-bindings': 0.15.0
       '@polkadot-api/utils': 0.2.0
 
-  '@polkadot-api/descriptors@0.0.1': {}
+  '@polkadot-api/descriptors@file:.papi/descriptors(polkadot-api@1.15.0(jiti@2.4.2)(postcss@8.5.3)(rxjs@7.8.2)(yaml@2.8.1))':
+    dependencies:
+      polkadot-api: 1.15.0(jiti@2.4.2)(postcss@8.5.3)(rxjs@7.8.2)(yaml@2.8.1)
 
   '@polkadot-api/ink-contracts@0.3.6':
     dependencies:

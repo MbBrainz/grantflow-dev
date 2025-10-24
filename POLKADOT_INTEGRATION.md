@@ -2,6 +2,24 @@
 
 This document summarizes the Polkadot multisig integration for GrantFlow's milestone-based grant payments.
 
+## 🚀 Setup Status
+
+**✅ COMPLETE:**
+- Polkadot-API package installed
+- Chain descriptors generated for Paseo testnet
+- TypeScript types available in `@polkadot-api/descriptors`
+- Client configured to use typed API
+- All typechecks passing
+
+**⏳ NEXT STEPS:**
+To enable actual blockchain transactions, you need to:
+1. Implement the stubbed functions in `src/lib/polkadot/multisig.ts`
+2. Test with a real Paseo testnet multisig wallet
+3. Connect Polkadot wallet extension (Polkadot.js, Talisman, etc.)
+4. Sign and submit transactions on-chain
+
+**Current Status:** ✅ Infrastructure Ready | ⏳ Implementation Pending
+
 ## ✅ What Was Built
 
 ### 1. Database Schema Extensions
@@ -106,44 +124,159 @@ interface MultisigConfig {
 - Drizzle ORM type inference
 - No `any` types in codebase
 
-## 🚀 What's Next (Not Yet Implemented)
+## 🚀 What's Next
 
-### Priority 1: UI Components
-- [ ] `MilestoneVotingPanel` - Show approval progress, signature status
-- [ ] `WalletConnectButton` - Connect Polkadot wallet extensions
-- [ ] `ApprovalWorkflowSelector` - Toggle between merged/separated
-- [ ] `SignatureProgress` - Visual progress of multisig approvals
+### ✅ Completed
+- [x] `MilestoneVotingPanel` - Show approval progress, signature status
+- [x] `PolkadotWalletSelector` - Connect Polkadot wallet extensions (in header)
+- [x] `MultisigConfigForm` - Configure multisig settings in committee management
+- [x] `SignatoryVoteList` - Visual progress of multisig approvals
+- [x] `PolkadotProvider` - React context for wallet management
+- [x] Integration with reviewer submission view (shows voting panel for approved milestones)
+- [x] Database schema and server actions complete
+- [x] Workflow pattern support (merged/separated)
+- [x] Committee management UI for multisig configuration
 
-### Priority 2: Integration with Existing Flow
-- [ ] Replace manual `MilestoneCompletionForm` with multisig workflow
-- [ ] Update `MilestoneStatus` component to show blockchain progress
-- [ ] Add workflow selector in committee management UI
-- [ ] Notification system for signature requests
+### ⏳ Priority 1: Enable Blockchain Transactions
+- [x] Install `polkadot-api` package (includes ws-provider and `papi` CLI)
+- [x] Generate chain descriptors using `npx papi add paseo -n paseo` and `npx papi`
+- [x] Update `src/lib/polkadot/client.ts` to import generated descriptors
+- [x] Add `.papi` to `.gitignore` and ESLint ignore list
+- [ ] Implement stubbed functions in `src/lib/polkadot/multisig.ts`:
+  - `createTransferCall()`
+  - `createBatchedPaymentCall()`
+  - `initiateMultisigApproval()`
+  - `approveMultisigCall()`
+  - `finalizeMultisigCall()`
+  - `queryPendingMultisigs()`
+- [ ] Test actual blockchain transactions on Paseo testnet
 
-### Priority 3: Testing & Validation
-- [ ] Test on Paseo testnet with real committee
+### Priority 2: Testing & Validation
+- [ ] Create test multisig wallet on Paseo with 2 signatories
+- [ ] Test merged workflow end-to-end with real wallet signatures
+- [ ] Test separated workflow end-to-end
 - [ ] Validate transaction cost calculations
 - [ ] Error handling for failed transactions
-- [ ] Edge cases: expired approvals, rejected signatures
+- [ ] Edge cases: expired approvals, rejected signatures, insufficient balance
 
-### Priority 4: Advanced Features
-- [ ] Query pending multisigs from blockchain
+### Priority 3: Advanced Features
+- [ ] Query pending multisigs from blockchain (`queryPendingMultisigs`)
 - [ ] Cancel/replace pending approvals
 - [ ] Batch multiple milestone payments
 - [ ] Historical signature analytics
+- [ ] Gas estimation before transaction
+- [ ] Notification system for signature requests
 
-## 📦 Dependencies Needed
+## 📦 Dependencies & Setup
 
-Add to `package.json`:
+### Step 1: Install Polkadot-API
+
+The `polkadot-api` package includes everything you need: runtime client, ws-provider, and the `papi` CLI tool for code generation.
+
+```bash
+pnpm add polkadot-api
+```
+
+### Step 2: Add Chain and Generate Descriptors
+
+The `papi` CLI tool (included in `polkadot-api`) generates TypeScript types from chain metadata.
+
+**Add to `package.json` scripts:**
 ```json
 {
-  "dependencies": {
-    "polkadot-api": "^1.15.0",
-    "@polkadot-api/descriptors": "latest",
-    "@polkadot/util-crypto": "^12.0.0"
+  "scripts": {
+    "polkadot:add-paseo": "papi add paseo -n paseo",
+    "polkadot:add-dot": "papi add dot -n polkadot",
+    "polkadot:add-ksm": "papi add ksm -n kusama",
+    "polkadot:generate": "papi"
   }
 }
 ```
+
+**Or use npx directly:**
+```bash
+# Add chain and generate descriptors for Paseo testnet
+npx papi add paseo -n paseo
+npx papi
+
+# For Polkadot mainnet
+npx papi add dot -n polkadot
+npx papi
+
+# For Kusama
+npx papi add ksm -n kusama
+npx papi
+```
+
+This will:
+1. Create a `polkadot-api.json` config file in your project root
+2. Generate type descriptors in `@polkadot-api/descriptors` folder
+3. Provide type-safe access to all chain operations
+
+**What gets generated:**
+- Storage queries (e.g., `Balances.Account`)
+- Transactions (e.g., `Balances.transfer`)
+- Events and errors
+- Runtime constants
+
+### Step 3: Using Generated Descriptors in Code
+
+Once descriptors are generated, update `/src/lib/polkadot/client.ts`:
+
+```typescript
+import { createClient } from 'polkadot-api'
+import { getWsProvider } from 'polkadot-api/ws-provider/web'
+import { paseo } from '@polkadot-api/descriptors' // Generated descriptor
+
+const NETWORK_ENDPOINTS = {
+  polkadot: 'wss://rpc.polkadot.io',
+  kusama: 'wss://kusama-rpc.polkadot.io',
+  paseo: process.env.POLKADOT_WS_URL || 'wss://rpc.rococo-paseo.land',
+}
+
+let clientInstance: ReturnType<typeof createClient> | null = null
+
+export function getPolkadotClient(network: 'paseo' = 'paseo') {
+  if (clientInstance) return clientInstance
+  
+  const wsProvider = getWsProvider(NETWORK_ENDPOINTS[network])
+  clientInstance = createClient(wsProvider)
+  
+  return clientInstance
+}
+
+// Get typed API with full type safety
+export const paseoApi = getPolkadotClient().getTypedApi(paseo)
+```
+
+**Environment Variables:**
+```bash
+# Optional: Override default WebSocket URL
+POLKADOT_WS_URL=wss://rpc.rococo-paseo.land
+```
+
+Then in `/src/lib/polkadot/multisig.ts`, you can use the typed API:
+
+```typescript
+import { paseoApi } from './client'
+
+// Type-safe multisig operations
+const multisigCall = paseoApi.tx.Multisig.as_multi({
+  threshold: 2,
+  otherSignatories: sortedSignatories,
+  maybeTimepoint: null,
+  call: transferCall,
+  maxWeight: { refTime: 1000000000n, proofSize: 64000n }
+})
+
+// Sign and submit
+await multisigCall.signSubmitAndWatch(signer)
+```
+
+**Resources:**
+- [Polkadot-API Codegen Docs](https://papi.how/codegen)
+- [TypedAPI Usage](https://papi.how/typed)
+- [Multisig Pallet Reference](https://wiki.polkadot.network/docs/learn-account-multisig)
 
 ## 🗄️ Database Migration
 
@@ -243,8 +376,131 @@ async function executePayment() {
 
 ---
 
-**Status:** Core infrastructure complete, UI integration pending
-**Next Steps:** Build React components and integrate with existing milestone flow
+## 📝 Summary
+
+**✅ Complete:**
+- Database schema (milestone_approvals, multisig_signatures tables)
+- Server actions (initiate, vote, finalize)
+- React components (MilestoneVotingPanel, MultisigConfigForm, WalletSelector)
+- Polkadot Provider context
+- UI integration in reviewer submission view
+- Committee management configuration
+- Both workflow patterns (merged/separated) supported
+- Seed data with multisig-enabled committee
+- ✨ **Polkadot-API installed and configured**
+- ✨ **Chain descriptors generated for Paseo testnet**
+- ✨ **TypeScript types available via `@polkadot-api/descriptors`**
+
+**⏳ Pending:**
+- Implement stubbed blockchain functions in `src/lib/polkadot/multisig.ts`
+- Test on Paseo testnet with real multisig wallet
+- Connect wallet extension and submit actual on-chain transactions
+
+**Next Step:** Implement the 6 stubbed functions in `multisig.ts` using the typed `getPaseoTypedApi()` from `client.ts`
+
+---
+
+## 🛠️ Implementation Guide: Enabling Blockchain Transactions
+
+### Step-by-Step Instructions
+
+**1. Install Polkadot-API**
+```bash
+cd /Users/mauritsbos/code/grantflow/grantflow-dev
+pnpm add polkadot-api
+```
+
+**2. Add Chain and Generate Descriptors**
+```bash
+# Add Paseo testnet chain
+npx papi add paseo -n paseo
+
+# Generate TypeScript types
+npx papi
+
+# This creates:
+# - polkadot-api.json (config file)
+# - @polkadot-api/descriptors folder with generated types
+```
+
+**3. Update `src/lib/polkadot/client.ts`**
+```typescript
+import { createClient } from 'polkadot-api'
+import { getWsProvider } from 'polkadot-api/ws-provider/web'
+import { paseo } from '@polkadot-api/descriptors'
+
+const NETWORK_ENDPOINTS = {
+  polkadot: 'wss://rpc.polkadot.io',
+  kusama: 'wss://kusama-rpc.polkadot.io',
+  paseo: process.env.POLKADOT_WS_URL || 'wss://rpc.rococo-paseo.land',
+}
+
+let clientInstance: ReturnType<typeof createClient> | null = null
+let currentNetwork: 'polkadot' | 'kusama' | 'paseo' = 'paseo'
+
+export function getPolkadotClient(network: 'polkadot' | 'kusama' | 'paseo' = 'paseo') {
+  if (clientInstance && currentNetwork === network) {
+    return clientInstance
+  }
+
+  if (clientInstance) {
+    clientInstance.destroy()
+  }
+
+  const provider = getWsProvider(NETWORK_ENDPOINTS[network])
+  clientInstance = createClient(provider)
+  currentNetwork = network
+
+  return clientInstance
+}
+
+// Export typed API for Paseo
+export const paseoApi = getPolkadotClient('paseo').getTypedApi(paseo)
+```
+
+**4. Implement Stubbed Functions in `src/lib/polkadot/multisig.ts`**
+
+Replace the throw statements with actual implementations:
+
+```typescript
+export function createTransferCall(beneficiaryAddress: string, amount: bigint) {
+  return paseoApi.tx.Balances.transfer_keep_alive({
+    dest: { type: 'Id', value: beneficiaryAddress },
+    value: amount,
+  })
+}
+
+export function createBatchedPaymentCall(/* params */) {
+  const transferCall = createTransferCall(beneficiaryAddress, payoutAmount)
+  const remarkCall = paseoApi.tx.System.remark({
+    remark: Binary.fromText(`milestone:${milestoneId}`)
+  })
+  
+  return paseoApi.tx.Utility.batch_all({
+    calls: [transferCall, remarkCall]
+  })
+}
+
+// Continue implementing other functions...
+```
+
+**5. Test Database Setup**
+```bash
+# Reset and seed database with multisig configuration
+pnpm db:reset
+pnpm db:seed
+```
+
+**6. Test Locally**
+- Login as `reviewer1@test.com` (password: `reviewer123`)
+- Navigate to Infrastructure Committee
+- View an approved milestone
+- Connect Polkadot wallet (ensure you have Paseo testnet tokens)
+- Sign the multisig transaction
+
+**7. Monitor Transactions**
+- View on Paseo block explorer: https://paseo.subscan.io/
+- Check multisig status on-chain
 
 
 

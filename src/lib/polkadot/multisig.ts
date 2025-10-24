@@ -8,8 +8,28 @@
  * - Final execution with full call data
  */
 
-import { getPolkadotApi } from './client'
-import type { PolkadotSigner } from 'polkadot-api'
+import { getPaseoTypedApi } from './client'
+import {
+  Binary,
+  type PolkadotSigner,
+  type FixedSizeBinary,
+  type TxCallData,
+} from 'polkadot-api'
+
+/**
+ * Multisig event interface
+ */
+interface MultisigEvent {
+  type: string
+  value: {
+    type: string
+    value: {
+      when?: { height: number; index: number }
+      approvals?: string[]
+      result?: { type: string; value?: unknown }
+    }
+  }
+}
 
 /**
  * Sort addresses for multisig operations
@@ -41,49 +61,50 @@ export function getOtherSignatories(
 /**
  * Create a balance transfer call
  * This is the base call that will be wrapped in multisig
- *
- * NOTE: This requires the polkadot-api package and proper chain descriptors
- * Install with: pnpm add polkadot-api @polkadot-api/descriptors
- * Generate descriptors: https://papi.how/recipes/codegen
  */
-export function createTransferCall(
-  _beneficiaryAddress: string,
-  _amount: bigint
-): unknown {
-  const _api = getPolkadotApi()
+export function createTransferCall(beneficiaryAddress: string, amount: bigint) {
+  console.log('[createTransferCall]: Creating transfer call', {
+    beneficiaryAddress,
+    amount: amount.toString(),
+  })
 
-  // TODO: Implement with proper typed API once descriptors are generated
-  // return api.tx.Balances.transfer_keep_alive({
-  //   dest: { type: 'Id', value: beneficiaryAddress },
-  //   value: amount,
-  // })
+  const api = getPaseoTypedApi()
 
-  throw new Error(
-    'createTransferCall: Polkadot API not fully configured. Install dependencies and generate chain descriptors.'
-  )
+  return api.tx.Balances.transfer_keep_alive({
+    dest: { type: 'Id', value: beneficiaryAddress },
+    value: amount,
+  })
 }
 
 /**
  * Create a batched call combining transfer and remark
  * This ensures atomic execution - both succeed or both fail
- *
- * NOTE: Requires proper chain descriptors
  */
 export function createBatchedPaymentCall(
-  _beneficiaryAddress: string,
-  _amount: bigint,
-  _milestoneId: number
-): unknown {
-  const _api = getPolkadotApi()
+  beneficiaryAddress: string,
+  amount: bigint,
+  milestoneId: number
+) {
+  console.log('[createBatchedPaymentCall]: Creating batched payment call', {
+    beneficiaryAddress,
+    amount: amount.toString(),
+    milestoneId,
+  })
 
-  // TODO: Implement with proper typed API
-  // const transferCall = api.tx.Balances.transfer_keep_alive({ ... })
-  // const remarkCall = api.tx.System.remark({ ... })
-  // return api.tx.Utility.batch_all({ calls: [...] })
+  const api = getPaseoTypedApi()
 
-  throw new Error(
-    'createBatchedPaymentCall: Polkadot API not fully configured.'
-  )
+  // Create the transfer call
+  const transferCall = createTransferCall(beneficiaryAddress, amount)
+
+  // Create the remark call with milestone ID
+  const remarkCall = api.tx.System.remark({
+    remark: Binary.fromText(`milestone:${milestoneId}`),
+  })
+
+  // Batch both calls atomically
+  return api.tx.Utility.batch_all({
+    calls: [transferCall.decodedCall, remarkCall.decodedCall],
+  })
 }
 
 /**
@@ -102,6 +123,7 @@ export interface InitiateApprovalResult {
   callHash: string
   callData: Uint8Array
   timepoint: Timepoint
+  blockNumber: number
 }
 
 /**
@@ -117,7 +139,7 @@ export interface InitiateApprovalResult {
  * @param signer - Polkadot signer instance
  * @param useBatch - Whether to use batch_all for atomic execution
  */
-export function initiateMultisigApproval(_params: {
+export async function initiateMultisigApproval(params: {
   beneficiaryAddress: string
   payoutAmount: bigint
   milestoneId: number
@@ -127,14 +149,6 @@ export function initiateMultisigApproval(_params: {
   signer: PolkadotSigner
   useBatch?: boolean
 }): Promise<InitiateApprovalResult> {
-  // TODO: Implement once polkadot-api is properly configured
-  throw new Error(
-    'initiateMultisigApproval: Polkadot API integration requires package installation and chain descriptor generation. ' +
-      'Run: pnpm add polkadot-api @polkadot-api/descriptors && generate chain descriptors. ' +
-      'See: https://papi.how/recipes/codegen'
-  )
-
-  /* Implementation template - uncomment once API is configured:
   const {
     beneficiaryAddress,
     payoutAmount,
@@ -146,28 +160,127 @@ export function initiateMultisigApproval(_params: {
     useBatch = true,
   } = params
 
-  console.log('[polkadot/multisig]: Initiating approval', {
+  console.log('[initiateMultisigApproval]: Initiating approval', {
     milestoneId,
     beneficiaryAddress,
     amount: payoutAmount.toString(),
     threshold,
     signatoryCount: allSignatories.length,
+    useBatch,
   })
 
-  // Create the payment call (batched or simple)
-  const paymentCall = useBatch
-    ? createBatchedPaymentCall(beneficiaryAddress, payoutAmount, milestoneId)
-    : createTransferCall(beneficiaryAddress, payoutAmount)
+  try {
+    const api = getPaseoTypedApi()
 
-  // Get call data and hash
-  const callData = await paymentCall.getEncodedData()
-  const callHash = await paymentCall.getEncodedDataHash()
+    // Create the payment call (batched or simple)
+    const paymentCall = useBatch
+      ? createBatchedPaymentCall(beneficiaryAddress, payoutAmount, milestoneId)
+      : createTransferCall(beneficiaryAddress, payoutAmount)
 
-  // Get sorted other signatories
-  const otherSignatories = getOtherSignatories(allSignatories, initiatorAddress)
+    // Get call data and hash
+    const callData = await paymentCall.getEncodedData()
+    const callHash = await paymentCall.getEncodedData()
 
-  // Rest of implementation commented out until API is properly configured
-  */
+    // Get sorted other signatories
+    const otherSignatories = getOtherSignatories(
+      allSignatories,
+      initiatorAddress
+    )
+
+    // Calculate max weight for the call execution
+    const maxWeight = {
+      ref_time: 1000000000n, // 1 second
+      proof_size: 1000000n, // 1MB
+    }
+
+    // Create multisig as_multi call (first signatory publishes AND votes)
+    const multisigCall = api.tx.Multisig.as_multi({
+      threshold,
+      other_signatories: otherSignatories,
+      maybe_timepoint: undefined, // First call has no timepoint
+      call: callData as unknown as TxCallData, // Type conversion for TxCallData
+      max_weight: maxWeight,
+    })
+
+    console.log('[initiateMultisigApproval]: Submitting multisig call', {
+      threshold,
+      otherSignatoriesCount: otherSignatories.length,
+      callHash: callHash.asText(),
+    })
+
+    // Sign and submit the transaction
+    const tx = multisigCall.signSubmitAndWatch(signer)
+
+    // Wait for the transaction to be finalized
+    const finalized = await tx.toPromise()
+
+    if (!finalized) {
+      throw new Error('Transaction was not finalized')
+    }
+
+    // Extract transaction details
+    const txHash = finalized.txHash
+    const blockNumber = (finalized as { blockNumber?: number }).blockNumber ?? 0
+
+    // Parse events to find timepoint
+    let timepoint: Timepoint | null = null
+
+    // Handle events from the transaction result
+    const events = (finalized as { events?: MultisigEvent[] }).events ?? []
+    for (const event of events) {
+      if (event.type === 'Multisig') {
+        if (event.value.type === 'NewMultisig' && event.value.value.when) {
+          // Extract timepoint from NewMultisig event
+          timepoint = {
+            height: event.value.value.when.height,
+            index: event.value.value.when.index,
+          }
+          console.log(
+            '[initiateMultisigApproval]: Found timepoint from NewMultisig',
+            timepoint
+          )
+        } else if (
+          event.value.type === 'MultisigApproval' &&
+          event.value.value.when
+        ) {
+          // Extract timepoint from MultisigApproval event
+          timepoint = {
+            height: event.value.value.when.height,
+            index: event.value.value.when.index,
+          }
+          console.log(
+            '[initiateMultisigApproval]: Found timepoint from MultisigApproval',
+            timepoint
+          )
+        }
+      }
+    }
+
+    if (!timepoint) {
+      throw new Error('Could not extract timepoint from transaction events')
+    }
+
+    console.log('[initiateMultisigApproval]: Approval initiated successfully', {
+      txHash,
+      blockNumber,
+      timepoint,
+      callHash: callHash.asText(),
+    })
+
+    return {
+      txHash,
+      callHash: callHash.asText(),
+      callData: callData as unknown as Uint8Array,
+      timepoint,
+      blockNumber,
+    }
+  } catch (error) {
+    console.error(
+      '[initiateMultisigApproval]: Failed to initiate approval',
+      error
+    )
+    throw error
+  }
 }
 
 /**
@@ -181,18 +294,14 @@ export function initiateMultisigApproval(_params: {
  * @param approverAddress - Address of the member approving
  * @param signer - Polkadot signer instance
  */
-export function approveMultisigCall(_params: {
+export async function approveMultisigCall(params: {
   callHash: string
   timepoint: Timepoint
   threshold: number
   allSignatories: string[]
   approverAddress: string
   signer: PolkadotSigner
-}): Promise<string> {
-  // TODO: Implement once polkadot-api is properly configured
-  throw new Error('approveMultisigCall: Polkadot API not fully configured')
-
-  /* Implementation template:
+}): Promise<{ txHash: string; blockNumber: number; thresholdMet: boolean }> {
   const {
     callHash,
     timepoint,
@@ -202,19 +311,94 @@ export function approveMultisigCall(_params: {
     signer,
   } = params
 
-  console.log('[polkadot/multisig]: Approving call', {
+  console.log('[approveMultisigCall]: Approving call', {
     callHash,
     timepoint,
     threshold,
   })
 
-  // Get sorted other signatories
-  const otherSignatories = getOtherSignatories(allSignatories, approverAddress)
+  try {
+    const api = getPaseoTypedApi()
 
-  // Create approval transaction (only needs hash)
-  const api = getPolkadotApi()
-  // Rest of implementation commented out until API is properly configured
-  */
+    // Get sorted other signatories
+    const otherSignatories = getOtherSignatories(
+      allSignatories,
+      approverAddress
+    )
+
+    // Calculate max weight for the call execution
+    const maxWeight = {
+      ref_time: 1000000000n, // 1 second
+      proof_size: 1000000n, // 1MB
+    }
+
+    // Create approval transaction (only needs hash, not full call data)
+    const approvalCall = api.tx.Multisig.approve_as_multi({
+      threshold,
+      other_signatories: otherSignatories,
+      maybe_timepoint: timepoint,
+      call_hash: callHash as unknown as FixedSizeBinary<32>, // Type conversion for FixedSizeBinary<32>
+      max_weight: maxWeight,
+    })
+
+    console.log('[approveMultisigCall]: Submitting approval', {
+      threshold,
+      otherSignatoriesCount: otherSignatories.length,
+      callHash,
+    })
+
+    // Sign and submit the transaction
+    const tx = approvalCall.signSubmitAndWatch(signer)
+
+    // Wait for the transaction to be finalized
+    const finalized = await tx.toPromise()
+
+    if (!finalized) {
+      throw new Error('Transaction was not finalized')
+    }
+
+    // Extract transaction details
+    const txHash = finalized.txHash
+    const blockNumber = (finalized as { blockNumber?: number }).blockNumber ?? 0
+
+    // Check if threshold is met by looking for MultisigApproval events
+    let thresholdMet = false
+    let approvalCount = 0
+
+    const events = (finalized as { events?: MultisigEvent[] }).events ?? []
+    for (const event of events) {
+      if (event.type === 'Multisig') {
+        if (
+          event.value.type === 'MultisigApproval' &&
+          event.value.value.approvals
+        ) {
+          approvalCount = event.value.value.approvals.length
+          thresholdMet = approvalCount >= threshold
+          console.log('[approveMultisigCall]: Found MultisigApproval event', {
+            approvalCount,
+            threshold,
+            thresholdMet,
+          })
+        }
+      }
+    }
+
+    console.log('[approveMultisigCall]: Approval submitted successfully', {
+      txHash,
+      blockNumber,
+      thresholdMet,
+      approvalCount,
+    })
+
+    return {
+      txHash,
+      blockNumber,
+      thresholdMet,
+    }
+  } catch (error) {
+    console.error('[approveMultisigCall]: Failed to approve call', error)
+    throw error
+  }
 }
 
 /**
@@ -233,7 +417,7 @@ export function approveMultisigCall(_params: {
  * @param milestoneId - Milestone ID (for reconstruction)
  * @param useBatch - Whether original call used batch
  */
-export function finalizeMultisigCall(_params: {
+export async function finalizeMultisigCall(params: {
   callData: Uint8Array
   timepoint: Timepoint
   threshold: number
@@ -244,11 +428,12 @@ export function finalizeMultisigCall(_params: {
   payoutAmount: bigint
   milestoneId: number
   useBatch?: boolean
-}): Promise<{ txHash: string; blockNumber: number }> {
-  // TODO: Implement once polkadot-api is properly configured
-  throw new Error('finalizeMultisigCall: Polkadot API not fully configured')
-
-  /* Implementation template:
+}): Promise<{
+  txHash: string
+  blockNumber: number
+  executionSuccess: boolean
+  executionError?: string
+}> {
   const {
     timepoint,
     threshold,
@@ -261,47 +446,185 @@ export function finalizeMultisigCall(_params: {
     useBatch = true,
   } = params
 
-  console.log('[polkadot/multisig]: Finalizing call', {
+  console.log('[finalizeMultisigCall]: Finalizing call', {
     timepoint,
     threshold,
     milestoneId,
+    useBatch,
   })
 
-  // Reconstruct the original call
-  const paymentCall = useBatch
-    ? createBatchedPaymentCall(beneficiaryAddress, payoutAmount, milestoneId)
-    : createTransferCall(beneficiaryAddress, payoutAmount)
+  try {
+    const api = getPaseoTypedApi()
 
-  // Get sorted other signatories
-  const otherSignatories = getOtherSignatories(allSignatories, executorAddress)
+    // Reconstruct the original call to get fresh call data
+    const paymentCall = useBatch
+      ? createBatchedPaymentCall(beneficiaryAddress, payoutAmount, milestoneId)
+      : createTransferCall(beneficiaryAddress, payoutAmount)
 
-  // Create final multisig transaction with full call data
-  const api = getPolkadotApi()
-  // Rest of implementation commented out until API is properly configured
-  */
+    // Get fresh call data (must match the original)
+    const freshCallData = await paymentCall.getEncodedData()
+
+    // Verify call data matches (safety check)
+    if (JSON.stringify(freshCallData) !== JSON.stringify(params.callData)) {
+      console.warn(
+        '[finalizeMultisigCall]: Call data mismatch, using provided data'
+      )
+    }
+
+    // Get sorted other signatories
+    const otherSignatories = getOtherSignatories(
+      allSignatories,
+      executorAddress
+    )
+
+    // Calculate max weight for the call execution
+    const maxWeight = {
+      ref_time: 1000000000n, // 1 second
+      proof_size: 1000000n, // 1MB
+    }
+
+    // Create final multisig transaction with full call data
+    const finalizeCall = api.tx.Multisig.as_multi({
+      threshold,
+      other_signatories: otherSignatories,
+      maybe_timepoint: timepoint,
+      call: params.callData as unknown as TxCallData, // Type conversion for TxCallData
+      max_weight: maxWeight,
+    })
+
+    console.log('[finalizeMultisigCall]: Submitting final execution', {
+      threshold,
+      otherSignatoriesCount: otherSignatories.length,
+      timepoint,
+    })
+
+    // Sign and submit the transaction
+    const tx = finalizeCall.signSubmitAndWatch(signer)
+
+    // Wait for the transaction to be finalized
+    const finalized = await tx.toPromise()
+
+    if (!finalized) {
+      throw new Error('Transaction was not finalized')
+    }
+
+    // Extract transaction details
+    const txHash = finalized.txHash
+    const blockNumber = (finalized as { blockNumber?: number }).blockNumber ?? 0
+
+    // Check for execution success/failure
+    let executionSuccess = false
+    let executionError: string | undefined
+
+    const events = (finalized as { events?: MultisigEvent[] }).events ?? []
+    for (const event of events) {
+      if (event.type === 'Multisig') {
+        if (
+          event.value.type === 'MultisigExecuted' &&
+          event.value.value.result
+        ) {
+          executionSuccess = event.value.value.result.type === 'Ok'
+          if (!executionSuccess && event.value.value.result.type === 'Err') {
+            executionError = String(event.value.value.result.value)
+          }
+          console.log('[finalizeMultisigCall]: Found MultisigExecuted event', {
+            executionSuccess,
+            executionError,
+          })
+        }
+      }
+    }
+
+    if (!executionSuccess && !executionError) {
+      executionError = 'Execution failed but no error details available'
+    }
+
+    console.log('[finalizeMultisigCall]: Final execution completed', {
+      txHash,
+      blockNumber,
+      executionSuccess,
+      executionError,
+    })
+
+    return {
+      txHash,
+      blockNumber,
+      executionSuccess,
+      executionError,
+    }
+  } catch (error) {
+    console.error('[finalizeMultisigCall]: Failed to finalize call', error)
+    throw error
+  }
+}
+
+/**
+ * Interface for pending multisig information
+ */
+export interface PendingMultisig {
+  callHash: string
+  when: Timepoint
+  deposit: bigint
+  depositor: string
+  approvals: string[]
 }
 
 /**
  * Query pending multisig calls for an address
  * This can be used to check if there are any pending approvals
  */
-export function queryPendingMultisigs(
-  _multisigAddress: string
-): Promise<unknown[]> {
-  // TODO: Implement once polkadot-api is properly configured
-  throw new Error('queryPendingMultisigs: Polkadot API not fully configured')
-
-  /* Implementation template:
-  const api = getPolkadotApi()
-  const entries = await api.query.Multisig.Multisigs.getEntries(
-    multisigAddress
-  )
-
-  console.log('[polkadot/multisig]: Queried pending multisigs', {
+export async function queryPendingMultisigs(
+  multisigAddress: string
+): Promise<PendingMultisig[]> {
+  console.log('[queryPendingMultisigs]: Querying pending multisigs', {
     multisigAddress,
-    count: entries.length,
   })
 
-  return entries
-  */
+  try {
+    const api = getPaseoTypedApi()
+
+    // Query all multisig entries for the address
+    const entries =
+      await api.query.Multisig.Multisigs.getEntries(multisigAddress)
+
+    const pendingMultisigs: PendingMultisig[] = []
+
+    for (const entry of entries) {
+      const [_address, callHash] = entry.keyArgs
+      const multisigData = entry.value
+
+      if (multisigData) {
+        const pendingMultisig: PendingMultisig = {
+          callHash: typeof callHash === 'string' ? callHash : callHash.asText(),
+          when: {
+            height: multisigData.when.height,
+            index: multisigData.when.index,
+          },
+          deposit: multisigData.deposit,
+          depositor: multisigData.depositor,
+          approvals: multisigData.approvals,
+        }
+
+        pendingMultisigs.push(pendingMultisig)
+      }
+    }
+
+    console.log('[queryPendingMultisigs]: Found pending multisigs', {
+      multisigAddress,
+      count: pendingMultisigs.length,
+      multisigs: pendingMultisigs.map(m => ({
+        callHash: m.callHash,
+        approvals: m.approvals.length,
+        depositor: m.depositor,
+      })),
+    })
+
+    return pendingMultisigs
+  } catch (error) {
+    console.error(
+      '[queryPendingMultisigs]: Failed to query pending multisigs',
+      error
+    )
+    throw error
+  }
 }
