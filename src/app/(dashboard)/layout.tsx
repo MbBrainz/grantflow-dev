@@ -15,6 +15,8 @@ import { signOut } from '@/app/(login)/actions'
 import { useRouter } from 'next/navigation'
 import type { User } from '@/lib/db/schema'
 import useSWR, { mutate } from 'swr'
+import { PolkadotProvider } from '@/components/providers/polkadot-provider'
+import { PolkadotWalletSelector } from '@/components/wallet/polkadot-wallet-selector'
 
 const fetcher = (url: string) => fetch(url).then(res => res.json())
 
@@ -96,6 +98,7 @@ function Header() {
           </span>
         </Link>
         <div className="flex items-center space-x-4">
+          <PolkadotWalletSelector />
           <Suspense fallback={<div className="h-9" />}>
             <UserMenu />
           </Suspense>
@@ -107,9 +110,11 @@ function Header() {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <section className="flex min-h-screen flex-col">
-      <Header />
-      {children}
-    </section>
+    <PolkadotProvider>
+      <section className="flex min-h-screen flex-col">
+        <Header />
+        {children}
+      </section>
+    </PolkadotProvider>
   )
 }

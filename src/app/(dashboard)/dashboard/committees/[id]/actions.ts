@@ -429,3 +429,70 @@ export async function getCommitteeForManagement(committeeId: number) {
   const committee = await getCommitteeById(committeeId)
   return committee
 }
+
+// ============================================================================
+// Update Multisig Configuration
+// ============================================================================
+
+const UpdateMultisigConfigSchema = z.object({
+  committeeId: z.coerce.number(),
+  multisigAddress: z.string().min(1, 'Multisig address is required'),
+  signatories: z.array(z.string()).min(2, 'At least 2 signatories required'),
+  threshold: z.number().int().min(2, 'Threshold must be at least 2'),
+  approvalWorkflow: z.enum(['merged', 'separated']),
+  requireAllSignatories: z.boolean(),
+  votingTimeoutBlocks: z.number().int().positive(),
+  automaticExecution: z.boolean(),
+  network: z.enum(['polkadot', 'kusama', 'paseo']),
+})
+
+export const updateMultisigConfig = validatedActionWithUser(
+  UpdateMultisigConfigSchema,
+  async (data, user) => {
+    const { committeeId, ...multisigConfig } = data
+
+    console.log(
+      `[updateMultisigConfig]: User ${user.id} updating multisig for committee ${committeeId}`
+    )
+
+    // Check if user is admin
+    const isAdmin = await isCommitteeAdmin(committeeId)
+    if (!isAdmin) {
+      return { error: 'You do not have permission to update this committee' }
+    }
+
+    // Validate threshold doesn't exceed signatory count
+    if (multisigConfig.threshold > multisigConfig.signatories.length) {
+      return { error: 'Threshold cannot exceed number of signatories' }
+    }
+
+    try {
+      const committee = await getCommitteeById(committeeId)
+      if (!committee) {
+        return { error: 'Committee not found' }
+      }
+
+      // Update committee with multisig config
+      const currentSettings = committee.settings ?? {
+        votingThreshold: 0.5,
+        requiredApprovalPercentage: 50,
+        stages: [],
+      }
+
+      await updateGroup(committeeId, {
+        settings: {
+          ...currentSettings,
+          multisig: multisigConfig,
+        },
+      })
+
+      revalidatePath(`/dashboard/committees/${committeeId}/manage`)
+      revalidatePath(`/dashboard/committees/${committeeId}`)
+
+      return { success: true }
+    } catch (error) {
+      console.error('[updateMultisigConfig]: Error', error)
+      return { error: 'Failed to update multisig configuration' }
+    }
+  }
+)
