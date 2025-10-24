@@ -23,6 +23,17 @@ config()
 const client = postgres(process.env.DATABASE_URL!)
 const db = drizzle(client)
 
+// Multisig configuration from environment or defaults
+const MULTISIG_ADDRESS =
+  process.env.MULTISIG_ADDRESS ??
+  '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty' // Default Polkadot address
+const SIGNATORY_1_ADDRESS =
+  process.env.SIGNATORY_1_ADDRESS ??
+  '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY' // Default signatory 1
+const SIGNATORY_2_ADDRESS =
+  process.env.SIGNATORY_2_ADDRESS ??
+  '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y' // Default signatory 2
+
 async function seed() {
   console.log('🌱 Starting comprehensive database seeding...')
 
@@ -42,6 +53,7 @@ async function seed() {
       name: 'Alex Chen',
       githubId: 'alex-reviewer',
       primaryRole: 'committee',
+      walletAddress: SIGNATORY_1_ADDRESS, // Alex is signatory 1 for multisig
     })
     .returning()
 
@@ -53,6 +65,7 @@ async function seed() {
       name: 'Maria Rodriguez',
       githubId: 'maria-reviewer',
       primaryRole: 'committee',
+      walletAddress: SIGNATORY_2_ADDRESS, // Maria is signatory 2 for multisig
     })
     .returning()
 
@@ -173,6 +186,16 @@ async function seed() {
           'security_review',
           'final_approval',
         ],
+        multisig: {
+          multisigAddress: MULTISIG_ADDRESS,
+          signatories: [SIGNATORY_1_ADDRESS, SIGNATORY_2_ADDRESS],
+          threshold: 2,
+          approvalWorkflow: 'merged',
+          requireAllSignatories: true,
+          votingTimeoutBlocks: 50400, // ~7 days on Polkadot (6s blocks)
+          automaticExecution: true,
+          network: 'paseo',
+        },
       },
     })
     .returning()
@@ -2391,10 +2414,22 @@ async function seed() {
   console.log('✅ Comprehensive database seeding completed successfully!')
   console.log('\n=== SUMMARY ===')
   console.log(`🏛️  Created ${4} committee groups:`)
-  console.log('   • Infrastructure Development Committee (active)')
+  console.log(
+    '   • Infrastructure Development Committee (active) 🔐 MULTISIG ENABLED'
+  )
   console.log('   • Research & Education Committee (active)')
   console.log('   • DeFi Innovation Committee (active)')
   console.log('   • Gaming & NFT Committee (active)')
+  console.log('\n🔐 MULTISIG CONFIGURATION (Infrastructure Committee):')
+  console.log(`   • Multisig Address: ${MULTISIG_ADDRESS}`)
+  console.log(`   • Signatory 1: ${SIGNATORY_1_ADDRESS}`)
+  console.log(`   • Signatory 2: ${SIGNATORY_2_ADDRESS}`)
+  console.log('   • Threshold: 2 of 2 signatures required')
+  console.log(
+    '   • Approval Workflow: MERGED (review + blockchain signature combined)'
+  )
+  console.log('   • Network: Paseo Testnet')
+  console.log('   • Automatic Execution: Enabled')
 
   console.log(`\n👥 Created ${5} team groups:`)
   console.log('   • NextGen SDK Team')
@@ -2407,6 +2442,9 @@ async function seed() {
   console.log('   • 4 reviewers with committee primary role')
   console.log('   • 5 team members with team primary role')
   console.log('   • All passwords: reviewer123, team1234 respectively')
+  console.log(
+    '   • Alex Chen & Maria Rodriguez: Configured with multisig wallet addresses'
+  )
 
   console.log(`\n💼 Created ${6} grant programs across committees`)
   console.log('   • Infrastructure: Core Development ($100K), Tools ($50K)')

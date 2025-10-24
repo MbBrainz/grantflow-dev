@@ -17,10 +17,13 @@ import {
   Target,
   AlertCircle,
   X,
+  Wallet,
 } from 'lucide-react'
 import { submitReview } from '@/app/(dashboard)/dashboard/submissions/actions'
 import { useToast } from '@/lib/hooks/use-toast'
+import { usePolkadot } from '@/components/providers/polkadot-provider'
 import type { Milestone } from '@/lib/db/schema'
+import type { GroupSettings } from '@/lib/db/schema/jsonTypes/GroupSettings'
 
 interface MilestoneReviewDialogProps {
   milestone: Pick<
@@ -41,6 +44,8 @@ interface MilestoneReviewDialogProps {
   >
   submissionId: number
   milestoneNumber: number
+  committeeId: number
+  committeeSettings?: GroupSettings | null
   open: boolean
   onOpenChange: (open: boolean) => void
   onReviewSubmitted: () => void
@@ -50,6 +55,8 @@ export function MilestoneReviewDialog({
   milestone,
   submissionId,
   milestoneNumber,
+  committeeId: _committeeId, // Reserved for multisig signing when polkadot-api is configured
+  committeeSettings,
   open,
   onOpenChange,
   onReviewSubmitted,
@@ -59,7 +66,14 @@ export function MilestoneReviewDialog({
   >(null)
   const [feedback, setFeedback] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isSigningMultisig, setIsSigningMultisig] = useState(false)
   const { toast } = useToast()
+  const { selectedAccount, isConnected, connectWallet, availableExtensions } =
+    usePolkadot()
+
+  // Check if merged workflow is enabled
+  const multisigConfig = committeeSettings?.multisig
+  const isMergedWorkflow = multisigConfig?.approvalWorkflow === 'merged'
 
   const deliverables = Array.isArray(milestone.deliverables)
     ? milestone.deliverables
@@ -74,6 +88,17 @@ export function MilestoneReviewDialog({
       toast({
         title: 'Vote Required',
         description: 'Please select your vote before submitting.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // For merged workflow with approve vote, check wallet connection first
+    if (isMergedWorkflow && selectedVote === 'approve' && !isConnected) {
+      toast({
+        title: 'Wallet Connection Required',
+        description:
+          'For on-chain payment approval, please connect your Polkadot wallet first.',
         variant: 'destructive',
       })
       return
@@ -97,16 +122,47 @@ export function MilestoneReviewDialog({
           description: result.error,
           variant: 'destructive',
         })
-      } else {
-        toast({
-          title: 'Review Submitted',
-          description: `Your ${selectedVote} vote has been recorded for this milestone.`,
-        })
-        onReviewSubmitted()
-        onOpenChange(false)
-        setSelectedVote(null)
-        setFeedback('')
+        return
       }
+
+      // Success - off-chain vote recorded
+      toast({
+        title: 'Review Submitted',
+        description: `Your ${selectedVote} vote has been recorded for this milestone.`,
+      })
+
+      // For merged workflow + approve vote, now sign the multisig transaction
+      if (
+        isMergedWorkflow &&
+        selectedVote === 'approve' &&
+        multisigConfig &&
+        selectedAccount
+      ) {
+        setIsSigningMultisig(true)
+        toast({
+          title: 'Blockchain Signature Required',
+          description:
+            'Please sign the transaction in your wallet to complete the on-chain approval.',
+        })
+
+        // TODO: Call multisig signing action here when polkadot-api is fully configured
+        // For now, just show a message
+        await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate delay
+
+        toast({
+          title: 'Multisig Integration Pending',
+          description:
+            'Your vote is recorded. Blockchain signing will be available once polkadot-api is configured.',
+        })
+
+        setIsSigningMultisig(false)
+      }
+
+      // Close dialog and refresh
+      onReviewSubmitted()
+      onOpenChange(false)
+      setSelectedVote(null)
+      setFeedback('')
     } catch (error) {
       console.error('[MilestoneReviewDialog]: Error submitting review', error)
       toast({
@@ -116,6 +172,7 @@ export function MilestoneReviewDialog({
       })
     } finally {
       setIsSubmitting(false)
+      setIsSigningMultisig(false)
     }
   }
 
@@ -158,6 +215,65 @@ export function MilestoneReviewDialog({
           </div>
 
           <div className="space-y-6">
+            {/* Merged Workflow Banner */}
+            {isMergedWorkflow && multisigConfig && (
+              <Card className="border-blue-200 bg-blue-50 p-4">
+                <div className="flex items-start gap-3">
+                  <Wallet className="h-5 w-5 flex-shrink-0 text-blue-600" />
+                  <div className="flex-1">
+                    <p className="font-medium text-blue-900">
+                      On-Chain Approval Workflow
+                    </p>
+                    <p className="mt-1 text-sm text-blue-700">
+                      This committee uses merged workflow. When you approve this
+                      milestone, you&apos;ll be prompted to sign a blockchain
+                      transaction with your Polkadot wallet.
+                    </p>
+                    {!isConnected && (
+                      <div className="mt-3">
+                        <p className="mb-2 text-sm font-medium text-blue-800">
+                          Connect your wallet:
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {availableExtensions.length > 0 ? (
+                            availableExtensions.map(ext => (
+                              <Button
+                                key={ext.name}
+                                size="sm"
+                                variant="outline"
+                                onClick={() => connectWallet(ext.name)}
+                                className="border-blue-300 bg-white text-blue-700 hover:bg-blue-100"
+                              >
+                                <Wallet className="mr-2 h-3 w-3" />
+                                {ext.name}
+                              </Button>
+                            ))
+                          ) : (
+                            <p className="text-sm text-blue-600">
+                              No Polkadot wallet extensions detected. Please
+                              install Polkadot.js, Talisman, or SubWallet.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                    {isConnected && selectedAccount && (
+                      <div className="mt-2 flex items-center gap-2 text-sm">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <span className="text-green-700">
+                          Connected:{' '}
+                          <code className="rounded bg-blue-100 px-1 py-0.5 text-xs">
+                            {selectedAccount.address.slice(0, 8)}...
+                            {selectedAccount.address.slice(-6)}
+                          </code>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </Card>
+            )}
+
             <Card className="p-4">
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
@@ -425,16 +541,22 @@ export function MilestoneReviewDialog({
                     type="button"
                     variant="outline"
                     onClick={() => onOpenChange(false)}
-                    disabled={isSubmitting}
+                    disabled={isSubmitting || isSigningMultisig}
                   >
                     Cancel
                   </Button>
                   <Button
                     type="button"
                     onClick={handleSubmit}
-                    disabled={!selectedVote || isSubmitting}
+                    disabled={
+                      !selectedVote || isSubmitting || isSigningMultisig
+                    }
                   >
-                    {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                    {isSigningMultisig
+                      ? 'Signing Transaction...'
+                      : isSubmitting
+                        ? 'Submitting Review...'
+                        : 'Submit Review'}
                   </Button>
                 </div>
               </div>

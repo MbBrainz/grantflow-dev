@@ -20,6 +20,7 @@ import {
   ChevronRight,
 } from 'lucide-react'
 import { CommitteeInfoCard } from '@/components/committee/committee-info-card'
+import { MilestoneVotingPanel } from '@/components/milestone/milestone-voting-panel'
 import type { Milestone, SubmissionWithMilestones, User } from '@/lib/db/schema'
 
 interface ReviewerSubmissionViewProps {
@@ -750,6 +751,71 @@ export function ReviewerSubmissionView({
                           )}
                         </div>
                       )}
+
+                      {/* Multisig Payment Approval - Only for SEPARATED workflow */}
+                      {submission.reviewerGroup?.settings?.multisig
+                        ?.approvalWorkflow === 'separated' &&
+                        milestone.status === 'completed' &&
+                        submission.userContext?.isCommitteeReviewer && (
+                          <div className="mt-4">
+                            <MilestoneVotingPanel
+                              _milestoneId={milestone.id}
+                              _submissionId={submission.id}
+                              _committeeId={submission.reviewerGroup.id}
+                              isCommitteeMember={
+                                submission.userContext?.isCommitteeReviewer ??
+                                false
+                              }
+                              _userWalletAddress={
+                                currentUser?.walletAddress ?? undefined
+                              }
+                            />
+                          </div>
+                        )}
+
+                      {/* Multisig Payment Approval - MERGED workflow (review + payment together) */}
+                      {submission.reviewerGroup?.settings?.multisig
+                        ?.approvalWorkflow === 'merged' &&
+                        milestone.status === 'in-review' &&
+                        !userMilestoneReview &&
+                        submission.userContext?.isCommitteeReviewer && (
+                          <div className="mt-4">
+                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                              <p className="mb-2 text-sm font-medium text-blue-800">
+                                🔗 Merged Approval Workflow
+                              </p>
+                              <p className="text-sm text-gray-700">
+                                This committee uses a merged workflow. When you
+                                click "Review This Milestone" above, you'll
+                                approve the milestone AND sign the blockchain
+                                transaction in one step.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                      {/* Show voting status for MERGED workflow after user has voted */}
+                      {submission.reviewerGroup?.settings?.multisig
+                        ?.approvalWorkflow === 'merged' &&
+                        (milestone.status === 'in-review' ||
+                          milestone.status === 'completed') &&
+                        userMilestoneReview &&
+                        submission.userContext?.isCommitteeReviewer && (
+                          <div className="mt-4">
+                            <MilestoneVotingPanel
+                              _milestoneId={milestone.id}
+                              _submissionId={submission.id}
+                              _committeeId={submission.reviewerGroup.id}
+                              isCommitteeMember={
+                                submission.userContext?.isCommitteeReviewer ??
+                                false
+                              }
+                              _userWalletAddress={
+                                currentUser?.walletAddress ?? undefined
+                              }
+                            />
+                          </div>
+                        )}
                     </div>
                   )}
                 </div>
@@ -767,6 +833,8 @@ export function ReviewerSubmissionView({
           milestoneNumber={
             milestones.findIndex(m => m.id === selectedMilestone.id) + 1
           }
+          committeeId={submission.reviewerGroup?.id ?? 0}
+          committeeSettings={submission.reviewerGroup?.settings}
           open={reviewDialogOpen}
           onOpenChange={setReviewDialogOpen}
           onReviewSubmitted={() => {
