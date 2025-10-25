@@ -34,6 +34,31 @@ import {
   type SubmitReviewInput,
 } from '@/lib/db/schema/actions'
 
+// Get submission details for milestone approval
+export async function getSubmissionDetails(submissionId: number) {
+  try {
+    const submission = await getSubmissionById(submissionId)
+    
+    if (!submission) {
+      return { error: 'Submission not found' }
+    }
+
+    return {
+      success: true,
+      submission: {
+        id: submission.id,
+        title: submission.title,
+        walletAddress: submission.walletAddress,
+        status: submission.status,
+        submitter: submission.submitter,
+      }
+    }
+  } catch (error) {
+    console.error('[getSubmissionDetails]: Failed to get submission', error)
+    return { error: 'Failed to get submission details' }
+  }
+}
+
 // Fetch active grant programs with their committees for submission
 export async function getActiveGrantPrograms() {
   try {

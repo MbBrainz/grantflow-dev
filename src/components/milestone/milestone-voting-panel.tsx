@@ -23,26 +23,21 @@ import {
 } from '@/components/ui/card'
 import { Loader2 } from 'lucide-react'
 import { useToast } from '@/lib/hooks/use-toast'
-// import {
-//   initiateMultisigApproval,
-//   castMultisigVote,
-//   finalizeMultisigApproval,
-// } from '@/app/(dashboard)/dashboard/submissions/multisig-actions'
+import { initiateMultisigApproval } from '@/lib/polkadot/multisig'
+import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
 
 interface MilestoneVotingPanelProps {
-  _milestoneId: number
-  _submissionId: number
-  _committeeId: number
+  multisigConfig: MultisigConfig
   isCommitteeMember: boolean
-  _userWalletAddress?: string
+  userWalletAddress: string
+  milestoneId: number
 }
 
 export function MilestoneVotingPanel({
-  _milestoneId,
-  _submissionId,
-  _committeeId,
+  multisigConfig,
   isCommitteeMember,
-  _userWalletAddress,
+  userWalletAddress, // eslint-disable-line @typescript-eslint/no-unused-vars
+  milestoneId,
 }: MilestoneVotingPanelProps) {
   const { selectedAccount, selectedSigner, isConnected } = usePolkadot()
   const { toast } = useToast()
@@ -57,7 +52,7 @@ export function MilestoneVotingPanel({
   //   loadApprovalStatus()
   // }, [milestoneId])
 
-  const handleInitiateApproval = () => {
+  const handleInitiateApproval = async () => {
     if (!selectedAccount || !selectedSigner) {
       toast({
         title: 'Wallet not connected',
@@ -67,18 +62,27 @@ export function MilestoneVotingPanel({
       return
     }
 
+    if (!isCommitteeMember) {
+      toast({
+        title: 'You are not a committee member',
+        description: 'Please contact the administrator to be added to the committee',
+        variant: 'destructive',
+      })
+      return
+    }
+
     setIsInitiating(true)
     try {
       // TODO: Implement actual multisig initiation
-      // const result = await initiateMultisigApproval({
-      //   milestoneId,
-      //   approvalWorkflow: 'merged',
-      //   initiatorWalletAddress: selectedAccount.address,
-      //   txHash: '...',
-      //   callHash: '...',
-      //   callData: '...',
-      //   timepoint: { height: 0, index: 0 },
-      // })
+      const result = await initiateMultisigApproval({
+        multisigConfig,
+        milestoneId,
+        initiatorAddress: selectedAccount.address,
+        signer: selectedSigner,
+        useBatch: true,
+        payoutAmount: 0n,
+      })
+      console.log('[milestone-voting-panel]: Result', result)
 
       // debug logger that this isnt implemented
       console.log('[milestone-voting-panel]: Not yet implemented')

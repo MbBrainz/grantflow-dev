@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -24,6 +24,18 @@ import { useToast } from '@/lib/hooks/use-toast'
 import { usePolkadot } from '@/components/providers/polkadot-provider'
 import type { Milestone } from '@/lib/db/schema'
 import type { GroupSettings } from '@/lib/db/schema/jsonTypes/GroupSettings'
+import { 
+  initiateMultisigApproval,
+  castMultisigVote,
+  finalizeMultisigApproval,
+  getMilestoneApprovalStatus
+} from '@/app/(dashboard)/dashboard/submissions/multisig-actions'
+import { getSubmissionDetails } from '@/app/(dashboard)/dashboard/submissions/actions'
+import { 
+  initiateMultisigApproval as initiatePolkadotApproval,
+  approveMultisigCall,
+  finalizeMultisigCall
+} from '@/lib/polkadot/multisig'
 
 interface MilestoneReviewDialogProps {
   milestone: Pick<
@@ -67,8 +79,20 @@ export function MilestoneReviewDialog({
   const [feedback, setFeedback] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSigningMultisig, setIsSigningMultisig] = useState(false)
+  const [existingApproval, setExistingApproval] = useState<{
+    id: number
+    callHash: string
+    callData: string
+    timepoint: { height: number; index: number } | null
+    initiatorAddress: string
+    approvalWorkflow: string
+    createdAt: Date
+  } | null>(null)
+  const [isLoadingApproval, setIsLoadingApproval] = useState(false)
+  const [multisigFailed, setMultisigFailed] = useState(false)
+  const [reviewSubmitted, setReviewSubmitted] = useState(false)
   const { toast } = useToast()
-  const { selectedAccount, isConnected, connectWallet, availableExtensions } =
+  const { selectedAccount, isConnected, connectWallet, availableExtensions, selectedSigner } =
     usePolkadot()
 
   // Check if merged workflow is enabled
@@ -82,6 +106,229 @@ export function MilestoneReviewDialog({
   const requirements = Array.isArray(milestone.requirements)
     ? milestone.requirements
     : []
+
+  const checkExistingApproval = useCallback(async () => {
+    setIsLoadingApproval(true)
+    try {
+      const approvalStatus = await getMilestoneApprovalStatus(milestone.id)
+      if (approvalStatus.status === 'active' && approvalStatus.approval) {
+        setExistingApproval({
+          ...approvalStatus.approval,
+          callData: (approvalStatus.approval as { callData?: string }).callData ?? '',
+        })
+        console.log('[MilestoneReviewDialog]: Found existing approval', approvalStatus)
+      } else {
+        setExistingApproval(null)
+        console.log('[MilestoneReviewDialog]: No existing approval found')
+      }
+    } catch (error) {
+      console.error('[MilestoneReviewDialog]: Failed to check existing approval', error)
+      setExistingApproval(null)
+    } finally {
+      setIsLoadingApproval(false)
+    }
+  }, [milestone.id])
+
+  // Check for existing approval when dialog opens
+  useEffect(() => {
+    if (open) {
+      // Reset states when dialog opens
+      setMultisigFailed(false)
+      setReviewSubmitted(false)
+      
+      if (isMergedWorkflow) {
+        void checkExistingApproval()
+      }
+    }
+  }, [open, isMergedWorkflow, checkExistingApproval])
+
+  const handleMultisigApproval = async () => {
+    if (!selectedAccount || !multisigConfig) {
+      console.error('[MilestoneReviewDialog]: Missing account or multisig config')
+      return
+    }
+
+    setIsSigningMultisig(true)
+    
+    try {
+      if (existingApproval) {
+        // There's an existing approval - this is a subsequent vote
+        await handleSubsequentApproval()
+      } else {
+        // No existing approval - this is the initial approval
+        await handleInitialApproval()
+      }
+      } catch (error) {
+        console.error('[MilestoneReviewDialog]: Multisig approval failed', error)
+        
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
+        const isWasmError = errorMessage.includes('wasm trap') || errorMessage.includes('unreachable')
+        
+        setMultisigFailed(true)
+        
+        toast({
+          title: isWasmError ? 'Blockchain Transaction Failed' : 'Multisig Error',
+          description: isWasmError 
+            ? 'Transaction validation failed. Please ensure your account has Paseo testnet tokens from https://faucet.polkadot.io/paseo'
+            : errorMessage.length > 200 ? `${errorMessage.substring(0, 200)  }...` : errorMessage,
+          variant: 'destructive',
+        })
+        
+        throw error // Re-throw to be caught by handleSubmit
+      } finally {
+        setIsSigningMultisig(false)
+      }
+  }
+
+  const handleInitialApproval = async () => {
+    console.log('[MilestoneReviewDialog]: Handling initial approval')
+    
+    if (!selectedAccount || !multisigConfig || !selectedSigner) {
+      throw new Error('Missing account, multisig configuration, or signer')
+    }
+
+    toast({
+      title: 'Initiating Multisig Transaction',
+      description: 'Creating new multisig transaction for milestone approval.',
+    })
+
+    try {
+      // Get submission details for beneficiary address
+      const submissionResult = await getSubmissionDetails(submissionId)
+      if (submissionResult.error || !submissionResult.success) {
+        throw new Error(submissionResult.error ?? 'Failed to get submission details')
+      }
+      // Create Polkadot multisig transaction
+      const polkadotResult = await initiatePolkadotApproval({
+        multisigConfig,
+        milestoneId: milestone.id,
+        payoutAmount: BigInt(milestone.amount ?? 0),
+        initiatorAddress: selectedAccount.address,
+        signer: selectedSigner,
+        useBatch: true,
+      })
+
+      // Record the approval in database
+      await initiateMultisigApproval({
+        milestoneId: milestone.id,
+        timepoint: polkadotResult.timepoint,
+        approvalWorkflow: 'merged',
+        txHash: polkadotResult.txHash,
+        initiatorWalletAddress: selectedAccount.address,
+        callHash: polkadotResult.callHash,
+        callData: polkadotResult.callData.toString(),
+      })
+
+      toast({
+        title: 'Initial Approval Created',
+        description: `Multisig transaction initiated. Transaction hash: ${polkadotResult.txHash.slice(0, 10)}...`,
+      })
+    } catch (error) {
+      console.error('[MilestoneReviewDialog]: Failed to create initial approval', error)
+      throw error
+    }
+  }
+
+  const handleSubsequentApproval = async () => {
+    console.log('[MilestoneReviewDialog]: Handling subsequent approval')
+    
+    if (!selectedAccount || !multisigConfig || !existingApproval || !selectedSigner) {
+      throw new Error('Missing account, multisig config, existing approval, or signer')
+    }
+
+    toast({
+      title: 'Adding Your Approval',
+      description: 'Adding your signature to the existing multisig transaction.',
+    })
+
+    try {
+      // Approve the existing multisig call on Polkadot
+      const polkadotResult = await approveMultisigCall({
+        callHash: existingApproval.callHash,
+        timepoint: existingApproval.timepoint ?? { height: 0, index: 0 },
+        threshold: multisigConfig.threshold,
+        allSignatories: multisigConfig.signatories,
+        approverAddress: selectedAccount.address,
+        signer: selectedSigner,
+      })
+
+      // Record the vote in database
+      await castMultisigVote({
+        approvalId: existingApproval.id,
+        signatoryAddress: selectedAccount.address,
+        signatureType: 'signed',
+        txHash: polkadotResult.txHash,
+      })
+
+      toast({
+        title: 'Approval Added',
+        description: `Your signature has been added. Transaction hash: ${polkadotResult.txHash.slice(0, 10)}...`,
+      })
+
+      // Check if threshold is met and we need to finalize
+      if (polkadotResult.thresholdMet) {
+        await handleFinalApproval()
+      }
+    } catch (error) {
+      console.error('[MilestoneReviewDialog]: Failed to add approval', error)
+      throw error
+    }
+  }
+
+  const handleFinalApproval = async () => {
+    console.log('[MilestoneReviewDialog]: Handling final approval - executing transaction')
+    
+    if (!selectedAccount || !multisigConfig || !existingApproval || !selectedSigner) {
+      throw new Error('Missing account, multisig config, existing approval, or signer')
+    }
+
+    toast({
+      title: 'Executing Final Transaction',
+      description: 'Threshold met! Executing the multisig transaction.',
+    })
+
+    try {
+      // Get submission details for beneficiary address
+      const submissionResult = await getSubmissionDetails(submissionId)
+      if (submissionResult.error || !submissionResult.success) {
+        throw new Error(submissionResult.error ?? 'Failed to get submission details')
+      }
+      if (!submissionResult.submission?.walletAddress) {
+        throw new Error('Submission beneficiary address not found')
+      }
+      const beneficiaryAddress = submissionResult.submission.walletAddress
+
+      // Execute the final multisig transaction
+      const polkadotResult = await finalizeMultisigCall({
+        callData: new Uint8Array(JSON.parse(existingApproval.callData) as number[]),
+        timepoint: existingApproval.timepoint ?? { height: 0, index: 0 },
+        threshold: multisigConfig.threshold,
+        allSignatories: multisigConfig.signatories,
+        executorAddress: selectedAccount.address,
+        signer: selectedSigner,
+        beneficiaryAddress,
+        payoutAmount: BigInt(milestone.amount ?? 0),
+        milestoneId: milestone.id,
+        useBatch: true,
+      })
+
+      // Finalize the approval in database
+      await finalizeMultisigApproval({
+        approvalId: existingApproval.id,
+        signatoryAddress: selectedAccount.address,
+        executionTxHash: polkadotResult.txHash,
+        executionBlockNumber: polkadotResult.blockNumber,
+      })
+
+      toast({
+        title: 'Transaction Executed Successfully!',
+        description: `Payment completed. Execution hash: ${polkadotResult.txHash.slice(0, 10)}...`,
+      })
+    } catch (error) {
+      console.error('[MilestoneReviewDialog]: Failed to execute final approval', error)
+      throw error
+    }
+  }
 
   const handleSubmit = async () => {
     if (!selectedVote) {
@@ -126,43 +373,48 @@ export function MilestoneReviewDialog({
       }
 
       // Success - off-chain vote recorded
+      setReviewSubmitted(true)
+      
       toast({
         title: 'Review Submitted',
         description: `Your ${selectedVote} vote has been recorded for this milestone.`,
       })
 
-      // For merged workflow + approve vote, now sign the multisig transaction
+      // For merged workflow + approve vote, handle multisig transaction
       if (
         isMergedWorkflow &&
         selectedVote === 'approve' &&
         multisigConfig &&
         selectedAccount
       ) {
-        setIsSigningMultisig(true)
-        toast({
-          title: 'Blockchain Signature Required',
-          description:
-            'Please sign the transaction in your wallet to complete the on-chain approval.',
-        })
-
-        // TODO: Call multisig signing action here when polkadot-api is fully configured
-        // For now, just show a message
-        await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate delay
-
-        toast({
-          title: 'Multisig Integration Pending',
-          description:
-            'Your vote is recorded. Blockchain signing will be available once polkadot-api is configured.',
-        })
-
-        setIsSigningMultisig(false)
+        try {
+          await handleMultisigApproval()
+          
+          // Success - close dialog and refresh
+          onReviewSubmitted()
+          onOpenChange(false)
+          setSelectedVote(null)
+          setFeedback('')
+        } catch (multisigError) {
+          // Multisig failed but off-chain vote is recorded
+          console.error('[MilestoneReviewDialog]: Multisig failed after review submitted', multisigError)
+          
+          // Don't close the dialog - let user retry
+          toast({
+            title: 'Blockchain Transaction Failed',
+            description: 'Your vote was recorded, but the blockchain transaction failed. You can retry the transaction or close this dialog.',
+          })
+          
+          // Keep the dialog open so user can retry
+          return
+        }
+      } else {
+        // No multisig needed - close dialog
+        onReviewSubmitted()
+        onOpenChange(false)
+        setSelectedVote(null)
+        setFeedback('')
       }
-
-      // Close dialog and refresh
-      onReviewSubmitted()
-      onOpenChange(false)
-      setSelectedVote(null)
-      setFeedback('')
     } catch (error) {
       console.error('[MilestoneReviewDialog]: Error submitting review', error)
       toast({
@@ -450,6 +702,54 @@ export function MilestoneReviewDialog({
             )}
 
             <div className="border-t pt-6">
+              {/* Existing Approval Status */}
+              {isMergedWorkflow && (
+                <div className="mb-6">
+                  {isLoadingApproval ? (
+                    <Card className="border-gray-200 bg-gray-50 p-4">
+                      <div className="flex items-center gap-3">
+                        <Clock className="h-5 w-5 text-gray-500" />
+                        <p className="text-sm text-gray-600">
+                          Checking for existing multisig approvals...
+                        </p>
+                      </div>
+                    </Card>
+                  ) : existingApproval ? (
+                    <Card className="border-blue-200 bg-blue-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <AlertCircle className="h-5 w-5 text-blue-600" />
+                        <div className="flex-1">
+                          <p className="font-medium text-blue-900">
+                            Existing Multisig Approval Found
+                          </p>
+                          <p className="mt-1 text-sm text-blue-700">
+                            There's already an active multisig transaction for this milestone. 
+                            Your approval will be added to the existing transaction.
+                          </p>
+                          <div className="mt-2 text-xs text-blue-600">
+                            Call Hash: {existingApproval?.callHash ?? 'Unknown'}
+                          </div>
+                        </div>
+                      </div>
+                    </Card>
+                  ) : (
+                    <Card className="border-green-200 bg-green-50 p-4">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle className="h-5 w-5 text-green-600" />
+                        <div className="flex-1">
+                          <p className="font-medium text-green-900">
+                            Ready to Create New Multisig Transaction
+                          </p>
+                          <p className="mt-1 text-sm text-green-700">
+                            No existing approval found. Your approval will create a new multisig transaction.
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                  )}
+                </div>
+              )}
+
               <h3 className="mb-4 text-lg font-semibold">Cast Your Vote</h3>
 
               <div className="space-y-4">
@@ -543,21 +843,33 @@ export function MilestoneReviewDialog({
                     onClick={() => onOpenChange(false)}
                     disabled={isSubmitting || isSigningMultisig}
                   >
-                    Cancel
+                    {multisigFailed && reviewSubmitted ? 'Close' : 'Cancel'}
                   </Button>
-                  <Button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={
-                      !selectedVote || isSubmitting || isSigningMultisig
-                    }
-                  >
-                    {isSigningMultisig
-                      ? 'Signing Transaction...'
-                      : isSubmitting
-                        ? 'Submitting Review...'
-                        : 'Submit Review'}
-                  </Button>
+                  {multisigFailed && reviewSubmitted ? (
+                    <Button
+                      type="button"
+                      onClick={handleMultisigApproval}
+                      disabled={isSigningMultisig}
+                    >
+                      {isSigningMultisig
+                        ? 'Signing Transaction...'
+                        : 'Retry Blockchain Transaction'}
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={
+                        !selectedVote || isSubmitting || isSigningMultisig
+                      }
+                    >
+                      {isSigningMultisig
+                        ? 'Signing Transaction...'
+                        : isSubmitting
+                          ? 'Submitting Review...'
+                          : 'Submit Review'}
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>
