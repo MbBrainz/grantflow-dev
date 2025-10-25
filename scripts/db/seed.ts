@@ -1285,7 +1285,7 @@ async function seed() {
       githubRepoUrl: 'https://github.com/nft-gaming-studio/web3-state',
       walletAddress: teamMember5.walletAddress,
       status: 'approved',
-      totalAmount: 50000,
+      totalAmount: 3500,
       appliedAt: new Date('2024-01-05'),
       createdAt: new Date('2024-01-05'),
       updatedAt: new Date('2024-01-15'),
@@ -1883,7 +1883,7 @@ async function seed() {
         'Blockchain data caching',
         'React 18+ compatibility',
       ],
-      amount: 20000,
+      amount: 1000,
       dueDate: new Date('2024-02-20'),
       status: 'in-review',
       deliverables: [
@@ -1920,7 +1920,7 @@ async function seed() {
         'API documentation',
         'Usage examples',
       ],
-      amount: 20000,
+      amount: 1000,
       dueDate: new Date('2024-03-30'),
       status: 'pending',
       deliverables: [
@@ -1948,7 +1948,7 @@ async function seed() {
         'Release documentation',
         'Community announcement',
       ],
-      amount: 10000,
+      amount: 500,
       dueDate: new Date('2024-04-15'),
       status: 'pending',
       deliverables: [
@@ -2280,7 +2280,7 @@ async function seed() {
         'Performance monitoring',
         'Cross-chain transaction support',
       ],
-      amount: 25000,
+      amount: 1000,
       dueDate: new Date('2024-03-25'),
       status: 'in-review',
       deliverables: [

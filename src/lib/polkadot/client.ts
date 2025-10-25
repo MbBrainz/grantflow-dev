@@ -5,15 +5,16 @@
  * configured for the Paseo testnet (development) or mainnet (production).
  */
 
+import type { ChainDefinition} from 'polkadot-api';
 import { createClient } from 'polkadot-api'
 import { getWsProvider } from 'polkadot-api/ws-provider/web'
-import { paseo } from '@polkadot-api/descriptors'
 
 // Network endpoints
 const NETWORK_ENDPOINTS = {
   polkadot: 'wss://rpc.polkadot.io',
   kusama: 'wss://kusama-rpc.polkadot.io',
   paseo: 'wss://paseo.rpc.amforc.com', // Paseo testnet
+  paseo_asset_hub: 'wss://asset-hub-paseo-rpc.n.dwellir.com', // Paseo asset hub
 } as const
 
 export type PolkadotNetwork = keyof typeof NETWORK_ENDPOINTS
@@ -25,7 +26,7 @@ const getActiveNetwork = (): PolkadotNetwork => {
     return network
   }
   // Default to Paseo testnet for development
-  return 'paseo'
+  return 'paseo_asset_hub'
 }
 
 // Create WebSocket provider
@@ -57,8 +58,8 @@ export function getPolkadotApi() {
 }
 
 // Export typed API for Paseo testnet with full type safety
-export function getPaseoTypedApi() {
-  return getPolkadotClient().getTypedApi(paseo)
+export function getPaseoTypedApi(chainDefinition: ChainDefinition) {
+  return getPolkadotClient().getTypedApi(chainDefinition)
 }
 
 // Cleanup function
@@ -80,6 +81,7 @@ export const BLOCK_EXPLORER_URLS = {
   polkadot: 'https://polkadot.subscan.io',
   kusama: 'https://kusama.subscan.io',
   paseo: 'https://paseo.subscan.io',
+  paseo_asset_hub: 'https://assethub-paseo.subscan.io',
 } as const
 
 export function getBlockExplorerUrl(
