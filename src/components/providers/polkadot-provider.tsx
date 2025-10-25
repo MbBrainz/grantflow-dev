@@ -339,8 +339,104 @@ async function createSignerForAccount(
 
   const extension = await injected[account.source].enable('GrantFlow')
 
-  // Get signer - the exact API depends on polkadot-api version
-  // This is a placeholder that needs proper implementation
-  return extension.signer as PolkadotSigner
+  if (!extension || !extension.signer) {
+    throw new Error('Failed to get signer from extension')
+  }
+
+  // The extension's signer should be compatible with polkadot-api
+  // We just need to ensure it has the right interface
+  const signer = extension.signer
+
+  // Add the required methods if they don't exist
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+  if (!signer.signTx) {
+    signer.signTx = async (callData: Uint8Array, signedExtensions: Record<string, {
+      identifier: string;
+      value: Uint8Array;
+      additionalSigned: Uint8Array;
+    }>, metadata: Uint8Array, atBlockNumber: number, _hasher?: (data: Uint8Array) => Uint8Array) => {
+      console.log('[polkadot-provider]: Signing transaction via signTx', {
+        address: account.address,
+        callDataLength: callData.length,
+        atBlockNumber,
+      })
+
+      try {
+        // Use the extension's signer to sign the transaction
+        const signature = await extension.signer.signRaw({
+          address: account.address,
+          data: Array.from(callData).map(byte => byte.toString(16).padStart(2, '0')).join(''),
+        })
+
+        if (!signature || !signature.signature) {
+          throw new Error('No signature returned from extension')
+        }
+
+        // Convert hex signature to Uint8Array
+        const signatureHex = String(signature.signature).replace('0x', '')
+        const signatureBytes = new Uint8Array(signatureHex.length / 2)
+        for (let i = 0; i < signatureHex.length; i += 2) {
+          signatureBytes[i / 2] = parseInt(signatureHex.substr(i, 2), 16)
+        }
+
+        console.log('[polkadot-provider]: Transaction signed via signTx', {
+          address: account.address,
+          signatureLength: signatureBytes.length,
+        })
+
+        return signatureBytes
+      } catch (error) {
+        console.error('[polkadot-provider]: Transaction signing failed', error)
+        throw new Error(`Failed to sign transaction: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+    }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+  if (!signer.signBytes) {
+    signer.signBytes = async (bytes: Uint8Array) => {
+      console.log('[polkadot-provider]: Signing bytes', {
+        address: account.address,
+        bytesLength: bytes.length,
+      })
+
+      try {
+        // Use the extension's signer to sign the bytes
+        const signature = await extension.signer.signRaw({
+          address: account.address,
+          data: Array.from(bytes).map(byte => byte.toString(16).padStart(2, '0')).join(''),
+        })
+
+        if (!signature || !signature.signature) {
+          throw new Error('No signature returned from extension')
+        }
+
+        // Convert hex signature to Uint8Array
+        const signatureHex = String(signature.signature).replace('0x', '')
+        const signatureBytes = new Uint8Array(signatureHex.length / 2)
+        for (let i = 0; i < signatureHex.length; i += 2) {
+          signatureBytes[i / 2] = parseInt(signatureHex.substr(i, 2), 16)
+        }
+
+        console.log('[polkadot-provider]: Bytes signed', {
+          address: account.address,
+          signatureLength: signatureBytes.length,
+        })
+
+        return signatureBytes
+      } catch (error) {
+        console.error('[polkadot-provider]: Bytes signing failed', error)
+        throw new Error(`Failed to sign bytes: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      }
+    }
+  }
+
+  // Ensure publicKey exists
+  // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing
+  if (!signer.publicKey) {
+    signer.publicKey = new Uint8Array(32) // Placeholder
+  }
+
+  return signer as PolkadotSigner
 }
 /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-call, @typescript-eslint/prefer-optional-chain */

@@ -8,6 +8,7 @@
  * - Final execution with full call data
  */
 
+import type { MultisigConfig } from '../db/schema/jsonTypes/GroupSettings'
 import { getPaseoTypedApi } from './client'
 import {
   Binary,
@@ -15,6 +16,7 @@ import {
   type FixedSizeBinary,
   type TxCallData,
 } from 'polkadot-api'
+import { toPaseoAddress } from './address'
 
 /**
  * Multisig event interface
@@ -140,32 +142,33 @@ export interface InitiateApprovalResult {
  * @param useBatch - Whether to use batch_all for atomic execution
  */
 export async function initiateMultisigApproval(params: {
-  beneficiaryAddress: string
-  payoutAmount: bigint
+  multisigConfig: MultisigConfig
   milestoneId: number
-  threshold: number
-  allSignatories: string[]
+  payoutAmount: bigint
   initiatorAddress: string
   signer: PolkadotSigner
   useBatch?: boolean
 }): Promise<InitiateApprovalResult> {
   const {
-    beneficiaryAddress,
-    payoutAmount,
+    multisigConfig,
     milestoneId,
-    threshold,
-    allSignatories,
-    initiatorAddress,
+    payoutAmount,
+    initiatorAddress: rawInitiatorAddress,
     signer,
     useBatch = true,
   } = params
+  
+  // Convert initiator address to Paseo format
+  const initiatorAddress = toPaseoAddress(rawInitiatorAddress)
 
   console.log('[initiateMultisigApproval]: Initiating approval', {
     milestoneId,
-    beneficiaryAddress,
+    beneficiaryAddress: multisigConfig.multisigAddress,
     amount: payoutAmount.toString(),
-    threshold,
-    signatoryCount: allSignatories.length,
+    threshold: multisigConfig.threshold,
+    signatoryCount: multisigConfig.signatories.length,
+    initiatorAddress,
+    rawInitiatorAddress,
     useBatch,
   })
 
@@ -174,8 +177,8 @@ export async function initiateMultisigApproval(params: {
 
     // Create the payment call (batched or simple)
     const paymentCall = useBatch
-      ? createBatchedPaymentCall(beneficiaryAddress, payoutAmount, milestoneId)
-      : createTransferCall(beneficiaryAddress, payoutAmount)
+      ? createBatchedPaymentCall(multisigConfig.multisigAddress, payoutAmount, milestoneId)
+      : createTransferCall(multisigConfig.multisigAddress, payoutAmount)
 
     // Get call data and hash
     const callData = await paymentCall.getEncodedData()
@@ -183,7 +186,7 @@ export async function initiateMultisigApproval(params: {
 
     // Get sorted other signatories
     const otherSignatories = getOtherSignatories(
-      allSignatories,
+      multisigConfig.signatories,
       initiatorAddress
     )
 
@@ -195,21 +198,26 @@ export async function initiateMultisigApproval(params: {
 
     // Create multisig as_multi call (first signatory publishes AND votes)
     const multisigCall = api.tx.Multisig.as_multi({
-      threshold,
+      threshold: multisigConfig.threshold,
       other_signatories: otherSignatories,
       maybe_timepoint: undefined, // First call has no timepoint
-      call: callData as unknown as TxCallData, // Type conversion for TxCallData
+      call: paymentCall.decodedCall, // Use the decoded call object
       max_weight: maxWeight,
     })
 
     console.log('[initiateMultisigApproval]: Submitting multisig call', {
-      threshold,
+      threshold: multisigConfig.threshold,
       otherSignatoriesCount: otherSignatories.length,
       callHash: callHash.asText(),
+      multisigAddress: multisigConfig.multisigAddress,
+      initiatorAddress,
+      otherSignatories,
     })
 
     // Sign and submit the transaction
+    console.log('[initiateMultisigApproval]: Calling signSubmitAndWatch with signer')
     const tx = multisigCall.signSubmitAndWatch(signer)
+    console.log('[initiateMultisigApproval]: Transaction observable created')
 
     // Wait for the transaction to be finalized
     const finalized = await tx.toPromise()
@@ -279,6 +287,21 @@ export async function initiateMultisigApproval(params: {
       '[initiateMultisigApproval]: Failed to initiate approval',
       error
     )
+    
+    // Provide helpful error messages
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    if (errorMessage.includes('wasm trap') || errorMessage.includes('unreachable')) {
+      throw new Error(
+        'Transaction validation failed on Paseo testnet. This usually means:\n' +
+        '1. The initiator account needs Paseo testnet tokens (get them from https://faucet.polkadot.io/paseo)\n' +
+        '2. The multisig address might not have enough balance\n' +
+        '3. The signatory addresses might be invalid\n\n' +
+        `Multisig: ${multisigConfig.multisigAddress}\n` +
+        `Initiator: ${initiatorAddress}\n` +
+        `Original error: ${errorMessage}`
+      )
+    }
+    
     throw error
   }
 }
@@ -307,13 +330,18 @@ export async function approveMultisigCall(params: {
     timepoint,
     threshold,
     allSignatories,
-    approverAddress,
+    approverAddress: rawApproverAddress,
     signer,
   } = params
+  
+  // Convert approver address to Paseo format
+  const approverAddress = toPaseoAddress(rawApproverAddress)
 
   console.log('[approveMultisigCall]: Approving call', {
     callHash,
     timepoint,
+    approverAddress,
+    rawApproverAddress,
     threshold,
   })
 
@@ -438,17 +466,22 @@ export async function finalizeMultisigCall(params: {
     timepoint,
     threshold,
     allSignatories,
-    executorAddress,
+    executorAddress: rawExecutorAddress,
     signer,
     beneficiaryAddress,
     payoutAmount,
     milestoneId,
     useBatch = true,
   } = params
+  
+  // Convert executor address to Paseo format
+  const executorAddress = toPaseoAddress(rawExecutorAddress)
 
   console.log('[finalizeMultisigCall]: Finalizing call', {
     timepoint,
     threshold,
+    executorAddress,
+    rawExecutorAddress,
     milestoneId,
     useBatch,
   })
