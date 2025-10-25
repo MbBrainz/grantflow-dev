@@ -206,6 +206,7 @@ export function MilestoneReviewDialog({
         initiatorAddress: selectedAccount.address,
         signer: selectedSigner,
         useBatch: true,
+        network: multisigConfig.network ?? 'paseo', // Use network from config
       })
 
       // Record the approval in database
@@ -242,15 +243,16 @@ export function MilestoneReviewDialog({
     })
 
     try {
-      // Approve the existing multisig call on Polkadot
-      const polkadotResult = await approveMultisigCall({
-        callHash: existingApproval.callHash,
-        timepoint: existingApproval.timepoint ?? { height: 0, index: 0 },
-        threshold: multisigConfig.threshold,
-        allSignatories: multisigConfig.signatories,
-        approverAddress: selectedAccount.address,
-        signer: selectedSigner,
-      })
+        // Approve the existing multisig call on Polkadot
+        const polkadotResult = await approveMultisigCall({
+          callHash: existingApproval.callHash,
+          timepoint: existingApproval.timepoint ?? { height: 0, index: 0 },
+          threshold: multisigConfig.threshold,
+          allSignatories: multisigConfig.signatories,
+          approverAddress: selectedAccount.address,
+          signer: selectedSigner,
+          network: multisigConfig.network ?? 'paseo', // Use network from config
+        })
 
       // Record the vote in database
       await castMultisigVote({
@@ -298,19 +300,20 @@ export function MilestoneReviewDialog({
       }
       const beneficiaryAddress = submissionResult.submission.walletAddress
 
-      // Execute the final multisig transaction
-      const polkadotResult = await finalizeMultisigCall({
-        callData: new Uint8Array(JSON.parse(existingApproval.callData) as number[]),
-        timepoint: existingApproval.timepoint ?? { height: 0, index: 0 },
-        threshold: multisigConfig.threshold,
-        allSignatories: multisigConfig.signatories,
-        executorAddress: selectedAccount.address,
-        signer: selectedSigner,
-        beneficiaryAddress,
-        payoutAmount: BigInt(milestone.amount ?? 0),
-        milestoneId: milestone.id,
-        useBatch: true,
-      })
+        // Execute the final multisig transaction
+        const polkadotResult = await finalizeMultisigCall({
+          callData: new Uint8Array(JSON.parse(existingApproval.callData) as number[]),
+          timepoint: existingApproval.timepoint ?? { height: 0, index: 0 },
+          threshold: multisigConfig.threshold,
+          allSignatories: multisigConfig.signatories,
+          executorAddress: selectedAccount.address,
+          signer: selectedSigner,
+          beneficiaryAddress,
+          payoutAmount: BigInt(milestone.amount ?? 0),
+          milestoneId: milestone.id,
+          useBatch: true,
+          network: multisigConfig.network ?? 'paseo', // Use network from config
+        })
 
       // Finalize the approval in database
       await finalizeMultisigApproval({
