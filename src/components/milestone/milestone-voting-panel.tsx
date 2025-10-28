@@ -11,8 +11,8 @@
 
 'use client'
 
-import { useState } from 'react'
-import { usePolkadot } from '@/components/providers/polkadot-provider'
+import { useEffect, useState } from 'react'
+import { useAccount, useApi, useSigner, useSwitchChain } from '@luno-kit/react'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -39,8 +39,22 @@ export function MilestoneVotingPanel({
   userWalletAddress, // eslint-disable-line @typescript-eslint/no-unused-vars
   milestoneId,
 }: MilestoneVotingPanelProps) {
-  const { selectedAccount, selectedSigner, isConnected } = usePolkadot()
+  const { account, address } = useAccount()
+  const { data: signer } = useSigner()
+  const { api: client } = useApi()
   const { toast } = useToast()
+  const { switchChain, currentChainId } = useSwitchChain()
+
+  useEffect(() => {
+    if (currentChainId !== multisigConfig.network) {
+      switchChain({ chainId: multisigConfig.network })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [multisigConfig.network, currentChainId])
+
+  // Derive connection state
+  const isConnected = !!account && !!address
+  const selectedSigner = signer
 
   const [isInitiating, setIsInitiating] = useState(false)
   const _approvalStatus = null // TODO: Implement approval status fetching
@@ -53,7 +67,7 @@ export function MilestoneVotingPanel({
   // }, [milestoneId])
 
   const handleInitiateApproval = async () => {
-    if (!selectedAccount || !selectedSigner) {
+    if (!account || !address || !selectedSigner || !client) {
       toast({
         title: 'Wallet not connected',
         description: 'Please connect your Polkadot wallet to initiate approval',
@@ -65,7 +79,8 @@ export function MilestoneVotingPanel({
     if (!isCommitteeMember) {
       toast({
         title: 'You are not a committee member',
-        description: 'Please contact the administrator to be added to the committee',
+        description:
+          'Please contact the administrator to be added to the committee',
         variant: 'destructive',
       })
       return
@@ -73,19 +88,22 @@ export function MilestoneVotingPanel({
 
     setIsInitiating(true)
     try {
-      // TODO: Implement actual multisig initiation
       const result = await initiateMultisigApproval({
+        client,
         multisigConfig,
         milestoneId,
-        initiatorAddress: selectedAccount.address,
+        initiatorAddress: address,
         signer: selectedSigner,
         useBatch: true,
         payoutAmount: 0n,
       })
-      console.log('[milestone-voting-panel]: Result', result)
+      console.log(
+        '[handleInitiateApproval]: multisig initiation result:',
+        JSON.stringify(result, null, 2)
+      )
 
-      // debug logger that this isnt implemented
-      console.log('[milestone-voting-panel]: Not yet implemented')
+      // debug logger that this isn't implemented yet
+      console.log('[handleInitiateApproval]: Not yet implemented')
 
       toast({
         title: 'Not yet implemented',

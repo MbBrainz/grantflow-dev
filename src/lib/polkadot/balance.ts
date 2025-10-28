@@ -1,14 +1,14 @@
 /**
  * Polkadot Balance Utilities
- * 
+ *
  * Provides functions to check account balances and validate sufficient funds
  * for transactions on Polkadot, Kusama, and Paseo networks.
+ *
+ * Now using LunoKit's LegacyClient (dedot) - client must be passed as parameter
  */
 
-import { getPaseoTypedApi } from './client'
+import type { LegacyClient } from 'dedot'
 import type { NetworkType } from './address'
-import { paseo } from '@polkadot-api/descriptors'
-
 
 /**
  * Account balance information
@@ -34,49 +34,45 @@ export interface BalanceCheckResult {
 
 /**
  * Minimum balance required for transaction fees (in Planck/smallest unit)
- * 
+ *
  * Polkadot transaction fees typically range from 0.0001 to 0.001 DOT depending on:
  * - Base Fee: Minimum charge for processing
  * - Weight Fee: Computational resources required
  * - Length Fee: Transaction size in bytes
  * - Tip: Optional priority fee
- * 
+ *
  * Multisig transactions are more complex and typically cost around 0.001-0.01 DOT.
  * We use a conservative estimate to ensure transactions succeed.
- * 
+ *
  * Note: Fees are independent of the payout amount - they depend on computational
  * complexity, not the value being transferred.
- * 
+ *
  * @see https://docs.polkadot.com/polkadot-protocol/parachain-basics/blocks-transactions-fees/fees/
  */
 const MIN_TRANSACTION_FEE = BigInt(100_000_000) // 0.01 DOT (10^10 plancks = 1 DOT)
 
 /**
  * Get account balance for a given address
- * 
+ *
+ * @param client - The LegacyClient instance from useApi()
  * @param address - The account address to check
- * @param network - The network to check on
+ * @param network - The network to check on (for logging only, client determines actual network)
  * @returns Account balance information
  */
 export async function getAccountBalance(
+  client: LegacyClient,
   address: string,
-  network: NetworkType = 'paseo'
+  network: NetworkType
 ): Promise<AccountBalance> {
   console.log('[getAccountBalance]: Checking balance', { address, network })
 
   try {
-    const api = getPaseoTypedApi(paseo)
-
     // Query account info from System pallet
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
-    const accountInfo = await (api.query.System.Account as any).getValue(address)
+    const accountInfo = await client.query.system.account(address)
 
     // Extract balance data
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
     const free = BigInt(accountInfo.data.free)
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
     const reserved = BigInt(accountInfo.data.reserved)
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unsafe-argument
     const frozen = BigInt(accountInfo.data.frozen ?? 0)
 
     const total = free + reserved
@@ -104,26 +100,32 @@ export async function getAccountBalance(
       network,
       error,
     })
-    throw new Error(`Failed to get balance for ${address}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    throw new Error(
+      `Failed to get balance for ${address}: ${error instanceof Error ? error.message : 'Unknown error'}`
+    )
   }
 }
 
 /**
  * Check if an account has sufficient balance for transaction fees
- * 
+ *
+ * @param client - The LegacyClient instance from useApi()
  * @param address - The account address to check
- * @param network - The network to check on
+ * @param network - The network to check on (for logging only)
  * @returns Balance check result
  */
 export async function checkTransactionFeeBalance(
+  client: LegacyClient,
   address: string,
   network: NetworkType = 'paseo'
 ): Promise<BalanceCheckResult> {
   try {
-    const balance = await getAccountBalance(address, network)
+    const balance = await getAccountBalance(client, address, network)
 
     const hasBalance = balance.transferable >= MIN_TRANSACTION_FEE
-    const shortfall = hasBalance ? BigInt(0) : MIN_TRANSACTION_FEE - balance.transferable
+    const shortfall = hasBalance
+      ? BigInt(0)
+      : MIN_TRANSACTION_FEE - balance.transferable
 
     return {
       hasBalance,
@@ -148,19 +150,21 @@ export async function checkTransactionFeeBalance(
 
 /**
  * Check if a multisig account has sufficient balance for a payout
- * 
+ *
+ * @param client - The LegacyClient instance from useApi()
  * @param multisigAddress - The multisig account address
  * @param payoutAmount - The amount to be paid out
- * @param network - The network to check on
+ * @param network - The network to check on (for logging only)
  * @returns Balance check result
  */
 export async function checkMultisigPayoutBalance(
+  client: LegacyClient,
   multisigAddress: string,
   payoutAmount: bigint,
   network: NetworkType = 'paseo'
 ): Promise<BalanceCheckResult> {
   try {
-    const balance = await getAccountBalance(multisigAddress, network)
+    const balance = await getAccountBalance(client, multisigAddress, network)
 
     // Need enough for payout + transaction fees
     const required = payoutAmount + MIN_TRANSACTION_FEE
@@ -200,7 +204,7 @@ export async function checkMultisigPayoutBalance(
 
 /**
  * Format balance for display (converts from Planck to tokens)
- * 
+ *
  * @param balance - Balance in Planck (smallest unit)
  * @param decimals - Number of decimals (default: 10 for DOT/KSM)
  * @returns Formatted balance string
@@ -212,20 +216,20 @@ export function formatBalance(balance: bigint, decimals = 10): string {
 
   // Pad fraction with leading zeros
   const fractionStr = fraction.toString().padStart(decimals, '0')
-  
+
   // Remove trailing zeros
   const trimmedFraction = fractionStr.replace(/0+$/, '')
-  
+
   if (trimmedFraction === '') {
     return whole.toString()
   }
-  
+
   return `${whole}.${trimmedFraction}`
 }
 
 /**
  * Get faucet URL for a given network
- * 
+ *
  * @param network - The network
  * @returns Faucet URL or null if not available
  */
@@ -244,7 +248,7 @@ export function getFaucetUrl(network: NetworkType): string | null {
 
 /**
  * Create a user-friendly error message for insufficient balance
- * 
+ *
  * @param address - The account address
  * @param checkResult - The balance check result
  * @param network - The network
@@ -258,12 +262,12 @@ export function createInsufficientBalanceError(
   accountType: 'initiator' | 'multisig' = 'initiator'
 ): string {
   const faucetUrl = getFaucetUrl(network)
-  const shortfallFormatted = checkResult.shortfall 
-    ? formatBalance(checkResult.shortfall) 
+  const shortfallFormatted = checkResult.shortfall
+    ? formatBalance(checkResult.shortfall)
     : '0'
   const balanceFormatted = formatBalance(checkResult.balance.transferable)
-  const requiredFormatted = checkResult.required 
-    ? formatBalance(checkResult.required) 
+  const requiredFormatted = checkResult.required
+    ? formatBalance(checkResult.required)
     : '0'
 
   let message = `Insufficient balance for ${accountType} account.\n\n`
@@ -283,4 +287,3 @@ export function createInsufficientBalanceError(
 
   return message
 }
-
