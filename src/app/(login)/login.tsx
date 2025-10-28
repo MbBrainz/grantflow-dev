@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useActionState } from 'react'
+import { useActionState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { signIn as nextAuthSignIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
@@ -11,12 +11,14 @@ import { Label } from '@/components/ui/label'
 import { CircleIcon } from 'lucide-react'
 import { signInState, signUpState } from './actions'
 import type { SignInState, SignUpState } from './actions'
+import { useToast } from '@/lib/hooks/use-toast'
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams()
   const redirect = searchParams.get('redirect')
   const priceId = searchParams.get('priceId')
   const inviteId = searchParams.get('inviteId')
+  const { toast } = useToast()
 
   type State = SignInState | SignUpState
   const initialState: State = { error: '' }
@@ -26,10 +28,34 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     initialState
   )
 
+  // Show toast notifications for errors
+  useEffect(() => {
+    if (state?.error) {
+      toast({
+        title: mode === 'signin' ? 'Sign In Failed' : 'Sign Up Failed',
+        description: state.error,
+        variant: 'destructive',
+      })
+    }
+  }, [state?.error, toast, mode])
+
   const handleGitHubLogin = async () => {
-    await nextAuthSignIn('github', {
-      callbackUrl: redirect ?? '/dashboard',
-    })
+    try {
+      toast({
+        title: 'Redirecting to GitHub...',
+        description:
+          'Please wait while we redirect you to GitHub for authentication.',
+      })
+      await nextAuthSignIn('github', {
+        callbackUrl: redirect ?? '/dashboard',
+      })
+    } catch {
+      toast({
+        title: 'GitHub Sign In Failed',
+        description: 'Failed to connect to GitHub. Please try again.',
+        variant: 'destructive',
+      })
+    }
   }
 
   return (

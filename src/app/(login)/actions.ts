@@ -156,9 +156,24 @@ export async function signInState(
     return await signInStateHandler(result.data)
   } catch (error) {
     console.error('[signInState]: Action failed', error)
+
+    // Check for connection errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      if (error.code === 'ECONNREFUSED') {
+        return {
+          ...prevState,
+          error:
+            'Database connection failed. Please ensure the database is running and try again.',
+        }
+      }
+    }
+
     return {
       ...prevState,
-      error: error instanceof Error ? error.message : 'An error occurred',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred. Please try again.',
     }
   }
 }
@@ -182,9 +197,24 @@ export async function signUpState(
     return await signUpStateHandler(result.data)
   } catch (error) {
     console.error('[signUpState]: Action failed', error)
+
+    // Check for connection errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      if (error.code === 'ECONNREFUSED') {
+        return {
+          ...prevState,
+          error:
+            'Database connection failed. Please ensure the database is running and try again.',
+        }
+      }
+    }
+
     return {
       ...prevState,
-      error: error instanceof Error ? error.message : 'An error occurred',
+      error:
+        error instanceof Error
+          ? error.message
+          : 'An unexpected error occurred. Please try again.',
     }
   }
 }
