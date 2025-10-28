@@ -754,19 +754,25 @@ export function ReviewerSubmissionView({
 
                       {/* Multisig Payment Approval - Only for SEPARATED workflow */}
                       {submission.reviewerGroup?.settings?.multisig &&
-                        submission.reviewerGroup.settings.multisig.approvalWorkflow === 'separated' &&
+                        submission.reviewerGroup.settings.multisig
+                          .approvalWorkflow === 'separated' &&
                         milestone.status === 'completed' &&
                         submission.userContext?.isCommitteeReviewer && (
                           <div className="mt-4">
                             <MilestoneVotingPanel
-                            multisigConfig={submission.reviewerGroup.settings.multisig}
-                            milestoneId={milestone.id}
+                              multisigConfig={
+                                submission.reviewerGroup.settings.multisig
+                              }
+                              milestoneId={milestone.id}
+                              submissionId={submission.id}
+                              milestoneAmount={milestone.amount ?? 0}
                               isCommitteeMember={
                                 submission.userContext?.isCommitteeReviewer ??
                                 false
                               }
                               userWalletAddress={
-                                currentUser?.walletAddress ?? '0xForALackOfBetterPlaceholder'
+                                currentUser?.walletAddress ??
+                                '0xForALackOfBetterPlaceholder'
                               }
                             />
                           </div>
@@ -774,7 +780,8 @@ export function ReviewerSubmissionView({
 
                       {/* Multisig Payment Approval - MERGED workflow (review + payment together) */}
                       {submission.reviewerGroup?.settings?.multisig &&
-                        submission.reviewerGroup.settings.multisig.approvalWorkflow === 'merged' &&
+                        submission.reviewerGroup.settings.multisig
+                          .approvalWorkflow === 'merged' &&
                         milestone.status === 'in-review' &&
                         !userMilestoneReview &&
                         submission.userContext?.isCommitteeReviewer && (
@@ -795,21 +802,27 @@ export function ReviewerSubmissionView({
 
                       {/* Show voting status for MERGED workflow after user has voted */}
                       {submission.reviewerGroup?.settings?.multisig &&
-                        submission.reviewerGroup.settings.multisig.approvalWorkflow === 'merged' &&
+                        submission.reviewerGroup.settings.multisig
+                          .approvalWorkflow === 'merged' &&
                         (milestone.status === 'in-review' ||
                           milestone.status === 'completed') &&
                         userMilestoneReview &&
                         submission.userContext?.isCommitteeReviewer && (
                           <div className="mt-4">
                             <MilestoneVotingPanel
-                              multisigConfig={submission.reviewerGroup.settings.multisig}
+                              multisigConfig={
+                                submission.reviewerGroup.settings.multisig
+                              }
                               milestoneId={milestone.id}
+                              submissionId={submission.id}
+                              milestoneAmount={milestone.amount ?? 0}
                               isCommitteeMember={
                                 submission.userContext?.isCommitteeReviewer ??
                                 false
                               }
                               userWalletAddress={
-                                currentUser?.walletAddress ?? '0xForALackOfBetterPlaceholder'
+                                currentUser?.walletAddress ??
+                                '0xForALackOfBetterPlaceholder'
                               }
                             />
                           </div>

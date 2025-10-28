@@ -44,6 +44,7 @@ import {
   finalizeMultisigCall,
 } from '@/lib/polkadot/multisig'
 import { chains } from '@/lib/polkadot/chains'
+import { u8aToHex } from 'dedot/utils'
 
 interface MilestoneReviewDialogProps {
   milestone: Pick<
@@ -97,33 +98,22 @@ export function MilestoneReviewDialog({
     createdAt: Date
   } | null>(null)
   const [isLoadingApproval, setIsLoadingApproval] = useState(false)
-  const [multisigFailed, setMultisigFailed] = useState(false)
-  const [reviewSubmitted, setReviewSubmitted] = useState(false)
   const multisigConfig = committeeSettings?.multisig
   const { toast } = useToast()
 
   // LunoKit hooks for wallet connection
   const { account, address } = useAccount()
-  const { switchChain, currentChainId, currentChain } = useSwitchChain()
+  const { currentChainId } = useSwitchChain()
   useEffect(() => {
     const networkChain = multisigConfig?.network
       ? chains[multisigConfig.network]
       : null
-    console.log(
-      `[MilestoneReviewDialog]: Network Chain: ${JSON.stringify(networkChain, null, 2)}`
-    )
-    console.log(
-      `[MilestoneReviewDialog]: Current Chain: ${JSON.stringify(currentChain, null, 2)}`
-    )
-    console.log(`[MilestoneReviewDialog]: Current Chain ID: ${currentChainId}`)
-    console.log(
-      `[MilestoneReviewDialog]: Network Chain SS58 Format: ${networkChain?.ss58Format}`
-    )
     if (currentChainId !== networkChain?.genesisHash && networkChain) {
-      console.log(
-        `[MilestoneReviewDialog]: Switching to network chain: ${networkChain.genesisHash}`
-      )
-      switchChain({ chainId: networkChain.genesisHash })
+      const toChain = networkChain.name
+      const logText = ` Please switch your network to ${toChain} to continue`
+      console.log(`[MilestoneReviewDialog]: ${logText}`)
+
+      // toast({title: 'Network Change Required',description: logText,})
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentChainId])
@@ -179,10 +169,6 @@ export function MilestoneReviewDialog({
   // Check for existing approval when dialog opens
   useEffect(() => {
     if (open) {
-      // Reset states when dialog opens
-      setMultisigFailed(false)
-      setReviewSubmitted(false)
-
       if (isMergedWorkflow) {
         void checkExistingApproval()
       }
@@ -194,7 +180,7 @@ export function MilestoneReviewDialog({
       console.error(
         '[MilestoneReviewDialog]: Missing account or multisig config'
       )
-      return
+      throw new Error('Missing account or multisig configuration')
     }
 
     setIsSigningMultisig(true)
@@ -215,8 +201,6 @@ export function MilestoneReviewDialog({
       const isWasmError =
         errorMessage.includes('wasm trap') ||
         errorMessage.includes('unreachable')
-
-      setMultisigFailed(true)
 
       toast({
         title: isWasmError ? 'Blockchain Transaction Failed' : 'Multisig Error',
@@ -267,6 +251,15 @@ export function MilestoneReviewDialog({
       })
 
       // Record the approval in database
+      console.log('[MilestoneReviewDialog]: Recording approval in database', {
+        milestoneId: milestone.id,
+        timepoint: polkadotResult.timepoint,
+        approvalWorkflow: 'merged',
+        txHash: polkadotResult.txHash,
+        initiatorWalletAddress: address,
+        callHash: polkadotResult.callHash,
+        callDataHex: u8aToHex(polkadotResult.callData),
+      })
       await initiateMultisigApproval({
         milestoneId: milestone.id,
         timepoint: polkadotResult.timepoint,
@@ -274,7 +267,7 @@ export function MilestoneReviewDialog({
         txHash: polkadotResult.txHash,
         initiatorWalletAddress: address,
         callHash: polkadotResult.callHash,
-        callData: polkadotResult.callData.toString(),
+        callDataHex: u8aToHex(polkadotResult.callData),
       })
 
       toast({
@@ -312,12 +305,29 @@ export function MilestoneReviewDialog({
         'Adding your signature to the existing multisig transaction.',
     })
 
+    // Validate timepoint exists
+    if (
+      !existingApproval.timepoint ||
+      existingApproval.timepoint.height === 0 ||
+      existingApproval.timepoint.index === 0
+    ) {
+      toast({
+        title: 'Invalid Timepoint',
+        description:
+          'The multisig timepoint is missing or invalid. The initiator may need to retry the initial approval.',
+        variant: 'destructive',
+      })
+      throw new Error(
+        'Invalid or missing timepoint for existing multisig approval'
+      )
+    }
+
     try {
       // Approve the existing multisig call on Polkadot
       const polkadotResult = await approveMultisigCall({
         client,
         callHash: existingApproval.callHash,
-        timepoint: existingApproval.timepoint ?? { height: 0, index: 0 },
+        timepoint: existingApproval.timepoint,
         threshold: multisigConfig.threshold,
         allSignatories: multisigConfig.signatories,
         approverAddress: address,
@@ -390,7 +400,6 @@ export function MilestoneReviewDialog({
         callData: new Uint8Array(
           JSON.parse(existingApproval.callData) as number[]
         ),
-        timepoint: existingApproval.timepoint ?? { height: 0, index: 0 },
         threshold: multisigConfig.threshold,
         allSignatories: multisigConfig.signatories,
         executorAddress: address,
@@ -447,6 +456,40 @@ export function MilestoneReviewDialog({
     setIsSubmitting(true)
 
     try {
+      // For merged workflow + approve vote, handle multisig transaction FIRST
+      if (
+        isMergedWorkflow &&
+        selectedVote === 'approve' &&
+        multisigConfig &&
+        account
+      ) {
+        try {
+          await handleMultisigApproval()
+
+          toast({
+            title: 'Blockchain Transaction Successful',
+            description:
+              'Your on-chain approval has been recorded. Now recording your review vote.',
+          })
+        } catch (multisigError) {
+          // Multisig failed - don't proceed with review submission
+          console.error(
+            '[MilestoneReviewDialog]: Multisig transaction failed',
+            multisigError
+          )
+
+          toast({
+            title: 'Blockchain Transaction Failed',
+            description: 'The blockchain transaction failed. Please try again.',
+            variant: 'destructive',
+          })
+
+          // Don't submit review - keep dialog open for retry
+          return
+        }
+      }
+
+      // Now submit the review (after blockchain transaction succeeds or if no multisig needed)
       const reviewData = {
         submissionId,
         milestoneId: milestone.id,
@@ -465,53 +508,17 @@ export function MilestoneReviewDialog({
         return
       }
 
-      // Success - off-chain vote recorded
-      setReviewSubmitted(true)
-
+      // Success - both blockchain (if needed) and off-chain vote recorded
       toast({
         title: 'Review Submitted',
         description: `Your ${selectedVote} vote has been recorded for this milestone.`,
       })
 
-      // For merged workflow + approve vote, handle multisig transaction
-      if (
-        isMergedWorkflow &&
-        selectedVote === 'approve' &&
-        multisigConfig &&
-        account
-      ) {
-        try {
-          await handleMultisigApproval()
-
-          // Success - close dialog and refresh
-          onReviewSubmitted()
-          onOpenChange(false)
-          setSelectedVote(null)
-          setFeedback('')
-        } catch (multisigError) {
-          // Multisig failed but off-chain vote is recorded
-          console.error(
-            '[MilestoneReviewDialog]: Multisig failed after review submitted',
-            multisigError
-          )
-
-          // Don't close the dialog - let user retry
-          toast({
-            title: 'Blockchain Transaction Failed',
-            description:
-              'Your vote was recorded, but the blockchain transaction failed. You can retry the transaction or close this dialog.',
-          })
-
-          // Keep the dialog open so user can retry
-          return
-        }
-      } else {
-        // No multisig needed - close dialog
-        onReviewSubmitted()
-        onOpenChange(false)
-        setSelectedVote(null)
-        setFeedback('')
-      }
+      // Success - close dialog and refresh
+      onReviewSubmitted()
+      onOpenChange(false)
+      setSelectedVote(null)
+      setFeedback('')
     } catch (error) {
       console.error('[MilestoneReviewDialog]: Error submitting review', error)
       toast({
@@ -944,33 +951,21 @@ export function MilestoneReviewDialog({
                     onClick={() => onOpenChange(false)}
                     disabled={isSubmitting || isSigningMultisig}
                   >
-                    {multisigFailed && reviewSubmitted ? 'Close' : 'Cancel'}
+                    Cancel
                   </Button>
-                  {multisigFailed && reviewSubmitted ? (
-                    <Button
-                      type="button"
-                      onClick={handleMultisigApproval}
-                      disabled={isSigningMultisig}
-                    >
-                      {isSigningMultisig
-                        ? 'Signing Transaction...'
-                        : 'Retry Blockchain Transaction'}
-                    </Button>
-                  ) : (
-                    <Button
-                      type="button"
-                      onClick={handleSubmit}
-                      disabled={
-                        !selectedVote || isSubmitting || isSigningMultisig
-                      }
-                    >
-                      {isSigningMultisig
-                        ? 'Signing Transaction...'
-                        : isSubmitting
-                          ? 'Submitting Review...'
-                          : 'Submit Review'}
-                    </Button>
-                  )}
+                  <Button
+                    type="button"
+                    onClick={handleSubmit}
+                    disabled={
+                      !selectedVote || isSubmitting || isSigningMultisig
+                    }
+                  >
+                    {isSigningMultisig
+                      ? 'Signing Transaction...'
+                      : isSubmitting
+                        ? 'Submitting Review...'
+                        : 'Submit Review'}
+                  </Button>
                 </div>
               </div>
             </div>

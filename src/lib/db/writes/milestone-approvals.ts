@@ -29,9 +29,7 @@ export async function createMilestoneApproval(data: {
   beneficiaryAddress: string
 }) {
   console.log('[db/writes/milestone-approvals]: Creating approval', {
-    milestoneId: data.milestoneId,
-    callHash: data.multisigCallHash,
-    workflow: data.approvalWorkflow,
+    ...data,
   })
 
   const [approval] = await db

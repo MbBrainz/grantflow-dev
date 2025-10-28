@@ -301,37 +301,154 @@ export async function initiateMultisigApproval(params: {
     console.log(
       '[initiateMultisigApproval]: Signing and submitting transaction'
     )
-    const _unsub = await multisigCall.signAndSend(
+
+    // Track the timepoint from the transaction events
+    let timepoint: Timepoint | null = null
+    let txHash: string | null = null
+    let blockNumber = 0
+
+    const unsub = await multisigCall.signAndSend(
       initiatorAddress,
       { signer },
-      (result: any) => {
+      result => {
         console.log(
           '[initiateMultisigApproval]: Transaction status:',
-          result.status
+          result.status.type,
+          {
+            isInBlock: result.status.type === 'BestChainBlockIncluded',
+            isFinalized: result.status.type === 'Finalized',
+          }
         )
+
+        // Extract timepoint when transaction is included in a block
+        if (
+          result.status.type === 'BestChainBlockIncluded' ||
+          result.status.type === 'Finalized'
+        ) {
+          txHash = result.txHash
+
+          // Get block header to extract block number and extrinsic index
+          if (result.status.value.blockNumber) {
+            blockNumber = result.status.value.blockNumber
+          }
+
+          // Look for MultisigApproval or NewMultisig event
+          if (result.events) {
+            for (const record of result.events) {
+              const { event } = record
+
+              // Check for Multisig.NewMultisig event
+              if (
+                event.pallet === 'Multisig' &&
+                event.palletEvent.name === 'NewMultisig'
+              ) {
+                console.log(
+                  '[initiateMultisigApproval]: Found NewMultisig event',
+                  {
+                    event: event.palletEvent,
+                  }
+                )
+
+                // Extract timepoint from event data
+                // NewMultisig event: (AccountId, AccountId, CallHash)
+                // The timepoint is the current block and extrinsic index
+                if (
+                  result.status.value.blockNumber !== undefined &&
+                  result.status.value.txIndex !== undefined
+                ) {
+                  timepoint = {
+                    height: result.status.value.blockNumber,
+                    index: result.status.value.txIndex,
+                  }
+                  console.log(
+                    '[initiateMultisigApproval]: Extracted timepoint from event',
+                    timepoint
+                  )
+                }
+              }
+            }
+          }
+        }
       }
     )
 
-    // Wait for finalization (simplified - in production you'd want proper event handling)
-    await new Promise(resolve => setTimeout(resolve, 10000)) // Wait 10 seconds
+    // Wait for finalization with proper timepoint extraction
+    await new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        void unsub()
+        if (!timepoint) {
+          reject(
+            new Error(
+              'Failed to extract timepoint from transaction events within timeout'
+            )
+          )
+        } else {
+          resolve(undefined)
+        }
+      }, 30000) // 30 second timeout
 
-    // For now, return placeholder values - proper event handling would extract these
-    const timepoint: Timepoint = {
-      height: 0,
-      index: 0,
+      // Check periodically if we got the timepoint
+      const checkInterval = setInterval(() => {
+        if (timepoint) {
+          clearTimeout(timeout)
+          clearInterval(checkInterval)
+          void unsub()
+          resolve(undefined)
+        }
+      }, 1000)
+    })
+
+    // Fallback: Query the chain for pending multisigs if event extraction failed
+    if (!timepoint) {
+      console.log(
+        '[initiateMultisigApproval]: Event extraction failed, querying chain for pending multisigs'
+      )
+      try {
+        const pendingMultisigs = await queryPendingMultisigs(
+          client,
+          multisigConfig.multisigAddress
+        )
+
+        // Find the multisig matching our call hash
+        const matchingMultisig = pendingMultisigs.find(
+          pending => pending.callHash === callHash
+        )
+
+        if (matchingMultisig) {
+          timepoint = matchingMultisig.when
+          console.log(
+            '[initiateMultisigApproval]: Found timepoint from chain query',
+            timepoint
+          )
+        }
+      } catch (queryError) {
+        console.error(
+          '[initiateMultisigApproval]: Failed to query chain for timepoint',
+          queryError
+        )
+      }
+    }
+
+    if (!timepoint) {
+      throw new Error(
+        'Failed to extract timepoint from transaction. The transaction may have failed or timed out. ' +
+          'Please check the blockchain explorer for your transaction status.'
+      )
     }
 
     console.log('[initiateMultisigApproval]: Approval initiated successfully', {
       callHash,
       timepoint,
+      txHash,
+      blockNumber,
     })
 
     return {
-      txHash: callHash as string,
+      txHash: txHash ?? (callHash as string),
       callHash: callHash as string,
       callData,
       timepoint,
-      blockNumber: 0,
+      blockNumber,
     }
   } catch (error) {
     console.error(
@@ -445,7 +562,7 @@ export async function approveMultisigCall(params: {
     const approvalCall = params.client.tx.multisig.approveAsMulti(
       threshold,
       otherSignatories,
-      timepoint,
+      undefined,
       callHash as HexString,
       maxWeight
     )
@@ -501,7 +618,6 @@ export async function approveMultisigCall(params: {
 export async function finalizeMultisigCall(params: {
   client: LegacyClient
   callData: Uint8Array
-  timepoint: Timepoint
   threshold: number
   allSignatories: string[]
   executorAddress: string
@@ -518,7 +634,6 @@ export async function finalizeMultisigCall(params: {
   executionError?: string
 }> {
   const {
-    timepoint,
     threshold,
     allSignatories,
     executorAddress: rawExecutorAddress,
@@ -537,7 +652,6 @@ export async function finalizeMultisigCall(params: {
   )
 
   console.log('[finalizeMultisigCall]: Finalizing call', {
-    timepoint,
     threshold,
     executorAddress,
     rawExecutorAddress,
@@ -580,10 +694,11 @@ export async function finalizeMultisigCall(params: {
       : createTransferCall(params.client, beneficiaryAddress, payoutAmount)
 
     // Get fresh call data (must match the original) - using type assertion
-    const freshCallData = (paymentCall as any).encodedData as Uint8Array
 
     // Verify call data matches (safety check)
-    if (JSON.stringify(freshCallData) !== JSON.stringify(params.callData)) {
+    if (
+      JSON.stringify(paymentCall.callHex) !== JSON.stringify(params.callData)
+    ) {
       console.warn(
         '[finalizeMultisigCall]: Call data mismatch, using provided data'
       )
@@ -605,7 +720,7 @@ export async function finalizeMultisigCall(params: {
     const finalizeCall = params.client.tx.multisig.asMulti(
       threshold,
       otherSignatories,
-      timepoint,
+      undefined,
       paymentCall.call,
       maxWeight
     )
@@ -613,7 +728,7 @@ export async function finalizeMultisigCall(params: {
     console.log('[finalizeMultisigCall]: Submitting final execution', {
       threshold,
       otherSignatoriesCount: otherSignatories.length,
-      timepoint,
+      timepoint: undefined,
     })
 
     // Sign and submit the transaction
