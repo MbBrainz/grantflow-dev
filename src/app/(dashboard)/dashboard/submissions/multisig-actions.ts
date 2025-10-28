@@ -36,7 +36,7 @@ const initiateApprovalSchema = z.object({
   initiatorWalletAddress: z.string().min(1, 'Wallet address is required'),
   txHash: z.string().min(1, 'Transaction hash is required'),
   callHash: z.string().min(1, 'Call hash is required'),
-  callData: z.string().min(1, 'Call data is required'),
+  callDataHex: z.string().min(1, 'Call data is required'),
   timepoint: z.object({
     height: z.number().int(),
     index: z.number().int(),
@@ -153,7 +153,7 @@ export const initiateMultisigApproval = validatedActionWithUser(
         milestoneId: data.milestoneId,
         groupId: milestone.groupId,
         multisigCallHash: data.callHash,
-        multisigCallData: data.callData,
+        multisigCallData: data.callDataHex,
         timepoint: data.timepoint,
         initiatorId: user.id,
         initiatorAddress: data.initiatorWalletAddress,
