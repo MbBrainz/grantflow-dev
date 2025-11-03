@@ -19,6 +19,12 @@
       "options": {
         "parser": "typescript"
       }
+    },
+    {
+    "files": "/docs/**",
+      "options": {
+        "parser": "json"
+      }
     }
   ]
 }
