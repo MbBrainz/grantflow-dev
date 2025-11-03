@@ -47,5 +47,3 @@ features:
 
 ### For Developers
 - [GitHub Integration](/guides/github-setup)
-- [Database Setup](../README.md)
-- [Contributing](../README.md)

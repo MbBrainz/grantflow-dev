@@ -40,10 +40,12 @@ vercel
    - Or use the A record provided by Vercel
 
 3. **Build Settings** (in Vercel Dashboard):
-   - Root Directory: `docs`
+   - Root Directory: `docs` (important: this makes Vercel use `docs/package.json`)
    - Build Command: `pnpm build`
    - Output Directory: `.vitepress/dist`
    - Install Command: `pnpm install`
+   
+   **Note**: The docs site is fully self-contained. It has its own `package.json` with all required dependencies (VitePress bundles everything it needs). No need to install dependencies from the root package.json.
 
 ### Continuous Deployment
 
