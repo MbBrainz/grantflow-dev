@@ -1,5 +1,6 @@
 'use client'
 
+import { useState } from 'react'
 import {
   Card,
   CardContent,
@@ -16,6 +17,8 @@ import {
   Target,
   ArrowRight,
   Calendar,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react'
 import Link from 'next/link'
 import { CommitteeBadge } from '@/components/submissions/committee-badge'
@@ -181,6 +184,8 @@ export function PendingActionsPanel({
   submissionsNeedingVote,
   milestonesNeedingReview,
 }: PendingActionsPanelProps) {
+  const [isMilestonesExpanded, setIsMilestonesExpanded] = useState(true)
+  const [isSubmissionsExpanded, setIsSubmissionsExpanded] = useState(true)
   const totalActions =
     submissionsNeedingVote.length + milestonesNeedingReview.length
 
@@ -223,37 +228,63 @@ export function PendingActionsPanel({
         </CardHeader>
       </Card>
 
-      {/* Submissions Needing Vote */}
-      {submissionsNeedingVote.length > 0 && (
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Vote className="h-5 w-5 text-blue-600" />
-            <h3 className="text-lg font-semibold">
-              Submissions Awaiting Your Vote ({submissionsNeedingVote.length})
-            </h3>
-          </div>
-          <div className="space-y-3">
-            {submissionsNeedingVote.map(action => (
-              <ActionCard key={`submission-${action.id}`} action={action} />
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Milestones Needing Review */}
       {milestonesNeedingReview.length > 0 && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Target className="h-5 w-5 text-purple-600" />
-            <h3 className="text-lg font-semibold">
-              Milestones Awaiting Your Review ({milestonesNeedingReview.length})
-            </h3>
-          </div>
-          <div className="space-y-3">
-            {milestonesNeedingReview.map(action => (
-              <ActionCard key={`milestone-${action.id}`} action={action} />
-            ))}
-          </div>
+          <button
+            onClick={() => setIsMilestonesExpanded(!isMilestonesExpanded)}
+            className="flex w-full items-center justify-between gap-2 rounded-lg p-2 transition-colors hover:bg-gray-50"
+          >
+            <div className="flex items-center gap-2">
+              <Target className="h-5 w-5 text-purple-600" />
+              <h3 className="text-lg font-semibold">
+                Milestones Awaiting Your Review (
+                {milestonesNeedingReview.length})
+              </h3>
+            </div>
+            {isMilestonesExpanded ? (
+              <ChevronUp className="h-5 w-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-500" />
+            )}
+          </button>
+          {isMilestonesExpanded && (
+            <div className="space-y-3">
+              {milestonesNeedingReview.map(action => (
+                <ActionCard key={`milestone-${action.id}`} action={action} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Submissions Needing Vote */}
+      {submissionsNeedingVote.length > 0 && (
+        <div className="space-y-4">
+          <button
+            onClick={() => setIsSubmissionsExpanded(!isSubmissionsExpanded)}
+            className="flex w-full items-center justify-between gap-2 rounded-lg p-2 transition-colors hover:bg-gray-50"
+          >
+            <div className="flex items-center gap-2">
+              <Vote className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold">
+                New Grant Submissions Awaiting Your Vote (
+                {submissionsNeedingVote.length})
+              </h3>
+            </div>
+            {isSubmissionsExpanded ? (
+              <ChevronUp className="h-5 w-5 text-gray-500" />
+            ) : (
+              <ChevronDown className="h-5 w-5 text-gray-500" />
+            )}
+          </button>
+          {isSubmissionsExpanded && (
+            <div className="space-y-3">
+              {submissionsNeedingVote.map(action => (
+                <ActionCard key={`submission-${action.id}`} action={action} />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
