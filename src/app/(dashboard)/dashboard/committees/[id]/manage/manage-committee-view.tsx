@@ -15,16 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  ArrowLeft,
-  Settings,
-  Users,
-  Plus,
-  Trash2,
-  Shield,
-  AlertCircle,
-  DollarSign,
-} from 'lucide-react'
+import { Settings, Users, Plus, Trash2, Shield, DollarSign } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import type { CommitteeWithDetails } from '@/lib/db/queries/committees'
 import Image from 'next/image'
@@ -37,10 +28,13 @@ import {
   createGrantProgramAction,
   updateGrantProgramAction,
   toggleGrantProgramAction,
+  updateMultisigConfig,
 } from '../actions'
 import { useToast } from '@/lib/hooks/use-toast'
 import { AsyncButton } from '@/components/ui/async-button'
 import { GrantProgramCard } from '@/components/committee/grant-program-card'
+import { MultisigConfigForm } from '@/components/committee/multisig-config-form'
+import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
 
 interface ProgramFinancials {
   programId: number
@@ -102,6 +96,10 @@ export function ManageCommitteeView({
   const [programMinMilestoneSize, setProgramMinMilestoneSize] = useState('')
   const [programMaxMilestoneSize, setProgramMaxMilestoneSize] = useState('')
   const [showInactivePrograms, setShowInactivePrograms] = useState(true)
+
+  // Multisig Configuration State
+  const [isEditingMultisig, setIsEditingMultisig] = useState(false)
+  const [isSavingMultisig, setIsSavingMultisig] = useState(false)
 
   const handleUpdateInfo = async () => {
     const focusAreasArray = focusAreasText
@@ -420,28 +418,43 @@ export function ManageCommitteeView({
     setProgramMaxMilestoneSize('')
   }
 
+  const handleSaveMultisigConfig = async (config: MultisigConfig) => {
+    setIsSavingMultisig(true)
+    try {
+      const result = await updateMultisigConfig({
+        committeeId: committee.id,
+        ...config,
+      })
+
+      if (result.error) {
+        toast({
+          title: 'Error',
+          description: result.error,
+          variant: 'destructive',
+        })
+      } else {
+        toast({
+          title: 'Success',
+          description: 'Multisig configuration saved successfully',
+        })
+        setIsEditingMultisig(false)
+        router.refresh()
+      }
+    } finally {
+      setIsSavingMultisig(false)
+    }
+  }
+
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       {/* Header */}
       <div className="mb-6 flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/dashboard/committees/${committee.id}`)}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Committee
-          </Button>
-
-          <div>
-            <div className="flex items-center gap-3">
-              <Settings className="h-8 w-8 text-gray-600" />
-              <div>
-                <h1 className="text-3xl font-bold">Manage Committee</h1>
-                <p className="text-gray-600">{committee.name}</p>
-              </div>
+        <div>
+          <div className="flex items-center gap-3">
+            <Settings className="h-8 w-8 text-gray-600" />
+            <div>
+              <h1 className="text-3xl font-bold">Manage Committee</h1>
+              <p className="text-gray-600">{committee.name}</p>
             </div>
           </div>
         </div>
@@ -707,22 +720,94 @@ export function ManageCommitteeView({
 
       {/* Multisig Configuration */}
       <Card className="p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <Shield className="h-5 w-5 text-gray-600" />
-          <h2 className="text-xl font-semibold">Multisig Account</h2>
-          <Badge variant="secondary">Coming Soon</Badge>
+        <div className="mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-gray-600" />
+            <h2 className="text-xl font-semibold">Multisig Account</h2>
+            {committee.settings?.multisig && (
+              <Badge variant="default">Configured</Badge>
+            )}
+          </div>
+          {!isEditingMultisig && committee.settings?.multisig && (
+            <Button onClick={() => setIsEditingMultisig(true)} size="sm">
+              Edit Configuration
+            </Button>
+          )}
         </div>
 
-        <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-8 text-center dark:border-gray-700 dark:bg-gray-800">
-          <AlertCircle className="mx-auto mb-3 h-12 w-12 text-gray-400" />
-          <h3 className="mb-2 text-lg font-medium text-gray-700 dark:text-gray-300">
-            Multisig Configuration
-          </h3>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Configure your committee&apos;s multisig account for secure grant
-            payouts. This feature will be available soon.
-          </p>
-        </div>
+        {isEditingMultisig || !committee.settings?.multisig ? (
+          <div>
+            <MultisigConfigForm
+              initialConfig={committee.settings?.multisig}
+              onSave={handleSaveMultisigConfig}
+              isLoading={isSavingMultisig}
+            />
+            {committee.settings?.multisig && (
+              <Button
+                variant="outline"
+                onClick={() => setIsEditingMultisig(false)}
+                className="mt-4 w-full"
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-muted-foreground text-sm">
+                  Multisig Address
+                </p>
+                <code className="font-mono text-sm">
+                  {committee.settings.multisig.multisigAddress.slice(0, 12)}...
+                  {committee.settings.multisig.multisigAddress.slice(-8)}
+                </code>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">Network</p>
+                <p className="text-sm font-medium capitalize">
+                  {committee.settings.multisig.network}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">Threshold</p>
+                <p className="text-sm font-medium">
+                  {committee.settings.multisig.threshold} of{' '}
+                  {committee.settings.multisig.signatories.length}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">
+                  Approval Workflow
+                </p>
+                <p className="text-sm font-medium capitalize">
+                  {committee.settings.multisig.approvalWorkflow}
+                </p>
+              </div>
+            </div>
+            <div>
+              <p className="text-muted-foreground mb-2 text-sm">
+                Signatories ({committee.settings.multisig.signatories.length})
+              </p>
+              <div className="space-y-2">
+                {committee.settings.multisig.signatories.map(
+                  (address, index) => (
+                    <div
+                      key={address}
+                      className="bg-muted flex items-center gap-2 rounded-md p-2 text-sm"
+                    >
+                      <Badge variant="outline">{index + 1}</Badge>
+                      <code className="text-xs">
+                        {address.slice(0, 10)}...{address.slice(-8)}
+                      </code>
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* Add Member Dialog */}

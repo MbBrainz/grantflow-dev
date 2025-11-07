@@ -6,6 +6,7 @@ import { useNotificationStream } from '@/lib/notifications/client'
 import { Toaster } from '@/components/ui/toaster'
 import useSWR from 'swr'
 import type { User } from '@/lib/db/schema'
+import { fetcher } from '@/lib/utils'
 
 interface NotificationContextType {
   isConnected: boolean
@@ -30,15 +31,13 @@ interface NotificationProviderProps {
   children: ReactNode
 }
 
-const fetcher = (url: string) => fetch(url).then(res => res.json())
-
 export function NotificationProvider({ children }: NotificationProviderProps) {
   // DISABLED: SSE notifications temporarily disabled to reduce RAM usage
   // Check if user is authenticated before initializing notifications
-  const { data: user, error: userError } = useSWR<User>(
+  const { data: user, error: userError } = useSWR<User, Error>(
     '/api/user',
-    fetcher
-  ) as { data: User | undefined; error: Error | undefined }
+    fetcher<User>
+  )
 
   // SSE disabled - set to false to prevent connection
   const [shouldConnect] = useState<boolean>(false)

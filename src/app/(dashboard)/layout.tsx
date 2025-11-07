@@ -15,12 +15,15 @@ import { signOut } from '@/app/(login)/actions'
 import { useRouter } from 'next/navigation'
 import type { User } from '@/lib/db/schema'
 import useSWR, { mutate } from 'swr'
-
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+import { fetcher } from '@/lib/utils'
+import { LunoProvider } from '@luno-kit/react'
+import { PolkadotChainSelector } from '@/components/wallet/polkadot-chain-selector'
+import { PolkadotWalletSelector } from '@/components/wallet/polkadot-wallet-selector'
+import { config } from '@/lib/polkadot/lunokit'
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { data: user } = useSWR<User>('/api/user', fetcher)
+  const { data: user } = useSWR<User>('/api/user', fetcher<User>)
   const router = useRouter()
 
   async function handleSignOut() {
@@ -95,7 +98,10 @@ function Header() {
             GRANTFLOW
           </span>
         </Link>
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4"></div>
+        <div className="flex flex-1 items-center justify-end space-x-4">
+          <PolkadotChainSelector />
+          <PolkadotWalletSelector />
           <Suspense fallback={<div className="h-9" />}>
             <UserMenu />
           </Suspense>
@@ -107,9 +113,11 @@ function Header() {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <section className="flex min-h-screen flex-col">
-      <Header />
-      {children}
-    </section>
+    <LunoProvider config={config}>
+      <section className="flex min-h-screen flex-col">
+        <Header />
+        {children}
+      </section>
+    </LunoProvider>
   )
 }

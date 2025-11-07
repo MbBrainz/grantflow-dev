@@ -39,11 +39,24 @@ type UserSubmission = UserSubmissions[number]
 
 function SubmissionCard({ submission }: { submission: UserSubmission }) {
   // Ensure labels is always a string array
-  const labels: string[] = Array.isArray(submission.labels)
-    ? submission.labels
-    : typeof submission.labels === 'string'
-      ? [submission.labels]
-      : []
+  // labels is stored as JSON string in DB, so we need to parse it
+  const labels: string[] = (() => {
+    if (!submission.labels) return []
+    if (Array.isArray(submission.labels)) {
+      return submission.labels.filter((l): l is string => typeof l === 'string')
+    }
+    if (typeof submission.labels === 'string') {
+      try {
+        const parsed = JSON.parse(submission.labels)
+        return Array.isArray(parsed)
+          ? parsed.filter((l): l is string => typeof l === 'string')
+          : [submission.labels]
+      } catch {
+        return [submission.labels]
+      }
+    }
+    return []
+  })()
 
   return (
     <Card className="transition-shadow hover:shadow-md">

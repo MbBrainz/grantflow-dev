@@ -11,7 +11,6 @@ import {
   MessageSquare,
   CheckCircle,
   AlertCircle,
-  DollarSign,
   Calendar,
   Target,
   GitBranch,
@@ -118,11 +117,6 @@ export function GranteeSubmissionView({
 
   const stage = getApplicationStage()
   const StageIcon = stage.icon
-
-  // Calculate funding timeline
-  const completedMilestones =
-    submission.milestones?.filter(m => m.status === 'completed').length ?? 0
-  const totalMilestones = submission.milestones?.length ?? 0
 
   // Get previous milestone commit SHA for commit selection
   const getPreviousMilestoneCommitSha = (currentMilestoneIndex: number) => {
@@ -279,49 +273,6 @@ export function GranteeSubmissionView({
               </div>
               <p className="text-gray-700">{stage.nextStep}</p>
             </div>
-          </div>
-        </div>
-
-        {/* Progress Overview */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <div className="rounded-lg border bg-white p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-blue-600" />
-              <span className="font-medium">Timeline</span>
-            </div>
-            <p className="text-sm text-gray-600">
-              Applied {new Date(submission.appliedAt).toLocaleDateString()}
-            </p>
-          </div>
-
-          <div className="rounded-lg border bg-white p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-green-600" />
-              <span className="font-medium">Funding</span>
-            </div>
-            <p className="text-lg font-bold">
-              ${submission.totalAmount?.toLocaleString() ?? 'TBD'}
-            </p>
-          </div>
-
-          <div className="rounded-lg border bg-white p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <Target className="h-4 w-4 text-purple-600" />
-              <span className="font-medium">Milestones</span>
-            </div>
-            <p className="text-sm">
-              {completedMilestones} of {totalMilestones} completed
-            </p>
-          </div>
-
-          <div className="rounded-lg border bg-white p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <MessageSquare className="h-4 w-4 text-orange-600" />
-              <span className="font-medium">Messages</span>
-            </div>
-            <p className="text-sm">
-              {submission.discussions?.[0]?.messages?.length ?? 0} total
-            </p>
           </div>
         </div>
 

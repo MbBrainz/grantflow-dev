@@ -34,6 +34,31 @@ import {
   type SubmitReviewInput,
 } from '@/lib/db/schema/actions'
 
+// Get submission details for milestone approval
+export async function getSubmissionDetails(submissionId: number) {
+  try {
+    const submission = await getSubmissionById(submissionId)
+
+    if (!submission) {
+      return { error: 'Submission not found' }
+    }
+
+    return {
+      success: true,
+      submission: {
+        id: submission.id,
+        title: submission.title,
+        walletAddress: submission.walletAddress,
+        status: submission.status,
+        submitter: submission.submitter,
+      },
+    }
+  } catch (error) {
+    console.error('[getSubmissionDetails]: Failed to get submission', error)
+    return { error: 'Failed to get submission details' }
+  }
+}
+
 // Fetch active grant programs with their committees for submission
 export async function getActiveGrantPrograms() {
   try {
@@ -233,23 +258,24 @@ export const createSubmission = async (
         ...rawData,
         labels:
           typeof rawData.labels === 'string'
-            ? (JSON.parse(rawData.labels) as unknown)
+            ? JSON.parse(rawData.labels)
             : rawData.labels,
         milestones:
           typeof rawData.milestones === 'string'
-            ? (JSON.parse(rawData.milestones) as unknown)
+            ? JSON.parse(rawData.milestones)
             : rawData.milestones,
       }
+
       console.log('[createSubmission]: Parsed data:', {
         ...parsedData,
         labels: parsedData.labels,
         labelsType: typeof parsedData.labels,
         labelsIsArray: Array.isArray(parsedData.labels),
         labelsLength: Array.isArray(parsedData.labels)
-          ? (parsedData.labels as unknown[]).length
+          ? parsedData.labels.length
           : 'not array',
         milestones: Array.isArray(parsedData.milestones)
-          ? `${(parsedData.milestones as unknown[]).length} milestones`
+          ? `${parsedData.milestones.length} milestones`
           : 'not array',
         milestonesType: typeof parsedData.milestones,
       })

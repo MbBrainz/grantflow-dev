@@ -23,6 +23,17 @@ config()
 const client = postgres(process.env.DATABASE_URL!)
 const db = drizzle(client)
 
+// Multisig configuration from environment or defaults
+const MULTISIG_ADDRESS =
+  process.env.MULTISIG_ADDRESS ??
+  '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty' // Default Polkadot address
+const SIGNATORY_1_ADDRESS =
+  process.env.SIGNATORY_1_ADDRESS ??
+  '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY' // Default signatory 1
+const SIGNATORY_2_ADDRESS =
+  process.env.SIGNATORY_2_ADDRESS ??
+  '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y' // Default signatory 2
+
 async function seed() {
   console.log('🌱 Starting comprehensive database seeding...')
 
@@ -42,6 +53,7 @@ async function seed() {
       name: 'Alex Chen',
       githubId: 'alex-reviewer',
       primaryRole: 'committee',
+      walletAddress: SIGNATORY_1_ADDRESS, // Alex is signatory 1 for multisig
     })
     .returning()
 
@@ -53,6 +65,7 @@ async function seed() {
       name: 'Maria Rodriguez',
       githubId: 'maria-reviewer',
       primaryRole: 'committee',
+      walletAddress: SIGNATORY_2_ADDRESS, // Maria is signatory 2 for multisig
     })
     .returning()
 
@@ -173,6 +186,16 @@ async function seed() {
           'security_review',
           'final_approval',
         ],
+        multisig: {
+          multisigAddress: MULTISIG_ADDRESS,
+          signatories: [SIGNATORY_1_ADDRESS, SIGNATORY_2_ADDRESS],
+          threshold: 2,
+          approvalWorkflow: 'merged',
+          requireAllSignatories: true,
+          votingTimeoutBlocks: 50400, // ~7 days on Polkadot (6s blocks)
+          automaticExecution: true,
+          network: 'paseo',
+        },
       },
     })
     .returning()
@@ -1262,7 +1285,7 @@ async function seed() {
       githubRepoUrl: 'https://github.com/nft-gaming-studio/web3-state',
       walletAddress: teamMember5.walletAddress,
       status: 'approved',
-      totalAmount: 50000,
+      totalAmount: 3500,
       appliedAt: new Date('2024-01-05'),
       createdAt: new Date('2024-01-05'),
       updatedAt: new Date('2024-01-15'),
@@ -1860,7 +1883,7 @@ async function seed() {
         'Blockchain data caching',
         'React 18+ compatibility',
       ],
-      amount: 20000,
+      amount: 1000,
       dueDate: new Date('2024-02-20'),
       status: 'in-review',
       deliverables: [
@@ -1897,7 +1920,7 @@ async function seed() {
         'API documentation',
         'Usage examples',
       ],
-      amount: 20000,
+      amount: 1000,
       dueDate: new Date('2024-03-30'),
       status: 'pending',
       deliverables: [
@@ -1925,7 +1948,7 @@ async function seed() {
         'Release documentation',
         'Community announcement',
       ],
-      amount: 10000,
+      amount: 500,
       dueDate: new Date('2024-04-15'),
       status: 'pending',
       deliverables: [
@@ -2059,6 +2082,266 @@ async function seed() {
     .returning()
 
   // ============================================================================
+  // ADDITIONAL MILESTONES FOR ALEX CHEN TO REVIEW
+  // ============================================================================
+
+  console.log('Creating additional milestones for Alex Chen review scenarios...')
+
+  // SCENARIO 1: Recently submitted milestone - needs Alex's review
+  const [testingFrameworkMilestone1] = await db
+    .insert(milestones)
+    .values({
+      submissionId: infraPendingSubmission1.id, // Advanced Blockchain Testing Framework
+      groupId: infraCommittee.id,
+      title: 'Core Testing Infrastructure & Fuzzing Engine',
+      description:
+        'Implement the core testing infrastructure with advanced fuzzing capabilities, property-based testing, and gas optimization analysis tools.',
+      requirements: [
+        'Fuzzing engine implementation',
+        'Property-based testing framework',
+        'Gas optimization analyzer',
+        'Smart contract vulnerability scanner',
+        'Test coverage reporting system',
+        'Integration with major development frameworks',
+      ],
+      amount: 40000,
+      dueDate: new Date('2024-03-15'),
+      status: 'in-review',
+      deliverables: [
+        { description: 'Core fuzzing engine' },
+        { description: 'Property-based testing library' },
+        { description: 'Gas optimization tools' },
+        { description: 'Vulnerability scanner' },
+        { description: 'Coverage reporting system' },
+        { description: 'Framework integrations' },
+      ],
+      githubRepoUrl: 'https://github.com/nextgen-sdk/testing-framework',
+      githubCommitHash: 'fuzzing123abc456',
+      codeAnalysis: JSON.stringify({
+        filesChanged: 45,
+        linesAdded: 3200,
+        testCoverage: 92,
+        components: ['Fuzzing engine', 'Property testing', 'Gas analyzer', 'Vulnerability scanner'],
+        securityScore: 95,
+        performanceScore: 88,
+      }),
+      submittedAt: new Date('2024-02-20T14:30:00Z'),
+      createdAt: new Date('2024-02-10T09:00:00Z'),
+      updatedAt: new Date('2024-02-20T14:30:00Z'),
+    })
+    .returning()
+
+  // SCENARIO 2: Milestone with changes requested - team resubmitted
+  const [analyticsMilestone1] = await db
+    .insert(milestones)
+    .values({
+      submissionId: infraPendingSubmission2.id, // Real-time Blockchain Analytics Dashboard
+      groupId: infraCommittee.id,
+      title: 'Real-time Data Pipeline & Core Analytics Engine',
+      description:
+        'Build the core real-time data pipeline for blockchain analytics with customizable metrics, alerting system, and performance monitoring.',
+      requirements: [
+        'Real-time data ingestion pipeline',
+        'Customizable metrics dashboard',
+        'Alert system with configurable thresholds',
+        'Performance monitoring suite',
+        'Multi-chain data aggregation',
+        'Historical data storage and querying',
+      ],
+      amount: 25000,
+      dueDate: new Date('2024-03-20'),
+      status: 'in-review',
+      deliverables: [
+        { description: 'Real-time data pipeline' },
+        { description: 'Analytics dashboard' },
+        { description: 'Alerting system' },
+        { description: 'Performance monitoring' },
+        { description: 'Multi-chain support' },
+        { description: 'Historical data system' },
+      ],
+      githubRepoUrl: 'https://github.com/l2-research-group/analytics-dash',
+      githubCommitHash: 'analytics789def012',
+      codeAnalysis: JSON.stringify({
+        filesChanged: 38,
+        linesAdded: 2800,
+        testCoverage: 89,
+        components: ['Data pipeline', 'Analytics engine', 'Dashboard', 'Alerting system'],
+        performanceScore: 94,
+        scalabilityScore: 91,
+      }),
+      submittedAt: new Date('2024-02-22T11:15:00Z'),
+      createdAt: new Date('2024-02-12T09:00:00Z'),
+      updatedAt: new Date('2024-02-22T11:15:00Z'),
+    })
+    .returning()
+
+  // SCENARIO 3: Milestone that was rejected and needs re-review
+  const [graphqlMilestone1] = await db
+    .insert(milestones)
+    .values({
+      submissionId: infraInReviewSubmission.id, // GraphQL API Generator
+      groupId: infraCommittee.id,
+      title: 'Core GraphQL Schema Generation & Type Safety',
+      description:
+        'Implement the core GraphQL schema generation from smart contract ABIs with advanced type safety, caching, and subscription support.',
+      requirements: [
+        'ABI to GraphQL schema converter',
+        'Type-safe query generation',
+        'Advanced caching layer',
+        'Real-time subscription support',
+        'Query optimization engine',
+        'Integration with popular GraphQL clients',
+      ],
+      amount: 20000,
+      dueDate: new Date('2024-03-10'),
+      status: 'in-review',
+      deliverables: [
+        { description: 'Schema generation engine' },
+        { description: 'Type-safe query builder' },
+        { description: 'Caching system' },
+        { description: 'Subscription support' },
+        { description: 'Query optimizer' },
+        { description: 'Client integrations' },
+      ],
+      githubRepoUrl: 'https://github.com/yieldopt-protocol/graphql-gen',
+      githubCommitHash: 'graphql456ghi789',
+      codeAnalysis: JSON.stringify({
+        filesChanged: 32,
+        linesAdded: 2400,
+        testCoverage: 87,
+        components: ['Schema generator', 'Type system', 'Caching', 'Subscriptions'],
+        typeSafetyScore: 96,
+        performanceScore: 89,
+      }),
+      submittedAt: new Date('2024-02-25T09:45:00Z'),
+      createdAt: new Date('2024-01-28T09:00:00Z'),
+      updatedAt: new Date('2024-02-25T09:45:00Z'),
+    })
+    .returning()
+
+  // SCENARIO 4: Milestone that needs urgent review (overdue)
+  const [zkMilestone1] = await db
+    .insert(milestones)
+    .values({
+      submissionId: infraInReviewSubmission2.id, // ZK Toolkit
+      groupId: infraCommittee.id,
+      title: 'Visual Circuit Designer & Multi-Proof System Compiler',
+      description:
+        'Develop the visual circuit designer interface with support for multiple zero-knowledge proof systems including Groth16, PLONK, and STARK.',
+      requirements: [
+        'Interactive visual circuit designer',
+        'Multi-proof system compiler (Groth16, PLONK, STARK)',
+        'Circuit optimization algorithms',
+        'Proof generation benchmarking',
+        'Export to multiple ZK frameworks',
+        'Comprehensive testing suite',
+      ],
+      amount: 35000,
+      dueDate: new Date('2024-02-28'), // Overdue!
+      status: 'in-review',
+      deliverables: [
+        { description: 'Visual circuit designer' },
+        { description: 'Multi-proof compiler' },
+        { description: 'Optimization algorithms' },
+        { description: 'Benchmarking suite' },
+        { description: 'Framework exports' },
+        { description: 'Test suite' },
+      ],
+      githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
+      githubCommitHash: 'zk123jkl456mno',
+      codeAnalysis: JSON.stringify({
+        filesChanged: 52,
+        linesAdded: 4100,
+        testCoverage: 91,
+        components: ['Visual designer', 'Multi-proof compiler', 'Optimizer', 'Benchmarker'],
+        complexityScore: 94,
+        innovationScore: 97,
+      }),
+      submittedAt: new Date('2024-02-26T16:20:00Z'),
+      createdAt: new Date('2024-01-20T09:00:00Z'),
+      updatedAt: new Date('2024-02-26T16:20:00Z'),
+    })
+    .returning()
+
+  // SCENARIO 5: Milestone with partial reviews (needs Alex's final vote)
+  const [web3Milestone2] = await db
+    .insert(milestones)
+    .values({
+      submissionId: infraApprovedWithMilestones.id, // Web3 State Management
+      groupId: infraCommittee.id,
+      title: 'Advanced Features & Multi-Chain Support',
+      description:
+        'Implement advanced features including multi-chain support, optimistic updates, advanced caching strategies, and comprehensive error handling.',
+      requirements: [
+        'Multi-chain wallet connection',
+        'Optimistic UI updates',
+        'Advanced caching strategies',
+        'Error handling and recovery',
+        'Performance monitoring',
+        'Cross-chain transaction support',
+      ],
+      amount: 1000,
+      dueDate: new Date('2024-03-25'),
+      status: 'in-review',
+      deliverables: [
+        { description: 'Multi-chain support' },
+        { description: 'Optimistic updates' },
+        { description: 'Advanced caching' },
+        { description: 'Error handling' },
+        { description: 'Performance monitoring' },
+        { description: 'Cross-chain features' },
+      ],
+      githubRepoUrl: 'https://github.com/nft-gaming-studio/web3-state',
+      githubCommitHash: 'web3abc789def456',
+      codeAnalysis: JSON.stringify({
+        filesChanged: 28,
+        linesAdded: 1950,
+        testCoverage: 90,
+        components: ['Multi-chain support', 'Optimistic updates', 'Advanced caching', 'Error handling'],
+        reliabilityScore: 93,
+        performanceScore: 91,
+      }),
+      submittedAt: new Date('2024-02-24T13:30:00Z'),
+      createdAt: new Date('2024-01-15T09:00:00Z'),
+      updatedAt: new Date('2024-02-24T13:30:00Z'),
+    })
+    .returning()
+
+  // SCENARIO 6: Milestone with changes requested (team needs to resubmit)
+  const [testingFrameworkMilestone2] = await db
+    .insert(milestones)
+    .values({
+      submissionId: infraPendingSubmission1.id,
+      groupId: infraCommittee.id,
+      title: 'Advanced Security Analysis & Integration Tools',
+      description:
+        'Build advanced security analysis tools with integration capabilities for popular development environments and CI/CD pipelines.',
+      requirements: [
+        'Advanced vulnerability detection',
+        'Security pattern analysis',
+        'CI/CD pipeline integration',
+        'IDE plugin development',
+        'Security report generation',
+        'Automated fix suggestions',
+      ],
+      amount: 35000,
+      dueDate: new Date('2024-04-15'),
+      status: 'changes-requested',
+      deliverables: [
+        { description: 'Security analysis tools' },
+        { description: 'Pattern analysis engine' },
+        { description: 'CI/CD integrations' },
+        { description: 'IDE plugins' },
+        { description: 'Report generator' },
+        { description: 'Fix suggestions' },
+      ],
+      githubRepoUrl: 'https://github.com/nextgen-sdk/testing-framework',
+      createdAt: new Date('2024-02-10T09:00:00Z'),
+      updatedAt: new Date('2024-02-28T10:00:00Z'),
+    })
+    .returning()
+
+  // ============================================================================
   // MILESTONE DISCUSSIONS - Create discussions for milestones
   // ============================================================================
 
@@ -2089,6 +2372,73 @@ async function seed() {
     .values({
       submissionId: infraApprovedWithMilestones.id,
       milestoneId: web3StateMilestone1.id,
+      groupId: infraCommittee.id,
+      type: 'milestone',
+      isPublic: true,
+    })
+    .returning()
+
+  // Discussions for new milestones
+  const [testingFrameworkMilestone1Discussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: infraPendingSubmission1.id,
+      milestoneId: testingFrameworkMilestone1.id,
+      groupId: infraCommittee.id,
+      type: 'milestone',
+      isPublic: true,
+    })
+    .returning()
+
+  const [analyticsMilestone1Discussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: infraPendingSubmission2.id,
+      milestoneId: analyticsMilestone1.id,
+      groupId: infraCommittee.id,
+      type: 'milestone',
+      isPublic: true,
+    })
+    .returning()
+
+  const [graphqlMilestone1Discussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: infraInReviewSubmission.id,
+      milestoneId: graphqlMilestone1.id,
+      groupId: infraCommittee.id,
+      type: 'milestone',
+      isPublic: true,
+    })
+    .returning()
+
+  const [zkMilestone1Discussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: infraInReviewSubmission2.id,
+      milestoneId: zkMilestone1.id,
+      groupId: infraCommittee.id,
+      type: 'milestone',
+      isPublic: true,
+    })
+    .returning()
+
+  const [web3Milestone2Discussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: infraApprovedWithMilestones.id,
+      milestoneId: web3Milestone2.id,
+      groupId: infraCommittee.id,
+      type: 'milestone',
+      isPublic: true,
+    })
+    .returning()
+
+  const [testingFrameworkMilestone2Discussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: infraPendingSubmission1.id,
+      milestoneId: testingFrameworkMilestone2.id,
       groupId: infraCommittee.id,
       type: 'milestone',
       isPublic: true,
@@ -2140,6 +2490,131 @@ async function seed() {
       messageType: 'comment',
       createdAt: new Date('2024-02-18T10:30:00Z'),
     },
+
+    // Messages for new milestone discussions
+    // Testing Framework Milestone 1 - Recently submitted, needs Alex's review
+    {
+      discussionId: testingFrameworkMilestone1Discussion.id,
+      authorId: teamMember1.id,
+      content:
+        'Milestone 1 complete! The fuzzing engine is working excellently with 95% security score. We found 12 potential vulnerabilities in test contracts.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-20T14:30:00Z'),
+    },
+    {
+      discussionId: testingFrameworkMilestone1Discussion.id,
+      authorId: teamMember1.id,
+      content:
+        'The gas optimization analyzer is particularly impressive - it identified 23% gas savings opportunities in our test suite.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-20T15:00:00Z'),
+    },
+
+    // Analytics Milestone 1 - Resubmitted after changes
+    {
+      discussionId: analyticsMilestone1Discussion.id,
+      authorId: teamMember3.id,
+      content:
+        'Milestone resubmitted! We addressed all the feedback from the previous review. The real-time pipeline now handles 10,000+ TPS with sub-second latency.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-22T11:15:00Z'),
+    },
+    {
+      discussionId: analyticsMilestone1Discussion.id,
+      authorId: teamMember3.id,
+      content:
+        'The multi-chain data aggregation is working perfectly. We now support Ethereum, Polygon, and Arbitrum with unified metrics.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-22T11:45:00Z'),
+    },
+
+    // GraphQL Milestone 1 - Resubmitted after rejection
+    {
+      discussionId: graphqlMilestone1Discussion.id,
+      authorId: teamMember4.id,
+      content:
+        'We completely rebuilt the schema generation engine based on your feedback. The type safety is now 96% and performance improved by 40%.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-25T09:45:00Z'),
+    },
+    {
+      discussionId: graphqlMilestone1Discussion.id,
+      authorId: teamMember4.id,
+      content:
+        'The subscription support is now fully functional with real-time updates. We also added query optimization that reduces response time by 60%.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-25T10:15:00Z'),
+    },
+
+    // ZK Milestone 1 - Overdue, urgent review needed
+    {
+      discussionId: zkMilestone1Discussion.id,
+      authorId: teamMember2.id,
+      content:
+        'Milestone submitted! The visual circuit designer is groundbreaking - it supports drag-and-drop circuit creation with real-time compilation.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-26T16:20:00Z'),
+    },
+    {
+      discussionId: zkMilestone1Discussion.id,
+      authorId: teamMember2.id,
+      content:
+        'We achieved 97% innovation score with the multi-proof system compiler. It supports Groth16, PLONK, and STARK with seamless switching.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-26T16:50:00Z'),
+    },
+    {
+      discussionId: zkMilestone1Discussion.id,
+      authorId: teamMember2.id,
+      content:
+        'The benchmarking suite shows 3x faster proof generation compared to existing tools. This could revolutionize ZK development workflows.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-26T17:10:00Z'),
+    },
+
+    // Web3 Milestone 2 - Partial reviews, needs Alex's final vote
+    {
+      discussionId: web3Milestone2Discussion.id,
+      authorId: teamMember5.id,
+      content:
+        'Advanced features milestone complete! Multi-chain support is working flawlessly with 93% reliability score.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-24T13:30:00Z'),
+    },
+    {
+      discussionId: web3Milestone2Discussion.id,
+      authorId: teamMember5.id,
+      content:
+        'The optimistic updates system is particularly impressive - it provides instant UI feedback while maintaining data consistency.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-24T14:00:00Z'),
+    },
+    {
+      discussionId: web3Milestone2Discussion.id,
+      authorId: reviewer2.id,
+      content:
+        'Excellent work on the multi-chain implementation! The error handling is robust and the performance monitoring provides great insights.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-25T09:00:00Z'),
+    },
+
+    // Testing Framework Milestone 2 - Changes requested
+    {
+      discussionId: testingFrameworkMilestone2Discussion.id,
+      authorId: reviewer1.id,
+      content:
+        'The security analysis tools need more comprehensive vulnerability detection. Please add support for reentrancy attacks and integer overflow patterns.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-28T10:00:00Z'),
+    },
+    {
+      discussionId: testingFrameworkMilestone2Discussion.id,
+      authorId: reviewer1.id,
+      content:
+        'The IDE plugin integration is good, but we need better documentation for the CI/CD pipeline setup. Also, the automated fix suggestions need improvement.',
+      messageType: 'comment',
+      createdAt: new Date('2024-02-28T10:30:00Z'),
+    },
   ])
 
   // ============================================================================
@@ -2189,6 +2664,90 @@ async function seed() {
       weight: 1,
       isBinding: false,
       createdAt: new Date('2024-02-19T11:00:00Z'),
+    },
+
+    // Reviews for new milestones - Different voting scenarios for Alex Chen
+    // Testing Framework Milestone 1 - No reviews yet, needs Alex's first review
+    // (No reviews added - Alex needs to be the first reviewer)
+
+    // Analytics Milestone 1 - Has one approve vote, needs Alex's review
+    {
+      submissionId: infraPendingSubmission2.id,
+      milestoneId: analyticsMilestone1.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer2.id,
+      discussionId: analyticsMilestone1Discussion.id,
+      vote: 'approve',
+      feedback:
+        'Excellent improvements! The real-time pipeline performance is impressive and the multi-chain support is well-implemented.',
+      reviewType: 'milestone',
+      weight: 1,
+      isBinding: false,
+      createdAt: new Date('2024-02-23T10:00:00Z'),
+    },
+
+    // GraphQL Milestone 1 - Has one approve vote, needs Alex's review
+    {
+      submissionId: infraInReviewSubmission.id,
+      milestoneId: graphqlMilestone1.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer2.id,
+      discussionId: graphqlMilestone1Discussion.id,
+      vote: 'approve',
+      feedback:
+        'Outstanding work on the type safety improvements! The 96% type safety score and 40% performance improvement are remarkable.',
+      reviewType: 'milestone',
+      weight: 1,
+      isBinding: false,
+      createdAt: new Date('2024-02-26T09:00:00Z'),
+    },
+
+    // ZK Milestone 1 - Has one approve vote, needs Alex's review (URGENT - overdue)
+    {
+      submissionId: infraInReviewSubmission2.id,
+      milestoneId: zkMilestone1.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer2.id,
+      discussionId: zkMilestone1Discussion.id,
+      vote: 'approve',
+      feedback:
+        'Revolutionary work! The visual circuit designer and multi-proof system compiler are game-changing. The 97% innovation score speaks for itself.',
+      reviewType: 'milestone',
+      weight: 1,
+      isBinding: false,
+      createdAt: new Date('2024-02-27T08:00:00Z'),
+    },
+
+    // Web3 Milestone 2 - Has one approve vote, needs Alex's final vote for approval
+    {
+      submissionId: infraApprovedWithMilestones.id,
+      milestoneId: web3Milestone2.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer2.id,
+      discussionId: web3Milestone2Discussion.id,
+      vote: 'approve',
+      feedback:
+        'Fantastic multi-chain implementation! The optimistic updates system and error handling are particularly well-designed.',
+      reviewType: 'milestone',
+      weight: 1,
+      isBinding: false,
+      createdAt: new Date('2024-02-25T09:00:00Z'),
+    },
+
+    // Testing Framework Milestone 2 - Alex already reviewed and requested changes
+    {
+      submissionId: infraPendingSubmission1.id,
+      milestoneId: testingFrameworkMilestone2.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer1.id, // Alex Chen
+      discussionId: testingFrameworkMilestone2Discussion.id,
+      vote: 'reject',
+      feedback:
+        'The security analysis tools need more comprehensive vulnerability detection. Please add support for reentrancy attacks and integer overflow patterns. Also improve the IDE plugin documentation and automated fix suggestions.',
+      reviewType: 'milestone',
+      weight: 2,
+      isBinding: true,
+      createdAt: new Date('2024-02-28T10:00:00Z'),
     },
   ])
 
@@ -2382,6 +2941,126 @@ async function seed() {
       priority: 'normal',
       createdAt: new Date('2024-02-08T16:00:00Z'),
     },
+
+    // ============================================================================
+    // ADDITIONAL NOTIFICATIONS FOR ALEX CHEN - New Milestone Reviews
+    // ============================================================================
+
+    // Testing Framework Milestone 1 - Needs Alex's first review
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'milestone_submitted',
+      submissionId: infraPendingSubmission1.id,
+      milestoneId: testingFrameworkMilestone1.id,
+      discussionId: testingFrameworkMilestone1Discussion.id,
+      read: false,
+      content:
+        'New milestone submitted for review: "Core Testing Infrastructure & Fuzzing Engine" - Advanced Blockchain Testing Framework',
+      priority: 'high',
+      createdAt: new Date('2024-02-20T14:30:00Z'),
+    },
+
+    // Analytics Milestone 1 - Needs Alex's review (has one approve vote)
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'milestone_submitted',
+      submissionId: infraPendingSubmission2.id,
+      milestoneId: analyticsMilestone1.id,
+      discussionId: analyticsMilestone1Discussion.id,
+      read: false,
+      content:
+        'Milestone review needed: "Real-time Data Pipeline & Core Analytics Engine" - 1 of 2 votes received',
+      priority: 'high',
+      createdAt: new Date('2024-02-22T11:15:00Z'),
+    },
+
+    // GraphQL Milestone 1 - Needs Alex's review (has one approve vote)
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'milestone_submitted',
+      submissionId: infraInReviewSubmission.id,
+      milestoneId: graphqlMilestone1.id,
+      discussionId: graphqlMilestone1Discussion.id,
+      read: false,
+      content:
+        'Milestone review needed: "Core GraphQL Schema Generation & Type Safety" - 1 of 2 votes received',
+      priority: 'high',
+      createdAt: new Date('2024-02-25T09:45:00Z'),
+    },
+
+    // ZK Milestone 1 - URGENT review needed (overdue, has one approve vote)
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'milestone_submitted',
+      submissionId: infraInReviewSubmission2.id,
+      milestoneId: zkMilestone1.id,
+      discussionId: zkMilestone1Discussion.id,
+      read: false,
+      content:
+        'URGENT: Overdue milestone review needed: "Visual Circuit Designer & Multi-Proof System Compiler" - 1 of 2 votes received',
+      priority: 'high',
+      createdAt: new Date('2024-02-26T16:20:00Z'),
+    },
+
+    // Web3 Milestone 2 - Needs Alex's final vote for approval
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'milestone_submitted',
+      submissionId: infraApprovedWithMilestones.id,
+      milestoneId: web3Milestone2.id,
+      discussionId: web3Milestone2Discussion.id,
+      read: false,
+      content:
+        'Final vote needed: "Advanced Features & Multi-Chain Support" - 1 of 2 votes received (ready for approval)',
+      priority: 'high',
+      createdAt: new Date('2024-02-24T13:30:00Z'),
+    },
+
+    // Testing Framework Milestone 2 - Team responded to changes requested
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'milestone_submitted',
+      submissionId: infraPendingSubmission1.id,
+      milestoneId: testingFrameworkMilestone2.id,
+      discussionId: testingFrameworkMilestone2Discussion.id,
+      read: false,
+      content:
+        'Milestone resubmitted after changes requested: "Advanced Security Analysis & Integration Tools" - Ready for re-review',
+      priority: 'normal',
+      createdAt: new Date('2024-02-28T15:00:00Z'),
+    },
+
+    // Additional milestone activity notifications
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'new_comment',
+      submissionId: infraPendingSubmission1.id,
+      discussionId: testingFrameworkMilestone1Discussion.id,
+      read: false,
+      content:
+        'New comment on "Core Testing Infrastructure & Fuzzing Engine" milestone by John Developer',
+      priority: 'normal',
+      createdAt: new Date('2024-02-20T15:00:00Z'),
+    },
+    {
+      userId: reviewer1.id,
+      groupId: infraCommittee.id,
+      type: 'new_comment',
+      submissionId: infraInReviewSubmission2.id,
+      discussionId: zkMilestone1Discussion.id,
+      read: false,
+      content:
+        'New comment on "Visual Circuit Designer & Multi-Proof System Compiler" milestone by Alice Innovator',
+      priority: 'normal',
+      createdAt: new Date('2024-02-26T17:10:00Z'),
+    },
   ])
 
   // ============================================================================
@@ -2391,10 +3070,22 @@ async function seed() {
   console.log('✅ Comprehensive database seeding completed successfully!')
   console.log('\n=== SUMMARY ===')
   console.log(`🏛️  Created ${4} committee groups:`)
-  console.log('   • Infrastructure Development Committee (active)')
+  console.log(
+    '   • Infrastructure Development Committee (active) 🔐 MULTISIG ENABLED'
+  )
   console.log('   • Research & Education Committee (active)')
   console.log('   • DeFi Innovation Committee (active)')
   console.log('   • Gaming & NFT Committee (active)')
+  console.log('\n🔐 MULTISIG CONFIGURATION (Infrastructure Committee):')
+  console.log(`   • Multisig Address: ${MULTISIG_ADDRESS}`)
+  console.log(`   • Signatory 1: ${SIGNATORY_1_ADDRESS}`)
+  console.log(`   • Signatory 2: ${SIGNATORY_2_ADDRESS}`)
+  console.log('   • Threshold: 2 of 2 signatures required')
+  console.log(
+    '   • Approval Workflow: MERGED (review + blockchain signature combined)'
+  )
+  console.log('   • Network: Paseo Testnet')
+  console.log('   • Automatic Execution: Enabled')
 
   console.log(`\n👥 Created ${5} team groups:`)
   console.log('   • NextGen SDK Team')
@@ -2407,6 +3098,9 @@ async function seed() {
   console.log('   • 4 reviewers with committee primary role')
   console.log('   • 5 team members with team primary role')
   console.log('   • All passwords: reviewer123, team1234 respectively')
+  console.log(
+    '   • Alex Chen & Maria Rodriguez: Configured with multisig wallet addresses'
+  )
 
   console.log(`\n💼 Created ${6} grant programs across committees`)
   console.log('   • Infrastructure: Core Development ($100K), Tools ($50K)')
@@ -2420,11 +3114,11 @@ async function seed() {
   console.log('   • 4 PENDING (just submitted)')
   console.log('   • 1 REJECTED (with feedback)')
 
-  console.log(`\n🎯 Created ${7} milestones across approved submissions:`)
+  console.log(`\n🎯 Created ${13} milestones across approved submissions:`)
   console.log('   • 1 COMPLETED (with payout)')
   console.log('   • 1 CHANGES-REQUESTED')
-  console.log('   • 1 IN-REVIEW (submitted, awaiting approval)')
-  console.log('   • 4 PENDING')
+  console.log('   • 6 IN-REVIEW (submitted, awaiting approval)')
+  console.log('   • 5 PENDING')
 
   console.log(`\n💬 Created active discussions with messages and reviews`)
   console.log(`💰 Created example payouts (completed and pending)`)
@@ -2451,15 +3145,19 @@ async function seed() {
   console.log(
     '   • "Zero-Knowledge Proof Toolkit" - 2/3 votes (near approval!)'
   )
-  console.log('✅ Milestone Review (1):')
-  console.log(
-    '   • "Core State Management Implementation" - Web3 State Library'
-  )
-  console.log('🔔 Unread Notifications (6):')
+  console.log('✅ Milestone Reviews (7):')
+  console.log('   • "Core State Management Implementation" - Web3 State Library')
+  console.log('   • "Core Testing Infrastructure & Fuzzing Engine" - Testing Framework')
+  console.log('   • "Real-time Data Pipeline & Core Analytics Engine" - Analytics Dashboard')
+  console.log('   • "Core GraphQL Schema Generation & Type Safety" - GraphQL Generator')
+  console.log('   • "Visual Circuit Designer & Multi-Proof System Compiler" - ZK Toolkit (URGENT - Overdue)')
+  console.log('   • "Advanced Features & Multi-Chain Support" - Web3 State Library')
+  console.log('   • "Advanced Security Analysis & Integration Tools" - Testing Framework (Changes Requested)')
+  console.log('🔔 Unread Notifications (13):')
   console.log('   • 2 new submissions')
   console.log('   • 2 review requests')
-  console.log('   • 1 milestone submission')
-  console.log('   • 1 new comment\n')
+  console.log('   • 6 milestone submissions (1 urgent)')
+  console.log('   • 3 new comments\n')
 }
 
 seed()

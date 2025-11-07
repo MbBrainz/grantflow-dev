@@ -33,7 +33,6 @@ docs/
 ├── guides/                 # Documentation guides
 │   ├── review-walkthrough.md
 │   ├── submitter-walkthrough.md
-│   ├── github-setup.md
 │   ├── review-walkthrough-images/  # Images for review guide
 │   └── submitter-walkthrough-images/ # Images for submitter guide
 ├── index.md               # Homepage
