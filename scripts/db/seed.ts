@@ -186,16 +186,16 @@ async function seed() {
           'security_review',
           'final_approval',
         ],
-        multisig: {
-          multisigAddress: MULTISIG_ADDRESS,
-          signatories: [SIGNATORY_1_ADDRESS, SIGNATORY_2_ADDRESS],
-          threshold: 2,
-          approvalWorkflow: 'merged',
-          requireAllSignatories: true,
-          votingTimeoutBlocks: 50400, // ~7 days on Polkadot (6s blocks)
-          automaticExecution: true,
-          network: 'paseo',
-        },
+        // multisig: {
+        //   multisigAddress: MULTISIG_ADDRESS,
+        //   signatories: [SIGNATORY_1_ADDRESS, SIGNATORY_2_ADDRESS],
+        //   threshold: 2,
+        //   approvalWorkflow: 'merged',
+        //   requireAllSignatories: true,
+        //   votingTimeoutBlocks: 50400, // ~7 days on Polkadot (6s blocks)
+        //   automaticExecution: true,
+        //   network: 'paseo',
+        // },
       },
     })
     .returning()
@@ -2085,7 +2085,9 @@ async function seed() {
   // ADDITIONAL MILESTONES FOR ALEX CHEN TO REVIEW
   // ============================================================================
 
-  console.log('Creating additional milestones for Alex Chen review scenarios...')
+  console.log(
+    'Creating additional milestones for Alex Chen review scenarios...'
+  )
 
   // SCENARIO 1: Recently submitted milestone - needs Alex's review
   const [testingFrameworkMilestone1] = await db
@@ -2121,7 +2123,12 @@ async function seed() {
         filesChanged: 45,
         linesAdded: 3200,
         testCoverage: 92,
-        components: ['Fuzzing engine', 'Property testing', 'Gas analyzer', 'Vulnerability scanner'],
+        components: [
+          'Fuzzing engine',
+          'Property testing',
+          'Gas analyzer',
+          'Vulnerability scanner',
+        ],
         securityScore: 95,
         performanceScore: 88,
       }),
@@ -2165,7 +2172,12 @@ async function seed() {
         filesChanged: 38,
         linesAdded: 2800,
         testCoverage: 89,
-        components: ['Data pipeline', 'Analytics engine', 'Dashboard', 'Alerting system'],
+        components: [
+          'Data pipeline',
+          'Analytics engine',
+          'Dashboard',
+          'Alerting system',
+        ],
         performanceScore: 94,
         scalabilityScore: 91,
       }),
@@ -2209,7 +2221,12 @@ async function seed() {
         filesChanged: 32,
         linesAdded: 2400,
         testCoverage: 87,
-        components: ['Schema generator', 'Type system', 'Caching', 'Subscriptions'],
+        components: [
+          'Schema generator',
+          'Type system',
+          'Caching',
+          'Subscriptions',
+        ],
         typeSafetyScore: 96,
         performanceScore: 89,
       }),
@@ -2253,7 +2270,12 @@ async function seed() {
         filesChanged: 52,
         linesAdded: 4100,
         testCoverage: 91,
-        components: ['Visual designer', 'Multi-proof compiler', 'Optimizer', 'Benchmarker'],
+        components: [
+          'Visual designer',
+          'Multi-proof compiler',
+          'Optimizer',
+          'Benchmarker',
+        ],
         complexityScore: 94,
         innovationScore: 97,
       }),
@@ -2297,7 +2319,12 @@ async function seed() {
         filesChanged: 28,
         linesAdded: 1950,
         testCoverage: 90,
-        components: ['Multi-chain support', 'Optimistic updates', 'Advanced caching', 'Error handling'],
+        components: [
+          'Multi-chain support',
+          'Optimistic updates',
+          'Advanced caching',
+          'Error handling',
+        ],
         reliabilityScore: 93,
         performanceScore: 91,
       }),
@@ -3146,13 +3173,27 @@ async function seed() {
     '   • "Zero-Knowledge Proof Toolkit" - 2/3 votes (near approval!)'
   )
   console.log('✅ Milestone Reviews (7):')
-  console.log('   • "Core State Management Implementation" - Web3 State Library')
-  console.log('   • "Core Testing Infrastructure & Fuzzing Engine" - Testing Framework')
-  console.log('   • "Real-time Data Pipeline & Core Analytics Engine" - Analytics Dashboard')
-  console.log('   • "Core GraphQL Schema Generation & Type Safety" - GraphQL Generator')
-  console.log('   • "Visual Circuit Designer & Multi-Proof System Compiler" - ZK Toolkit (URGENT - Overdue)')
-  console.log('   • "Advanced Features & Multi-Chain Support" - Web3 State Library')
-  console.log('   • "Advanced Security Analysis & Integration Tools" - Testing Framework (Changes Requested)')
+  console.log(
+    '   • "Core State Management Implementation" - Web3 State Library'
+  )
+  console.log(
+    '   • "Core Testing Infrastructure & Fuzzing Engine" - Testing Framework'
+  )
+  console.log(
+    '   • "Real-time Data Pipeline & Core Analytics Engine" - Analytics Dashboard'
+  )
+  console.log(
+    '   • "Core GraphQL Schema Generation & Type Safety" - GraphQL Generator'
+  )
+  console.log(
+    '   • "Visual Circuit Designer & Multi-Proof System Compiler" - ZK Toolkit (URGENT - Overdue)'
+  )
+  console.log(
+    '   • "Advanced Features & Multi-Chain Support" - Web3 State Library'
+  )
+  console.log(
+    '   • "Advanced Security Analysis & Integration Tools" - Testing Framework (Changes Requested)'
+  )
   console.log('🔔 Unread Notifications (13):')
   console.log('   • 2 new submissions')
   console.log('   • 2 review requests')
