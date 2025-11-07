@@ -26,14 +26,12 @@ export function PublicSubmissionView({
   const reviews = submission.reviews ?? []
   const approveVotes = reviews.filter(r => r.vote === 'approve').length
   const totalVotes = reviews.length
-  const totalMilestones = submission.milestones?.length ?? 0
   // Only show messages from public discussions
   const publicDiscussion = submission.discussions?.find(d => d.isPublic)
   const publicMessages = publicDiscussion?.messages ?? []
 
   return (
     <div className="space-y-6">
-
       {/* Voting Results */}
       {reviews.length > 0 && (
         <Card className="p-6">

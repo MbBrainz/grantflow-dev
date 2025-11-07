@@ -38,7 +38,7 @@ import {
 export async function getSubmissionDetails(submissionId: number) {
   try {
     const submission = await getSubmissionById(submissionId)
-    
+
     if (!submission) {
       return { error: 'Submission not found' }
     }
@@ -51,7 +51,7 @@ export async function getSubmissionDetails(submissionId: number) {
         walletAddress: submission.walletAddress,
         status: submission.status,
         submitter: submission.submitter,
-      }
+      },
     }
   } catch (error) {
     console.error('[getSubmissionDetails]: Failed to get submission', error)
@@ -254,27 +254,42 @@ export const createSubmission = async (
     // Parse JSON fields
     let parsedData: Record<string, unknown>
     try {
+      // Parse labels - JSON.parse returns any, but we validate with Zod immediately after
+      let parsedLabels: unknown
+      if (typeof rawData.labels === 'string') {
+        parsedLabels = JSON.parse(rawData.labels)
+      } else {
+        parsedLabels = rawData.labels
+      }
+
+      // Parse milestones - JSON.parse returns any, but we validate with Zod immediately after
+      let parsedMilestones: unknown
+      if (typeof rawData.milestones === 'string') {
+        parsedMilestones = JSON.parse(rawData.milestones)
+      } else {
+        parsedMilestones = rawData.milestones
+      }
+
       parsedData = {
         ...rawData,
-        labels:
-          typeof rawData.labels === 'string'
-            ? (JSON.parse(rawData.labels) as unknown)
-            : rawData.labels,
-        milestones:
-          typeof rawData.milestones === 'string'
-            ? (JSON.parse(rawData.milestones) as unknown)
-            : rawData.milestones,
+        labels: parsedLabels,
+        milestones: parsedMilestones,
       }
+
+      // Type-safe logging with proper type guards
+      const labelsArray = Array.isArray(parsedLabels) ? parsedLabels : null
+      const milestonesArray = Array.isArray(parsedMilestones)
+        ? parsedMilestones
+        : null
+
       console.log('[createSubmission]: Parsed data:', {
         ...parsedData,
         labels: parsedData.labels,
         labelsType: typeof parsedData.labels,
         labelsIsArray: Array.isArray(parsedData.labels),
-        labelsLength: Array.isArray(parsedData.labels)
-          ? (parsedData.labels as unknown[]).length
-          : 'not array',
-        milestones: Array.isArray(parsedData.milestones)
-          ? `${(parsedData.milestones as unknown[]).length} milestones`
+        labelsLength: labelsArray ? labelsArray.length : 'not array',
+        milestones: milestonesArray
+          ? `${milestonesArray.length} milestones`
           : 'not array',
         milestonesType: typeof parsedData.milestones,
       })

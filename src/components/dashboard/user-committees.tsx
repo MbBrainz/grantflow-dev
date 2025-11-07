@@ -28,13 +28,11 @@ const fetcher = async (url: string): Promise<UserCommitteesResponse> => {
   const res = await fetch(url)
   if (!res.ok) throw new Error('Failed to fetch committees')
 
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-return
-  return res.json()
+  return res.json() as Promise<UserCommitteesResponse>
 }
 
 export function UserCommittees({ userId }: UserCommitteesProps) {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-  const { data, error, isLoading } = useSWR<UserCommitteesResponse>(
+  const { data, error, isLoading } = useSWR<UserCommitteesResponse, Error>(
     `/api/user/committees?userId=${userId}`,
     fetcher
   )

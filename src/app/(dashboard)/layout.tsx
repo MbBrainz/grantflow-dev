@@ -19,12 +19,11 @@ import { LunoKitProvider } from '@luno-kit/ui'
 import { PolkadotWalletSelector } from '@/components/wallet/polkadot-wallet-selector'
 import { PolkadotChainSelector } from '@/components/wallet/polkadot-chain-selector'
 import { config } from '@/lib/polkadot/lunokit'
-
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+import { fetcher } from '@/lib/utils'
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { data: user } = useSWR<User>('/api/user', fetcher)
+  const { data: user } = useSWR<User>('/api/user', fetcher<User>)
   const router = useRouter()
 
   async function handleSignOut() {

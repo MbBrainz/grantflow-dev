@@ -1,4 +1,4 @@
-import { ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
 
@@ -27,13 +27,7 @@ export function MetadataGrid({
   }
 
   return (
-    <div
-      className={cn(
-        'grid grid-cols-1 gap-4',
-        gridCols[columns],
-        className
-      )}
-    >
+    <div className={cn('grid grid-cols-1 gap-4', gridCols[columns], className)}>
       {items.map((item, index) => (
         <Card key={index} className="p-3">
           <div className="mb-1 flex items-center gap-2">
@@ -50,4 +44,3 @@ export function MetadataGrid({
     </div>
   )
 }
-
