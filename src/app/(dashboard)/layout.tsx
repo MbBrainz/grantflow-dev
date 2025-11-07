@@ -15,12 +15,11 @@ import { signOut } from '@/app/(login)/actions'
 import { useRouter } from 'next/navigation'
 import type { User } from '@/lib/db/schema'
 import useSWR, { mutate } from 'swr'
-
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+import { fetcher } from '@/lib/utils'
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
-  const { data: user } = useSWR<User>('/api/user', fetcher)
+  const { data: user } = useSWR<User>('/api/user', fetcher<User>)
   const router = useRouter()
 
   async function handleSignOut() {

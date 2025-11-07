@@ -1,10 +1,8 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { ArrowLeft, Users } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { Users } from 'lucide-react'
 import Link from 'next/link'
 import type { GrantProgramWithDetails } from '@/lib/db/queries/grant-programs'
 import { GrantProgramCard } from '@/components/committee/grant-program-card'
@@ -28,44 +26,8 @@ export function GrantProgramDetailView({
   program,
   financials,
 }: GrantProgramDetailViewProps) {
-  const router = useRouter()
-
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      {/* Header */}
-      <div className="mb-6 flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.back()}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-
-          <div>
-            <h1 className="text-3xl font-bold">{program.name}</h1>
-            <div className="mt-1 flex items-center gap-2">
-              <Badge variant={program.isActive ? 'default' : 'secondary'}>
-                {program.isActive ? 'Active' : 'Inactive'}
-              </Badge>
-              {program.group && (
-                <Link href={`/dashboard/committees/${program.group.id}`}>
-                  <Badge
-                    variant="outline"
-                    className="cursor-pointer hover:bg-gray-100"
-                  >
-                    {program.group.name}
-                  </Badge>
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Program Overview Card */}
       <GrantProgramCard
         program={program}

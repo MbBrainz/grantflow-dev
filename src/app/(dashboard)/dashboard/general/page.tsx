@@ -13,8 +13,7 @@ import {
 import type { User } from '@/lib/db/schema'
 import useSWR from 'swr'
 import { Suspense } from 'react'
-
-const fetcher = (url: string) => fetch(url).then(res => res.json())
+import { fetcher } from '@/lib/utils'
 
 interface AccountFormProps {
   state: AccountFormState

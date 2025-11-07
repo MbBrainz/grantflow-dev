@@ -25,12 +25,6 @@ features:
     details: Step-by-step instructions for submitting grant proposals, defining milestones, and tracking your applications.
     link: /guides/submitter-walkthrough
     linkText: Read Guide
-  
-  - icon: ⚙️
-    title: Developer Setup
-    details: Technical documentation for GitHub integration, database setup, and development workflows.
-    link: /guides/github-setup
-    linkText: Read Docs
 ---
 
 ## Quick Links
@@ -45,5 +39,3 @@ features:
 - [Defining Milestones](/guides/submitter-walkthrough#step-3-completing-the-application-form)
 - [Tracking Status](/guides/submitter-walkthrough#step-6-submission-status-and-review-process)
 
-### For Developers
-- [GitHub Integration](/guides/github-setup)

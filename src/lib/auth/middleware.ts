@@ -22,6 +22,22 @@ type ValidatedActionWithUserFunction<TInput, TOutput extends ActionState> = (
   user: User
 ) => Promise<TOutput>
 
+/**
+ * Creates an authenticated server action that accepts plain objects.
+ *
+ * **Use when:** Calling server actions directly from client components.
+ * **Input:** Plain object (data)
+ * **Returns:** `TOutput | { error: string }` - throws on auth failure
+ * **Error handling:** No try-catch wrapper - errors propagate
+ *
+ * @example
+ * ```ts
+ * const myAction = validatedActionWithUser(schema, async (data, user) => {
+ *   return { success: true }
+ * })
+ * const result = await myAction({ id: 1 })
+ * ```
+ */
 export function validatedActionWithUser<
   TSchema extends ZodLike,
   TOutput extends ActionState,
@@ -139,6 +155,22 @@ type ValidatedActionWithUserStateFunction<
   TState extends ActionState,
 > = (data: TInput, user: User) => Promise<TState>
 
+/**
+ * Creates an authenticated server action compatible with React's `useActionState` hook.
+ *
+ * **Use when:** Integrating with `useActionState` for form state management.
+ * **Input:** `(prevState: TState, formData: FormData)`
+ * **Returns:** `TState` - always returns state (merges with prevState)
+ * **Error handling:** Try-catch wrapper - returns error state instead of throwing
+ *
+ * @example
+ * ```ts
+ * const myAction = validatedActionWithUserState(schema, async (data, user) => {
+ *   return { success: true }
+ * })
+ * const [state, formAction] = useActionState(myAction, initialState)
+ * ```
+ */
 export function validatedActionWithUserState<
   TSchema extends ZodLike,
   TState extends ActionState,

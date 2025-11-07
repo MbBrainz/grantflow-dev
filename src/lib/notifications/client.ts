@@ -13,8 +13,20 @@ export interface RealtimeNotification extends NotificationData {
 interface SSEMessage {
   type: 'connection' | 'heartbeat' | 'notification'
   timestamp: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  [key: string]: any
+  [key: string]: unknown
+}
+
+// Type guard to validate SSE message structure
+function isSSEMessage(data: unknown): data is SSEMessage {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'type' in data &&
+    'timestamp' in data &&
+    (data.type === 'connection' ||
+      data.type === 'heartbeat' ||
+      data.type === 'notification')
+  )
 }
 
 interface NotificationConnectionState {
@@ -72,9 +84,16 @@ export function useNotificationStream(shouldConnect = true) {
 
       eventSource.onmessage = event => {
         try {
-          const message: SSEMessage = JSON.parse(
-            event.data as string
-          ) as unknown as SSEMessage
+          // Parse SSE message - JSON.parse returns any, validate structure before use
+          const parsedData: unknown = JSON.parse(event.data as string)
+          if (!isSSEMessage(parsedData)) {
+            console.error(
+              '[notifications-client]: Invalid SSE message structure',
+              parsedData
+            )
+            return
+          }
+          const message = parsedData
           console.log('[notifications-client]: Received SSE message', message)
 
           switch (message.type) {
@@ -90,8 +109,10 @@ export function useNotificationStream(shouldConnect = true) {
               break
 
             case 'notification':
+              // Type assertion is safe here - we've already validated message.type === 'notification'
+              // The message object contains all RealtimeNotification fields
               handleRealtimeNotification(
-                message as unknown as RealtimeNotification
+                parsedData as unknown as RealtimeNotification
               )
               break
 
