@@ -3,7 +3,7 @@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { ArrowLeft, Settings, ExternalLink, Github } from 'lucide-react'
+import { Settings, ExternalLink, Github } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { CommitteeWithDetails } from '@/lib/db/queries/committees'
@@ -36,36 +36,24 @@ export function CommitteeDetailView({
     <div className="mx-auto max-w-6xl space-y-6">
       {/* Header */}
       <div className="mb-6 flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.back()}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back
-          </Button>
-
-          <div>
-            <div className="flex items-center gap-3">
-              {committee.logoUrl && (
-                <Image
-                  src={committee.logoUrl ?? undefined}
-                  alt={committee.name}
-                  className="h-12 w-12 rounded-lg object-cover"
-                  width={48}
-                  height={48}
-                />
-              )}
-              <div>
-                <h1 className="text-3xl font-bold">{committee.name}</h1>
-                <div className="mt-1 flex items-center gap-2">
-                  <Badge variant={committee.isActive ? 'default' : 'secondary'}>
-                    {committee.isActive ? 'Active' : 'Inactive'}
-                  </Badge>
-                  <Badge variant="outline">Committee</Badge>
-                </div>
+        <div>
+          <div className="flex items-center gap-3">
+            {committee.logoUrl && (
+              <Image
+                src={committee.logoUrl ?? undefined}
+                alt={committee.name}
+                className="h-12 w-12 rounded-lg object-cover"
+                width={48}
+                height={48}
+              />
+            )}
+            <div>
+              <h1 className="text-3xl font-bold">{committee.name}</h1>
+              <div className="mt-1 flex items-center gap-2">
+                <Badge variant={committee.isActive ? 'default' : 'secondary'}>
+                  {committee.isActive ? 'Active' : 'Inactive'}
+                </Badge>
+                <Badge variant="outline">Committee</Badge>
               </div>
             </div>
           </div>

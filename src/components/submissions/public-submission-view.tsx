@@ -4,16 +4,13 @@ import { Card } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  Eye,
-  DollarSign,
-  Target,
   CheckCircle,
   Clock,
-  Users,
   GitBranch,
-  Award,
-  TrendingUp,
   MessageSquare,
+  Target,
+  TrendingUp,
+  Users,
 } from 'lucide-react'
 
 import type { SubmissionWithMilestones } from '@/lib/db/schema'
@@ -29,8 +26,6 @@ export function PublicSubmissionView({
   const reviews = submission.reviews ?? []
   const approveVotes = reviews.filter(r => r.vote === 'approve').length
   const totalVotes = reviews.length
-  const completedMilestones =
-    submission.milestones?.filter(m => m.status === 'completed').length ?? 0
   const totalMilestones = submission.milestones?.length ?? 0
   // Only show messages from public discussions
   const publicDiscussion = submission.discussions?.find(d => d.isPublic)
@@ -38,170 +33,6 @@ export function PublicSubmissionView({
 
   return (
     <div className="space-y-6">
-      {/* Public Overview Hero */}
-      <Card className="border-l-4 border-l-purple-500 bg-purple-50/50 p-6">
-        <div className="mb-6 flex items-start gap-4">
-          <div className="rounded-full bg-purple-100 p-3 text-purple-600">
-            <Eye className="h-6 w-6" />
-          </div>
-
-          <div className="flex-1">
-            <div className="mb-2 flex items-center gap-3">
-              <h2 className="text-2xl font-bold">Public Transparency View</h2>
-              <Badge className="bg-green-100 text-green-800">
-                Open for Review
-              </Badge>
-            </div>
-            <p className="text-lg text-gray-600">
-              This submission is publicly viewable as part of our transparency
-              commitment. All voting, decisions, and progress are open for
-              community review.
-            </p>
-          </div>
-        </div>
-
-        {/* Public Metrics Grid */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-          <div className="rounded-lg border bg-white p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <Users className="h-4 w-4 text-blue-600" />
-              <span className="font-medium">Committee Votes</span>
-            </div>
-            <p className="text-lg font-bold">
-              {approveVotes}/{totalVotes}
-            </p>
-            <p className="text-xs text-gray-600">Approve/Total</p>
-          </div>
-
-          <div className="rounded-lg border bg-white p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <DollarSign className="h-4 w-4 text-green-600" />
-              <span className="font-medium">Funding</span>
-            </div>
-            <p className="text-lg font-bold">
-              ${submission.totalAmount?.toLocaleString() ?? 'TBD'}
-            </p>
-            <p className="text-xs text-gray-600">Requested</p>
-          </div>
-
-          <div className="rounded-lg border bg-white p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <Target className="h-4 w-4 text-orange-600" />
-              <span className="font-medium">Progress</span>
-            </div>
-            <p className="text-lg font-bold">
-              {completedMilestones}/{totalMilestones}
-            </p>
-            <p className="text-xs text-gray-600">Milestones</p>
-          </div>
-
-          <div className="rounded-lg border bg-white p-4">
-            <div className="mb-2 flex items-center gap-2">
-              <Clock className="h-4 w-4 text-purple-600" />
-              <span className="font-medium">Timeline</span>
-            </div>
-            <p className="text-sm font-medium">
-              {Math.floor(
-                (Date.now() - new Date(submission.appliedAt).getTime()) /
-                  (1000 * 60 * 60 * 24)
-              )}{' '}
-              days
-            </p>
-            <p className="text-xs text-gray-600">Since applied</p>
-          </div>
-        </div>
-      </Card>
-
-      {/* Project Summary */}
-      <Card className="p-6">
-        <div className="mb-4 flex items-center gap-2">
-          <Award className="h-5 w-5 text-blue-600" />
-          <h3 className="text-xl font-semibold">Project Summary</h3>
-        </div>
-
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          <div className="space-y-4">
-            <div>
-              <h4 className="mb-2 font-medium">Executive Summary</h4>
-              <p className="text-gray-700">{submission.executiveSummary}</p>
-            </div>
-
-            <div>
-              <h4 className="mb-2 font-medium">Project Goals</h4>
-              <p className="text-gray-700">{submission.description}</p>
-            </div>
-
-            {submission.postGrantPlan && (
-              <div>
-                <h4 className="mb-2 font-medium">Post-Grant Development</h4>
-                <p className="text-gray-700">{submission.postGrantPlan}</p>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <h4 className="mb-2 font-medium">Project Information</h4>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Applied:</span>
-                  <span>
-                    {new Date(submission.appliedAt).toLocaleDateString()}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Status:</span>
-                  <Badge
-                    className={`${
-                      submission.status === 'approved'
-                        ? 'bg-green-100 text-green-800'
-                        : submission.status === 'rejected'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                    }`}
-                  >
-                    {submission.status.replace('_', ' ').toUpperCase()}
-                  </Badge>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Total Milestones:</span>
-                  <span>{totalMilestones}</span>
-                </div>
-                {submission.githubRepoUrl && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Repository:</span>
-                    <a
-                      href={submission.githubRepoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-blue-600 hover:underline"
-                    >
-                      <GitBranch className="h-3 w-3" />
-                      View Code
-                    </a>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Labels */}
-            {submission.labels && (
-              <div>
-                <h4 className="mb-2 font-medium">Project Tags</h4>
-                <div className="flex flex-wrap gap-2">
-                  {(JSON.parse(submission.labels) as string[]).map(
-                    (label: string, index: number) => (
-                      <Badge key={index} variant="outline" className="text-xs">
-                        {label}
-                      </Badge>
-                    )
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
 
       {/* Voting Results */}
       {reviews.length > 0 && (

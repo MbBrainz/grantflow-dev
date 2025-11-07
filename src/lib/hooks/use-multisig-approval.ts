@@ -147,7 +147,8 @@ export function useMultisigApproval(
 
   const hasUserVoted = useCallback(
     (userAddress: string) => {
-      return signatories.some(sig => sig.address === userAddress)
+      const normalized = userAddress.trim()
+      return signatories.some(sig => sig.address.trim() === normalized)
     },
     [signatories]
   )

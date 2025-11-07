@@ -81,6 +81,23 @@ export function MilestoneVotingPanel({
   } = useMultisigApproval(milestoneId, multisigConfig.network)
 
   const [isProcessing, setIsProcessing] = useState(false)
+  const activeAddress = address?.trim()
+  const hasCurrentUserApproved = activeAddress
+    ? hasUserVoted(activeAddress)
+    : false
+  const isSignatory =
+    !!activeAddress &&
+    multisigConfig.signatories.some(
+      signatory => signatory.trim() === activeAddress
+    )
+  const canExecute =
+    !!activeAddress && isSignatory && !!voteCount && voteCount.thresholdMet
+  const canApprove =
+    !!activeAddress &&
+    isSignatory &&
+    !!voteCount &&
+    !voteCount.thresholdMet &&
+    !hasCurrentUserApproved
 
   // Load approval status on mount and when dialog opens
   useEffect(() => {
@@ -88,7 +105,7 @@ export function MilestoneVotingPanel({
   }, [checkExistingApproval])
 
   const handleInitialApproval = async () => {
-    if (!isConnected || !address || !signer || !client) {
+    if (!isConnected || !activeAddress || !signer || !client) {
       toast({
         title: 'Wallet not connected',
         description: 'Please connect your Polkadot wallet to initiate approval',
@@ -129,7 +146,7 @@ export function MilestoneVotingPanel({
         multisigConfig,
         milestoneId,
         payoutAmount: BigInt(milestoneAmount),
-        initiatorAddress: address,
+        initiatorAddress: activeAddress,
         signer,
         useBatch: true,
         network: multisigConfig.network ?? 'paseo',
@@ -141,7 +158,7 @@ export function MilestoneVotingPanel({
         timepoint: polkadotResult.timepoint,
         approvalWorkflow: 'separated',
         txHash: polkadotResult.txHash,
-        initiatorWalletAddress: address,
+        initiatorWalletAddress: activeAddress,
         callHash: polkadotResult.callHash,
         callDataHex: u8aToString(polkadotResult.callData),
       })
@@ -172,10 +189,26 @@ export function MilestoneVotingPanel({
   }
 
   const handleApproveVote = async () => {
-    if (!isConnected || !address || !signer || !client || !existingApproval) {
+    if (
+      !isConnected ||
+      !activeAddress ||
+      !signer ||
+      !client ||
+      !existingApproval
+    ) {
       toast({
         title: 'Cannot vote',
         description: 'Wallet not connected or no active approval found',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!isSignatory) {
+      toast({
+        title: 'Not a signatory',
+        description:
+          'Only configured multisig signatories can approve this transaction.',
         variant: 'destructive',
       })
       return
@@ -205,7 +238,7 @@ export function MilestoneVotingPanel({
         timepoint: existingApproval.timepoint ?? { height: 0, index: 0 },
         threshold: multisigConfig.threshold,
         allSignatories: multisigConfig.signatories,
-        approverAddress: address,
+        approverAddress: activeAddress,
         signer,
         network: multisigConfig.network ?? 'paseo',
       })
@@ -213,7 +246,7 @@ export function MilestoneVotingPanel({
       // Record the vote in database
       await castMultisigVote({
         approvalId: existingApproval.id,
-        signatoryAddress: address,
+        signatoryAddress: activeAddress,
         signatureType: 'signed',
         txHash: polkadotResult.txHash,
       })
@@ -248,10 +281,26 @@ export function MilestoneVotingPanel({
   }
 
   const handleExecute = async () => {
-    if (!isConnected || !address || !signer || !client || !existingApproval) {
+    if (
+      !isConnected ||
+      !activeAddress ||
+      !signer ||
+      !client ||
+      !existingApproval
+    ) {
       toast({
         title: 'Cannot execute',
         description: 'Wallet not connected or no active approval found',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    if (!isSignatory) {
+      toast({
+        title: 'Not a signatory',
+        description:
+          'Only configured multisig signatories can execute this transaction.',
         variant: 'destructive',
       })
       return
@@ -286,15 +335,26 @@ export function MilestoneVotingPanel({
       }
       const beneficiaryAddress = submissionResult.submission.walletAddress
 
+      let callDataBytes = new Uint8Array()
+      try {
+        const rawCallData = existingApproval.callData?.trim()
+        if (rawCallData?.startsWith('[')) {
+          callDataBytes = new Uint8Array(JSON.parse(rawCallData) as number[])
+        }
+      } catch (parseError) {
+        console.warn(
+          '[MilestoneVotingPanel]: Unable to parse stored call data, falling back to regenerated call',
+          parseError
+        )
+      }
+
       // Execute the final multisig transaction
       const polkadotResult = await finalizeMultisigCall({
         client,
-        callData: new Uint8Array(
-          JSON.parse(existingApproval.callData ?? '[]') as number[]
-        ),
+        callData: callDataBytes,
         threshold: multisigConfig.threshold,
         allSignatories: multisigConfig.signatories,
-        executorAddress: address,
+        executorAddress: activeAddress,
         signer,
         beneficiaryAddress,
         payoutAmount: BigInt(milestoneAmount),
@@ -306,7 +366,7 @@ export function MilestoneVotingPanel({
       // Finalize the approval in database
       await finalizeMultisigApproval({
         approvalId: existingApproval.id,
-        signatoryAddress: address,
+        signatoryAddress: activeAddress,
         executionTxHash: polkadotResult.txHash,
         executionBlockNumber: polkadotResult.blockNumber,
       })
@@ -393,7 +453,7 @@ export function MilestoneVotingPanel({
               <span className="text-sm text-green-700">
                 Connected:{' '}
                 <code className="rounded bg-green-100 px-1 py-0.5 text-xs">
-                  {address?.slice(0, 8)}...{address?.slice(-6)}
+                  {activeAddress?.slice(0, 8)}...{activeAddress?.slice(-6)}
                 </code>
               </span>
             </div>
@@ -455,27 +515,36 @@ export function MilestoneVotingPanel({
                 </Card>
 
                 {/* Action Buttons */}
-                {address && !hasUserVoted(address) ? (
+                {canExecute ? (
                   <Button
-                    onClick={
-                      voteCount.thresholdMet ? handleExecute : handleApproveVote
-                    }
+                    onClick={handleExecute}
                     disabled={isProcessing}
                     className="w-full"
                   >
                     {isProcessing && (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     )}
-                    {voteCount.thresholdMet
-                      ? 'Execute Transaction'
-                      : 'Approve Transaction'}
+                    Execute Transaction
+                  </Button>
+                ) : canApprove ? (
+                  <Button
+                    onClick={handleApproveVote}
+                    disabled={isProcessing}
+                    className="w-full"
+                  >
+                    {isProcessing && (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    )}
+                    Approve Transaction
                   </Button>
                 ) : (
                   <Card className="border-gray-200 bg-gray-50 p-4">
                     <div className="flex items-center gap-2">
                       <CheckCircle className="h-4 w-4 text-gray-600" />
                       <p className="text-sm text-gray-600">
-                        You have already voted on this approval
+                        {isSignatory
+                          ? 'You have already voted on this approval'
+                          : 'The connected wallet is not a multisig signatory'}
                       </p>
                     </div>
                   </Card>

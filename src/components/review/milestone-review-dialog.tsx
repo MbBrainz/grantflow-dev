@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { MetadataGrid } from '@/components/ui/metadata-grid'
+import { InfoBox } from '@/components/ui/info-box'
 import {
   CheckCircle,
   XCircle,
@@ -573,138 +575,112 @@ export function MilestoneReviewDialog({
           <div className="space-y-6">
             {/* Merged Workflow Banner */}
             {isMergedWorkflow && multisigConfig && (
-              <Card className="border-blue-200 bg-blue-50 p-4">
-                <div className="flex items-start gap-3">
-                  <Wallet className="h-5 w-5 flex-shrink-0 text-blue-600" />
-                  <div className="flex-1">
-                    <p className="font-medium text-blue-900">
-                      On-Chain Approval Workflow
-                    </p>
-                    <p className="mt-1 text-sm text-blue-700">
-                      This committee uses merged workflow. When you approve this
-                      milestone, you&apos;ll be prompted to sign a blockchain
-                      transaction with your Polkadot wallet.
-                    </p>
-                    {!isConnected && (
-                      <div className="mt-3">
-                        <p className="mb-2 text-sm font-medium text-blue-800">
-                          Connect your wallet:
+              <InfoBox
+                icon={<Wallet className="h-5 w-5" />}
+                title="On-Chain Approval Workflow"
+                variant="info"
+              >
+                <p className="mb-3">
+                  This committee uses merged workflow. When you approve this
+                  milestone, you&apos;ll be prompted to sign a blockchain
+                  transaction with your Polkadot wallet.
+                </p>
+                {!isConnected && (
+                  <div>
+                    <p className="mb-2 text-sm font-medium">Connect your wallet:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {connectors.length > 0 ? (
+                        connectors.map(connector => (
+                          <Button
+                            key={connector.id}
+                            size="sm"
+                            variant="outline"
+                            onClick={() =>
+                              connect({ connectorId: connector.id })
+                            }
+                            className="border-blue-300 bg-white text-blue-700 hover:bg-blue-100"
+                          >
+                            <Wallet className="mr-2 h-3 w-3" />
+                            {connector.name}
+                          </Button>
+                        ))
+                      ) : (
+                        <p className="text-sm text-blue-600">
+                          No Polkadot wallet extensions detected. Please
+                          install Polkadot.js, Talisman, or SubWallet.
                         </p>
-                        <div className="flex flex-wrap gap-2">
-                          {connectors.length > 0 ? (
-                            connectors.map(connector => (
-                              <Button
-                                key={connector.id}
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  connect({ connectorId: connector.id })
-                                }
-                                className="border-blue-300 bg-white text-blue-700 hover:bg-blue-100"
-                              >
-                                <Wallet className="mr-2 h-3 w-3" />
-                                {connector.name}
-                              </Button>
-                            ))
-                          ) : (
-                            <p className="text-sm text-blue-600">
-                              No Polkadot wallet extensions detected. Please
-                              install Polkadot.js, Talisman, or SubWallet.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                    {isConnected && address && (
-                      <div className="mt-2 flex items-center gap-2 text-sm">
-                        <CheckCircle className="h-4 w-4 text-green-600" />
-                        <span className="text-green-700">
-                          Connected:{' '}
-                          <code className="rounded bg-blue-100 px-1 py-0.5 text-xs">
-                            {address.slice(0, 8)}...
-                            {address.slice(-6)}
-                          </code>
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </Card>
-            )}
-
-            <Card className="p-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <DollarSign className="h-4 w-4 text-gray-500" />
-                  <div>
-                    <p className="text-sm text-gray-500">Funding Amount</p>
-                    <p className="font-semibold">
-                      ${(milestone.amount ?? 0).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <div>
-                    <p className="text-sm text-gray-500">Due Date</p>
-                    <p className="font-semibold">
-                      {milestone.dueDate
-                        ? new Date(milestone.dueDate).toLocaleDateString()
-                        : 'Not specified'}
-                    </p>
-                  </div>
-                </div>
-                {milestone.submittedAt && (
-                  <div className="col-span-2 flex items-center gap-2">
-                    <Clock className="h-4 w-4 text-gray-500" />
-                    <div>
-                      <p className="text-sm text-gray-500">Submitted At</p>
-                      <p className="font-semibold">
-                        {new Date(milestone.submittedAt).toLocaleString()}
-                      </p>
+                      )}
                     </div>
                   </div>
                 )}
-              </div>
-            </Card>
+                {isConnected && address && (
+                  <div className="mt-2 flex items-center gap-2 text-sm">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <span className="text-green-700">
+                      Connected:{' '}
+                      <code className="rounded bg-blue-100 px-1 py-0.5 text-xs">
+                        {address.slice(0, 8)}...
+                        {address.slice(-6)}
+                      </code>
+                    </span>
+                  </div>
+                )}
+              </InfoBox>
+            )}
 
-            <div>
-              <h3 className="mb-2 flex items-center gap-2 font-semibold">
-                <FileCode className="h-4 w-4" />
-                Description
-              </h3>
-              <Card className="p-4">
-                <p className="text-sm whitespace-pre-wrap text-gray-700">
-                  {milestone.description}
-                </p>
-              </Card>
-            </div>
+            <MetadataGrid
+              items={[
+                {
+                  icon: <DollarSign className="h-4 w-4 text-gray-500" />,
+                  label: 'Funding Amount',
+                  value: `$${(milestone.amount ?? 0).toLocaleString()}`,
+                },
+                {
+                  icon: <Calendar className="h-4 w-4 text-gray-500" />,
+                  label: 'Due Date',
+                  value: milestone.dueDate
+                    ? new Date(milestone.dueDate).toLocaleDateString()
+                    : 'Not specified',
+                },
+                milestone.submittedAt && {
+                  icon: <Clock className="h-4 w-4 text-gray-500" />,
+                  label: 'Submitted At',
+                  value: new Date(milestone.submittedAt).toLocaleString(),
+                },
+              ].filter(Boolean)}
+              columns={milestone.submittedAt ? 3 : 2}
+            />
+
+            <InfoBox
+              icon={<FileCode className="h-4 w-4" />}
+              title="Description"
+            >
+              <p className="whitespace-pre-wrap text-gray-700">
+                {milestone.description}
+              </p>
+            </InfoBox>
 
             {requirements.length > 0 && (
-              <div>
-                <h3 className="mb-2 flex items-center gap-2 font-semibold">
-                  <CheckCircle className="h-4 w-4" />
-                  Acceptance Criteria
-                </h3>
-                <Card className="p-4">
-                  <ul className="space-y-2">
-                    {requirements.map((req, index) => (
-                      <li key={index} className="flex items-start gap-2">
-                        <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
-                        <span className="text-sm">{req}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </Card>
-              </div>
+              <InfoBox
+                icon={<CheckCircle className="h-4 w-4" />}
+                title="Acceptance Criteria"
+              >
+                <ul className="space-y-2">
+                  {requirements.map((req, index) => (
+                    <li key={index} className="flex items-start gap-2">
+                      <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-600" />
+                      <span className="text-sm">{req}</span>
+                    </li>
+                  ))}
+                </ul>
+              </InfoBox>
             )}
 
             {deliverables.length > 0 && (
-              <div>
-                <h3 className="mb-2 flex items-center gap-2 font-semibold">
-                  <GitBranch className="h-4 w-4" />
-                  Submitted Deliverables
-                </h3>
+              <InfoBox
+                icon={<GitBranch className="h-4 w-4" />}
+                title="Submitted Deliverables"
+              >
                 <div className="space-y-3">
                   {deliverables.map((deliverable, index) => (
                     <Card key={index} className="p-4">
@@ -741,70 +717,65 @@ export function MilestoneReviewDialog({
                     </Card>
                   ))}
                 </div>
-              </div>
+              </InfoBox>
             )}
 
             {(milestone.githubRepoUrl ??
               milestone.githubPrUrl ??
               milestone.githubCommitHash) && (
-              <div>
-                <h3 className="mb-2 flex items-center gap-2 font-semibold">
-                  <GitBranch className="h-4 w-4" />
-                  Code Repository
-                </h3>
-                <Card className="p-4">
-                  <div className="space-y-2">
-                    {milestone.githubRepoUrl && (
-                      <div>
-                        <p className="text-xs text-gray-500">Repository:</p>
-                        <a
-                          href={milestone.githubRepoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:underline"
-                        >
-                          {milestone.githubRepoUrl}
-                        </a>
-                      </div>
-                    )}
-                    {milestone.githubPrUrl && (
-                      <div>
-                        <p className="text-xs text-gray-500">Pull Request:</p>
-                        <a
-                          href={milestone.githubPrUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-sm text-blue-600 hover:underline"
-                        >
-                          {milestone.githubPrUrl}
-                        </a>
-                      </div>
-                    )}
-                    {milestone.githubCommitHash && (
-                      <div>
-                        <p className="text-xs text-gray-500">Commit Hash:</p>
-                        <code className="rounded bg-gray-100 px-2 py-1 text-xs">
-                          {milestone.githubCommitHash}
-                        </code>
-                      </div>
-                    )}
-                  </div>
-                </Card>
-              </div>
+              <InfoBox
+                icon={<GitBranch className="h-4 w-4" />}
+                title="Code Repository"
+              >
+                <div className="space-y-2">
+                  {milestone.githubRepoUrl && (
+                    <div>
+                      <p className="text-xs text-gray-500">Repository:</p>
+                      <a
+                        href={milestone.githubRepoUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        {milestone.githubRepoUrl}
+                      </a>
+                    </div>
+                  )}
+                  {milestone.githubPrUrl && (
+                    <div>
+                      <p className="text-xs text-gray-500">Pull Request:</p>
+                      <a
+                        href={milestone.githubPrUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-blue-600 hover:underline"
+                      >
+                        {milestone.githubPrUrl}
+                      </a>
+                    </div>
+                  )}
+                  {milestone.githubCommitHash && (
+                    <div>
+                      <p className="text-xs text-gray-500">Commit Hash:</p>
+                      <code className="rounded bg-gray-100 px-2 py-1 text-xs">
+                        {milestone.githubCommitHash}
+                      </code>
+                    </div>
+                  )}
+                </div>
+              </InfoBox>
             )}
 
             {milestone.codeAnalysis && (
-              <div>
-                <h3 className="mb-2 flex items-center gap-2 font-semibold">
-                  <AlertCircle className="h-4 w-4" />
-                  AI Code Analysis
-                </h3>
-                <Card className="border-purple-200 bg-purple-50/50 p-4">
-                  <p className="text-sm whitespace-pre-wrap text-gray-700">
-                    {milestone.codeAnalysis}
-                  </p>
-                </Card>
-              </div>
+              <InfoBox
+                icon={<AlertCircle className="h-4 w-4" />}
+                title="AI Code Analysis"
+                variant="info"
+              >
+                <p className="whitespace-pre-wrap text-gray-700">
+                  {milestone.codeAnalysis}
+                </p>
+              </InfoBox>
             )}
 
             <div className="border-t pt-6">

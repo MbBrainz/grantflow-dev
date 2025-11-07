@@ -13,8 +13,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { ArrowLeft, Save, Send, FlaskConical, CheckCircle2 } from 'lucide-react'
-import Link from 'next/link'
+import { Save, Send, FlaskConical, CheckCircle2 } from 'lucide-react'
 import { createSubmission, getActiveGrantPrograms } from '../actions'
 import { useToast } from '@/lib/hooks/use-toast'
 import {
@@ -587,19 +586,11 @@ export default function NewSubmissionPage() {
     return (
       <div className="mx-auto max-w-4xl space-y-6">
         {/* Header */}
-        <div className="flex items-center gap-4">
-          <Link href="/dashboard/submissions">
-            <Button variant="ghost" size="sm">
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Submissions
-            </Button>
-          </Link>
-          <div>
-            <h1 className="text-3xl font-bold">New Grant Submission</h1>
-            <p className="text-muted-foreground">
-              Step 1: Select a grant program
-            </p>
-          </div>
+        <div className="space-y-1">
+          <h1 className="text-3xl font-bold">New Grant Submission</h1>
+          <p className="text-muted-foreground">
+            Step 1: Select a grant program
+          </p>
         </div>
 
         <Card>
@@ -672,17 +663,11 @@ export default function NewSubmissionPage() {
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="sm" onClick={() => setStep('program')}>
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Change Program
-          </Button>
-          <div>
-            <h1 className="text-3xl font-bold">New Grant Submission</h1>
-            <p className="text-muted-foreground">
-              Step 2: Complete your grant proposal
-            </p>
-          </div>
+        <div>
+          <h1 className="text-3xl font-bold">New Grant Submission</h1>
+          <p className="text-muted-foreground">
+            Step 2: Complete your grant proposal
+          </p>
         </div>
         <Button
           variant="outline"

@@ -1,27 +1,19 @@
 'use client'
 
 import { useState } from 'react'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   AlertCircle,
-  Clock,
   Vote,
   Target,
   ArrowRight,
-  Calendar,
   ChevronDown,
   ChevronUp,
 } from 'lucide-react'
-import Link from 'next/link'
 import { CommitteeBadge } from '@/components/submissions/committee-badge'
+import type { MetadataItem } from '@/components/submissions/actionable-card';
+import { ActionableCard } from '@/components/submissions/actionable-card'
 import type { Committee } from '@/lib/db/schema'
 
 export interface PendingAction {
@@ -75,108 +67,73 @@ function ActionCard({ action }: { action: PendingAction }) {
     ? `/dashboard/submissions/${action.id}`
     : `/dashboard/submissions/${action.submission?.id}`
 
-  const urgencyColor = isCritical
-    ? 'border-red-500 bg-red-50'
-    : isUrgent
-      ? 'border-orange-500 bg-orange-50'
-      : 'border-blue-500 bg-blue-50'
+  const urgencyBadges = []
+  if (isCritical || isUrgent) {
+    urgencyBadges.push(
+      <Badge
+        key="urgency"
+        variant={isCritical ? 'destructive' : 'secondary'}
+        className="text-xs"
+      >
+        {isCritical ? 'Critical' : 'Urgent'}
+      </Badge>
+    )
+  }
 
-  const urgencyIcon = isCritical ? (
-    <AlertCircle className="h-4 w-4 text-red-600" />
-  ) : isUrgent ? (
-    <Clock className="h-4 w-4 text-orange-600" />
-  ) : (
-    <Vote className="h-4 w-4 text-blue-600" />
+  urgencyBadges.push(
+    <Badge key="action" variant="outline" className="text-xs">
+      {isSubmissionVote ? 'Vote Required' : 'Review Required'}
+    </Badge>
   )
 
   return (
-    <Card
-      className={`border-l-4 ${urgencyColor} transition-shadow hover:shadow-md`}
-    >
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              {urgencyIcon}
-              <CardTitle className="text-lg">
-                {isSubmissionVote
-                  ? action.title
-                  : `${action.submission?.title} - ${action.title}`}
-              </CardTitle>
-              {(isCritical ?? isUrgent) && (
-                <Badge
-                  variant={isCritical ? 'destructive' : 'secondary'}
-                  className="text-xs"
-                >
-                  {isCritical ? 'Critical' : 'Urgent'}
-                </Badge>
-              )}
-            </div>
-            <CardDescription className="flex items-center gap-4">
-              <span>
-                by{' '}
-                {(isSubmissionVote
-                  ? action.submitter?.name
-                  : action.submission?.submitter?.name) ?? 'Anonymous'}
-              </span>
-              <div className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                <span>{action.daysOld} days old</span>
-              </div>
-            </CardDescription>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {isSubmissionVote ? 'Vote Required' : 'Review Required'}
-            </Badge>
-          </div>
-        </div>
-
-        {/* Committee Badge */}
-        {action.committee && (
+    <ActionableCard
+      title={
+        isSubmissionVote
+          ? action.title
+          : `${action.submission?.title} - ${action.title}`
+      }
+      subtitle={`by ${
+        (isSubmissionVote
+          ? action.submitter?.name
+          : action.submission?.submitter?.name) ?? 'Anonymous'
+      } • ${action.daysOld} days old`}
+      urgency={isCritical ? 'critical' : isUrgent ? 'urgent' : 'normal'}
+      badges={[
+        action.committee && (
           <CommitteeBadge
+            key="committee"
             committee={action.committee}
             variant="compact"
-            className="mt-2"
           />
-        )}
-      </CardHeader>
-
-      <CardContent>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4 text-sm text-gray-600">
-            {isSubmissionVote ? (
-              <>
-                <div className="flex items-center gap-1">
-                  <Target className="h-4 w-4" />
-                  {action.grantProgram?.name ?? 'General Program'}
-                </div>
-                {action.grantProgram?.fundingAmount && (
-                  <div className="flex items-center gap-1">
-                    <span className="font-medium">
-                      ${action.grantProgram.fundingAmount.toLocaleString()}
-                    </span>
-                  </div>
-                )}
-              </>
-            ) : (
-              <div className="flex items-center gap-1">
-                <Target className="h-4 w-4" />
-                Milestone Review
-              </div>
-            )}
-          </div>
-
-          <Link href={linkHref}>
-            <Button size="sm" className="flex items-center gap-2">
-              {isSubmissionVote ? 'Review & Vote' : 'Review Milestone'}
-              <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
+        ),
+        ...urgencyBadges,
+      ].filter(Boolean)}
+      metadata={
+        isSubmissionVote
+          ? [
+              {
+                icon: <Target className="h-4 w-4" />,
+                value: action.grantProgram?.name ?? 'General Program',
+              },
+              action.grantProgram?.fundingAmount ? {
+                icon: <span>$</span>,
+                value: `$${action.grantProgram.fundingAmount.toLocaleString()}`,
+              } : undefined,
+            ].filter(Boolean) as MetadataItem[]
+          : [
+              {
+                icon: <Target className="h-4 w-4" />,
+                value: 'Milestone Review',
+              },
+            ]
+      }
+      actionButton={{
+        label: isSubmissionVote ? 'Review & Vote' : 'Review Milestone',
+        href: linkHref,
+        icon: <ArrowRight className="h-4 w-4" />,
+      }}
+    />
   )
 }
 

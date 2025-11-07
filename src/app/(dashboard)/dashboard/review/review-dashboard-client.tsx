@@ -2,14 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import Link from 'next/link'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Clock,
   FileText,
@@ -24,6 +17,8 @@ import {
 } from '@/components/review/pending-actions-panel'
 import { CommitteeBadge } from '@/components/submissions/committee-badge'
 import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge'
+import { ActionableCard } from '@/components/submissions/actionable-card'
+import { ArrowRight } from 'lucide-react'
 import type { Committee, Milestone, GrantProgram } from '@/lib/db/schema'
 
 interface Submitter {
@@ -48,27 +43,6 @@ interface Submission {
   milestones?: Milestone[]
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const colors = {
-    draft: 'bg-gray-100 text-gray-800',
-    pending: 'bg-blue-100 text-blue-800',
-    'in-review': 'bg-yellow-100 text-yellow-800',
-    'changes-requested': 'bg-orange-100 text-orange-800',
-    approved: 'bg-green-100 text-green-800',
-    rejected: 'bg-red-100 text-red-800',
-  }
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-        colors[status as keyof typeof colors] ?? colors.draft
-      }`}
-    >
-      {status.replace(/_|-/g, ' ').toUpperCase()}
-    </span>
-  )
-}
-
 function parseLabels(labelsString: string | null): string[] {
   if (!labelsString) return []
   try {
@@ -82,98 +56,80 @@ function parseLabels(labelsString: string | null): string[] {
 
 function SubmissionCard({ submission }: { submission: Submission }) {
   const labels = parseLabels(submission.labels)
+  const labelBadges =
+    labels.length > 0
+      ? labels.slice(0, 3).map((label: string) => (
+          <span
+            key={label}
+            className="rounded-md bg-blue-50 px-2 py-0.5 text-xs text-blue-700"
+          >
+            {label}
+          </span>
+        ))
+      : []
+
+  if (labels.length > 3) {
+    labelBadges.push(
+      <span
+        key="more"
+        className="rounded-md bg-gray-50 px-2 py-0.5 text-xs text-gray-600"
+      >
+        +{labels.length - 3} more
+      </span>
+    )
+  }
 
   return (
-    <Card className="transition-shadow hover:shadow-md">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="space-y-2">
-            <CardTitle className="text-lg">
-              {submission.title ?? 'Untitled Submission'}
-            </CardTitle>
-            <CardDescription>
-              by {submission.submitter?.name ?? 'Anonymous'} •{' '}
-              {new Date(submission.createdAt).toLocaleDateString()}
-            </CardDescription>
-
-            {/* Committee Badge */}
-            {submission.committee && (
-              <CommitteeBadge
-                committee={submission.committee}
-                variant="compact"
-                className="mt-1"
-              />
-            )}
-
-            {/* Milestone Progress for Approved Submissions */}
-            <MilestoneProgressBadge
-              milestones={submission.milestones ?? []}
-              submissionStatus={submission.status}
-              variant="compact"
-            />
-          </div>
-          <StatusBadge status={submission.status} />
-        </div>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-3">
-          <p className="line-clamp-2 text-sm text-gray-600 dark:text-gray-400">
-            {submission.description ??
-              submission.executiveSummary ??
-              'No description available'}
-          </p>
-
-          {labels.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {labels.slice(0, 3).map((label: string) => (
-                <span
-                  key={label}
-                  className="rounded-md bg-blue-50 px-2 py-0.5 text-xs text-blue-700"
-                >
-                  {label}
-                </span>
-              ))}
-              {labels.length > 3 && (
-                <span className="rounded-md bg-gray-50 px-2 py-0.5 text-xs text-gray-600">
-                  +{labels.length - 3} more
-                </span>
-              )}
-            </div>
-          )}
-
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4 text-sm text-gray-500">
-              <div className="flex items-center gap-1">
-                <FileText className="h-4 w-4" />
-                {submission.milestones?.length ?? 0} milestones
-              </div>
-              <div className="flex items-center gap-1">
-                <Clock className="h-4 w-4" />
-                {submission.totalAmount
-                  ? `$${submission.totalAmount.toLocaleString()}`
-                  : submission.grantProgram?.fundingAmount
-                    ? `$${submission.grantProgram.fundingAmount.toLocaleString()}`
-                    : 'Amount TBD'}
-              </div>
-              {submission.grantProgram && (
-                <div className="flex items-center gap-1">
-                  <Users className="h-4 w-4" />
-                  {submission.grantProgram.name}
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2">
-              <Link href={`/dashboard/submissions/${submission.id}`}>
-                <Button variant="outline" size="sm">
-                  Review & Discuss
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <ActionableCard
+      title={submission.title ?? 'Untitled Submission'}
+      subtitle={`by ${submission.submitter?.name ?? 'Anonymous'} • ${new Date(submission.createdAt).toLocaleDateString()}`}
+      description={
+        submission.description ??
+        submission.executiveSummary ??
+        'No description available'
+      }
+      status={submission.status}
+      badges={[
+        submission.committee && (
+          <CommitteeBadge
+            key="committee"
+            committee={submission.committee}
+            variant="compact"
+          />
+        ),
+        <MilestoneProgressBadge
+          key="milestones"
+          milestones={submission.milestones ?? []}
+          submissionStatus={submission.status}
+          variant="compact"
+        />,
+        ...labelBadges,
+      ].filter(Boolean)}
+      metadata={[
+        {
+          icon: <FileText className="h-4 w-4" />,
+          value: `${submission.milestones?.length ?? 0} milestones`,
+        },
+        {
+          icon: <Clock className="h-4 w-4" />,
+          value: submission.totalAmount
+            ? `$${submission.totalAmount.toLocaleString()}`
+            : submission.grantProgram?.fundingAmount
+              ? `$${submission.grantProgram.fundingAmount.toLocaleString()}`
+              : 'Amount TBD',
+        },
+        submission.grantProgram && {
+          icon: <Users className="h-4 w-4" />,
+          value: submission.grantProgram.name,
+        },
+      ].filter(Boolean)}
+      actionButton={{
+        label: 'Review & Discuss',
+        href: `/dashboard/submissions/${submission.id}`,
+        variant: 'outline',
+        icon: <ArrowRight className="h-4 w-4" />,
+      }}
+    />
   )
 }
 

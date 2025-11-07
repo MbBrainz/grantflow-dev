@@ -15,15 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  ArrowLeft,
-  Settings,
-  Users,
-  Plus,
-  Trash2,
-  Shield,
-  DollarSign,
-} from 'lucide-react'
+import { Settings, Users, Plus, Trash2, Shield, DollarSign } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import type { CommitteeWithDetails } from '@/lib/db/queries/committees'
 import Image from 'next/image'
@@ -457,24 +449,12 @@ export function ManageCommitteeView({
     <div className="mx-auto max-w-6xl space-y-6">
       {/* Header */}
       <div className="mb-6 flex items-start justify-between">
-        <div className="flex items-center gap-4">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => router.push(`/dashboard/committees/${committee.id}`)}
-            className="flex items-center gap-2"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Committee
-          </Button>
-
-          <div>
-            <div className="flex items-center gap-3">
-              <Settings className="h-8 w-8 text-gray-600" />
-              <div>
-                <h1 className="text-3xl font-bold">Manage Committee</h1>
-                <p className="text-gray-600">{committee.name}</p>
-              </div>
+        <div>
+          <div className="flex items-center gap-3">
+            <Settings className="h-8 w-8 text-gray-600" />
+            <div>
+              <h1 className="text-3xl font-bold">Manage Committee</h1>
+              <p className="text-gray-600">{committee.name}</p>
             </div>
           </div>
         </div>
