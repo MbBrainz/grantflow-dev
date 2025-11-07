@@ -288,6 +288,16 @@ export async function getSubmissionForReviewerReview(submissionId: number) {
           description: true,
           focusAreas: true,
         },
+        with: {
+          members: {
+            where: eq(groupMemberships.isActive, true),
+            columns: {
+              id: true,
+              userId: true,
+              isActive: true,
+            },
+          },
+        },
       },
       grantProgram: {
         columns: {

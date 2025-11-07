@@ -41,12 +41,15 @@ import type { Submission } from './schema/submissions'
 import type { Milestone } from './schema/milestones'
 import type { DiscussionWithMessages } from './schema/discussions'
 import type { Review } from './schema/reviews'
+import type { GroupMembership } from './schema/group-memberships'
 
 export type SubmissionWithMilestones = Submission & {
   milestones: Milestone[]
   submitter: User
   submitterGroup: Group
-  reviewerGroup: Group
+  reviewerGroup: Group & {
+    members?: GroupMembership[]
+  }
   grantProgram: GrantProgram
   discussions?: DiscussionWithMessages[]
   reviews?: (Review & {

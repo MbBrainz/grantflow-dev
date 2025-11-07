@@ -1211,7 +1211,7 @@ async function seed() {
     })
     .returning()
 
-  // SCENARIO 3: IN-REVIEW SUBMISSION - Partial votes, needs Alex's vote
+  // SCENARIO 3: APPROVED SUBMISSION - Approved with milestones in progress
   const [infraInReviewSubmission] = await db
     .insert(submissions)
     .values({
@@ -1228,15 +1228,15 @@ async function seed() {
       labels: JSON.stringify(['GraphQL', 'API', 'Code Generation', 'Tools']),
       githubRepoUrl: 'https://github.com/yieldopt-protocol/graphql-gen',
       walletAddress: teamMember4.walletAddress,
-      status: 'in-review',
+      status: 'approved',
       totalAmount: 50000,
       appliedAt: new Date('2024-01-28'),
       createdAt: new Date('2024-01-28'),
-      updatedAt: new Date('2024-02-05'),
+      updatedAt: new Date('2024-02-06'),
     })
     .returning()
 
-  // SCENARIO 4: IN-REVIEW SUBMISSION - Near approval threshold
+  // SCENARIO 4: APPROVED SUBMISSION - Approved with milestones in progress
   const [infraInReviewSubmission2] = await db
     .insert(submissions)
     .values({
@@ -1259,11 +1259,11 @@ async function seed() {
       ]),
       githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
       walletAddress: teamMember2.walletAddress,
-      status: 'in-review',
+      status: 'approved',
       totalAmount: 100000,
       appliedAt: new Date('2024-01-20'),
       createdAt: new Date('2024-01-20'),
-      updatedAt: new Date('2024-02-08'),
+      updatedAt: new Date('2024-02-10'),
     })
     .returning()
 
@@ -1512,7 +1512,7 @@ async function seed() {
       createdAt: new Date('2024-02-12T10:00:00Z'),
     },
 
-    // In-review submission - Partial votes, needs Alex
+    // Approved submission - GraphQL API Generator (was in-review, now approved)
     {
       discussionId: infraInReviewDiscussion.id,
       authorId: reviewer2.id,
@@ -1529,8 +1529,20 @@ async function seed() {
       messageType: 'comment',
       createdAt: new Date('2024-02-02T09:30:00Z'),
     },
+    {
+      discussionId: infraInReviewDiscussion.id,
+      authorId: reviewer1.id,
+      content:
+        'Submission approved! The GraphQL approach will significantly improve developer experience. Looking forward to seeing the first milestone.',
+      messageType: 'status_change',
+      metadata: JSON.stringify({
+        newStatus: 'approved',
+        oldStatus: 'in-review',
+      }),
+      createdAt: new Date('2024-02-06T09:00:00Z'),
+    },
 
-    // In-review submission 2 - Near threshold
+    // Approved submission - ZK Toolkit (was near threshold, now approved)
     {
       discussionId: infraInReview2Discussion.id,
       authorId: reviewer2.id,
@@ -1554,6 +1566,18 @@ async function seed() {
         "That's impressive! Looking forward to seeing this move forward. We need more votes for approval.",
       messageType: 'comment',
       createdAt: new Date('2024-02-08T16:00:00Z'),
+    },
+    {
+      discussionId: infraInReview2Discussion.id,
+      authorId: reviewer1.id,
+      content:
+        'Submission approved! Excellent proposal with strong partnerships. Looking forward to seeing the first milestone.',
+      messageType: 'status_change',
+      metadata: JSON.stringify({
+        newStatus: 'approved',
+        oldStatus: 'in-review',
+      }),
+      createdAt: new Date('2024-02-10T09:00:00Z'),
     },
 
     // Approved submission with milestones
@@ -1668,7 +1692,7 @@ async function seed() {
 
   // Reviews for Alex Chen's Infrastructure Committee scenarios
   await db.insert(reviews).values([
-    // GraphQL API Generator - Has one approve vote from Maria, needs Alex's vote (and one more)
+    // GraphQL API Generator - Approved with two votes (Alex gave final approval)
     {
       submissionId: infraInReviewSubmission.id,
       groupId: infraCommittee.id,
@@ -1682,8 +1706,21 @@ async function seed() {
       isBinding: false,
       createdAt: new Date('2024-02-05T11:30:00Z'),
     },
+    {
+      submissionId: infraInReviewSubmission.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer1.id, // Alex Chen - final approval
+      discussionId: infraInReviewDiscussion.id,
+      vote: 'approve',
+      feedback:
+        'Excellent tool for simplifying smart contract integration. The GraphQL approach is innovative. Approved!',
+      reviewType: 'final',
+      weight: 2,
+      isBinding: true,
+      createdAt: new Date('2024-02-06T09:00:00Z'),
+    },
 
-    // ZK Toolkit - Has two approve votes, needs Alex's final vote for approval (threshold is 3)
+    // ZK Toolkit - Approved with three votes (Alex gave final approval)
     {
       submissionId: infraInReviewSubmission2.id,
       groupId: infraCommittee.id,
@@ -1709,6 +1746,19 @@ async function seed() {
       weight: 1,
       isBinding: false,
       createdAt: new Date('2024-02-07T10:00:00Z'),
+    },
+    {
+      submissionId: infraInReviewSubmission2.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer1.id, // Alex Chen - final approval
+      discussionId: infraInReview2Discussion.id,
+      vote: 'approve',
+      feedback:
+        'Excellent proposal! The ZK toolkit will significantly improve developer experience. Approved!',
+      reviewType: 'final',
+      weight: 2,
+      isBinding: true,
+      createdAt: new Date('2024-02-10T09:00:00Z'),
     },
 
     // Web3 State Management - Already approved, Alex gave final approval
@@ -1963,35 +2013,7 @@ async function seed() {
     .returning()
 
   // Milestones for Zero-Knowledge Proof Development Toolkit (infraInReviewSubmission2)
-  const [_zkToolkitMilestone1] = await db
-    .insert(milestones)
-    .values({
-      submissionId: infraInReviewSubmission2.id,
-      groupId: infraCommittee.id,
-      title: 'Core ZK Circuit Designer & Compiler',
-      description:
-        'Develop the visual circuit designer interface and core ZK circuit compiler with support for multiple proof systems.',
-      requirements: [
-        'Visual circuit designer UI',
-        'Circuit compiler for Groth16',
-        'Circuit compiler for PLONK',
-        'Basic optimization algorithms',
-        'Unit tests with >85% coverage',
-      ],
-      amount: 30000,
-      dueDate: new Date('2024-04-15'),
-      status: 'pending',
-      deliverables: [
-        { description: 'Visual circuit designer web application' },
-        { description: 'Multi-proof system compiler' },
-        { description: 'Optimization tooling' },
-        { description: 'Test suite' },
-      ],
-      githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
-      createdAt: new Date('2024-01-20T09:00:00Z'),
-    })
-    .returning()
-
+  // Note: Milestone 1 is created later as zkMilestone1 (in-review status)
   const [_zkToolkitMilestone2] = await db
     .insert(milestones)
     .values({
@@ -2285,7 +2307,7 @@ async function seed() {
     })
     .returning()
 
-  // SCENARIO 5: Milestone with partial reviews (needs Alex's final vote)
+  // SCENARIO 5: Milestone 2 - pending until milestone 1 is completed
   const [web3Milestone2] = await db
     .insert(milestones)
     .values({
@@ -2304,7 +2326,7 @@ async function seed() {
       ],
       amount: 1000,
       dueDate: new Date('2024-03-25'),
-      status: 'in-review',
+      status: 'pending',
       deliverables: [
         { description: 'Multi-chain support' },
         { description: 'Optimistic updates' },
@@ -2334,7 +2356,7 @@ async function seed() {
     })
     .returning()
 
-  // SCENARIO 6: Milestone with changes requested (team needs to resubmit)
+  // SCENARIO 6: Milestone 2 - pending until milestone 1 is completed
   const [testingFrameworkMilestone2] = await db
     .insert(milestones)
     .values({
@@ -2353,7 +2375,7 @@ async function seed() {
       ],
       amount: 35000,
       dueDate: new Date('2024-04-15'),
-      status: 'changes-requested',
+      status: 'pending',
       deliverables: [
         { description: 'Security analysis tools' },
         { description: 'Pattern analysis engine' },
@@ -2450,7 +2472,7 @@ async function seed() {
     })
     .returning()
 
-  const [web3Milestone2Discussion] = await db
+  const [_web3Milestone2Discussion] = await db
     .insert(discussions)
     .values({
       submissionId: infraApprovedWithMilestones.id,
@@ -2461,7 +2483,7 @@ async function seed() {
     })
     .returning()
 
-  const [testingFrameworkMilestone2Discussion] = await db
+  const [_testingFrameworkMilestone2Discussion] = await db
     .insert(discussions)
     .values({
       submissionId: infraPendingSubmission1.id,
@@ -2599,49 +2621,8 @@ async function seed() {
       createdAt: new Date('2024-02-26T17:10:00Z'),
     },
 
-    // Web3 Milestone 2 - Partial reviews, needs Alex's final vote
-    {
-      discussionId: web3Milestone2Discussion.id,
-      authorId: teamMember5.id,
-      content:
-        'Advanced features milestone complete! Multi-chain support is working flawlessly with 93% reliability score.',
-      messageType: 'comment',
-      createdAt: new Date('2024-02-24T13:30:00Z'),
-    },
-    {
-      discussionId: web3Milestone2Discussion.id,
-      authorId: teamMember5.id,
-      content:
-        'The optimistic updates system is particularly impressive - it provides instant UI feedback while maintaining data consistency.',
-      messageType: 'comment',
-      createdAt: new Date('2024-02-24T14:00:00Z'),
-    },
-    {
-      discussionId: web3Milestone2Discussion.id,
-      authorId: reviewer2.id,
-      content:
-        'Excellent work on the multi-chain implementation! The error handling is robust and the performance monitoring provides great insights.',
-      messageType: 'comment',
-      createdAt: new Date('2024-02-25T09:00:00Z'),
-    },
-
-    // Testing Framework Milestone 2 - Changes requested
-    {
-      discussionId: testingFrameworkMilestone2Discussion.id,
-      authorId: reviewer1.id,
-      content:
-        'The security analysis tools need more comprehensive vulnerability detection. Please add support for reentrancy attacks and integer overflow patterns.',
-      messageType: 'comment',
-      createdAt: new Date('2024-02-28T10:00:00Z'),
-    },
-    {
-      discussionId: testingFrameworkMilestone2Discussion.id,
-      authorId: reviewer1.id,
-      content:
-        'The IDE plugin integration is good, but we need better documentation for the CI/CD pipeline setup. Also, the automated fix suggestions need improvement.',
-      messageType: 'comment',
-      createdAt: new Date('2024-02-28T10:30:00Z'),
-    },
+    // Note: web3Milestone2 and testingFrameworkMilestone2 are pending (milestone 1 not completed yet)
+    // Messages will be added once milestone 1 is completed and milestone 2 is submitted
   ])
 
   // ============================================================================
@@ -2745,37 +2726,8 @@ async function seed() {
       createdAt: new Date('2024-02-27T08:00:00Z'),
     },
 
-    // Web3 Milestone 2 - Has one approve vote, needs Alex's final vote for approval
-    {
-      submissionId: infraApprovedWithMilestones.id,
-      milestoneId: web3Milestone2.id,
-      groupId: infraCommittee.id,
-      reviewerId: reviewer2.id,
-      discussionId: web3Milestone2Discussion.id,
-      vote: 'approve',
-      feedback:
-        'Fantastic multi-chain implementation! The optimistic updates system and error handling are particularly well-designed.',
-      reviewType: 'milestone',
-      weight: 1,
-      isBinding: false,
-      createdAt: new Date('2024-02-25T09:00:00Z'),
-    },
-
-    // Testing Framework Milestone 2 - Alex already reviewed and requested changes
-    {
-      submissionId: infraPendingSubmission1.id,
-      milestoneId: testingFrameworkMilestone2.id,
-      groupId: infraCommittee.id,
-      reviewerId: reviewer1.id, // Alex Chen
-      discussionId: testingFrameworkMilestone2Discussion.id,
-      vote: 'reject',
-      feedback:
-        'The security analysis tools need more comprehensive vulnerability detection. Please add support for reentrancy attacks and integer overflow patterns. Also improve the IDE plugin documentation and automated fix suggestions.',
-      reviewType: 'milestone',
-      weight: 2,
-      isBinding: true,
-      createdAt: new Date('2024-02-28T10:00:00Z'),
-    },
+    // Note: web3Milestone2 and testingFrameworkMilestone2 are pending (milestone 1 not completed yet)
+    // Reviews will be added once milestone 1 is completed and milestone 2 is submitted
   ])
 
   // ============================================================================
@@ -2930,14 +2882,15 @@ async function seed() {
     {
       userId: reviewer1.id,
       groupId: infraCommittee.id,
-      type: 'review_requested',
+      type: 'submission_approved',
       submissionId: infraInReviewSubmission2.id,
       discussionId: infraInReview2Discussion.id,
-      read: false,
+      read: true,
       content:
-        'Your vote needed for approval: "Zero-Knowledge Proof Development Toolkit" - 2 of 3 votes received',
+        'Submission approved: "Zero-Knowledge Proof Development Toolkit" - Your final vote completed the approval',
       priority: 'high',
-      createdAt: new Date('2024-02-08T16:30:00Z'),
+      createdAt: new Date('2024-02-10T09:00:00Z'),
+      readAt: new Date('2024-02-10T09:15:00Z'),
     },
 
     // Milestone review needed
@@ -3033,35 +2986,8 @@ async function seed() {
       createdAt: new Date('2024-02-26T16:20:00Z'),
     },
 
-    // Web3 Milestone 2 - Needs Alex's final vote for approval
-    {
-      userId: reviewer1.id,
-      groupId: infraCommittee.id,
-      type: 'milestone_submitted',
-      submissionId: infraApprovedWithMilestones.id,
-      milestoneId: web3Milestone2.id,
-      discussionId: web3Milestone2Discussion.id,
-      read: false,
-      content:
-        'Final vote needed: "Advanced Features & Multi-Chain Support" - 1 of 2 votes received (ready for approval)',
-      priority: 'high',
-      createdAt: new Date('2024-02-24T13:30:00Z'),
-    },
-
-    // Testing Framework Milestone 2 - Team responded to changes requested
-    {
-      userId: reviewer1.id,
-      groupId: infraCommittee.id,
-      type: 'milestone_submitted',
-      submissionId: infraPendingSubmission1.id,
-      milestoneId: testingFrameworkMilestone2.id,
-      discussionId: testingFrameworkMilestone2Discussion.id,
-      read: false,
-      content:
-        'Milestone resubmitted after changes requested: "Advanced Security Analysis & Integration Tools" - Ready for re-review',
-      priority: 'normal',
-      createdAt: new Date('2024-02-28T15:00:00Z'),
-    },
+    // Note: web3Milestone2 and testingFrameworkMilestone2 are pending (milestone 1 not completed yet)
+    // Notifications will be created once milestone 1 is completed and milestone 2 is submitted
 
     // Additional milestone activity notifications
     {
@@ -3136,16 +3062,16 @@ async function seed() {
   console.log('   • Gaming: Platform Development ($80K)')
 
   console.log(`\n📋 Created ${10} submissions in various states:`)
-  console.log('   • 2 APPROVED (with milestones and payouts)')
-  console.log('   • 3 IN-REVIEW (partial reviewer votes)')
+  console.log('   • 3 APPROVED (with milestones and payouts)')
+  console.log('   • 2 IN-REVIEW (partial reviewer votes)')
   console.log('   • 4 PENDING (just submitted)')
   console.log('   • 1 REJECTED (with feedback)')
 
-  console.log(`\n🎯 Created ${13} milestones across approved submissions:`)
+  console.log(`\n🎯 Created ${12} milestones across approved submissions:`)
   console.log('   • 1 COMPLETED (with payout)')
   console.log('   • 1 CHANGES-REQUESTED')
   console.log('   • 6 IN-REVIEW (submitted, awaiting approval)')
-  console.log('   • 5 PENDING')
+  console.log('   • 4 PENDING')
 
   console.log(`\n💬 Created active discussions with messages and reviews`)
   console.log(`💰 Created example payouts (completed and pending)`)
@@ -3167,12 +3093,9 @@ async function seed() {
   console.log('📥 Pending Submissions (2):')
   console.log('   • "Advanced Blockchain Testing Framework" - $100K')
   console.log('   • "Real-time Blockchain Analytics Dashboard" - $50K')
-  console.log('🗳️  In-Review Submissions Needing Vote (2):')
+  console.log('🗳️  In-Review Submissions Needing Vote (1):')
   console.log('   • "GraphQL API Generator" - 1/3 votes')
-  console.log(
-    '   • "Zero-Knowledge Proof Toolkit" - 2/3 votes (near approval!)'
-  )
-  console.log('✅ Milestone Reviews (7):')
+  console.log('✅ Milestone Reviews (5):')
   console.log(
     '   • "Core State Management Implementation" - Web3 State Library'
   )
@@ -3188,17 +3111,12 @@ async function seed() {
   console.log(
     '   • "Visual Circuit Designer & Multi-Proof System Compiler" - ZK Toolkit (URGENT - Overdue)'
   )
-  console.log(
-    '   • "Advanced Features & Multi-Chain Support" - Web3 State Library'
-  )
-  console.log(
-    '   • "Advanced Security Analysis & Integration Tools" - Testing Framework (Changes Requested)'
-  )
-  console.log('🔔 Unread Notifications (13):')
+  console.log('🔔 Unread Notifications (10):')
   console.log('   • 2 new submissions')
-  console.log('   • 2 review requests')
-  console.log('   • 6 milestone submissions (1 urgent)')
-  console.log('   • 3 new comments\n')
+  console.log('   • 1 review request')
+  console.log('   • 1 submission approved (read)')
+  console.log('   • 5 milestone submissions (1 urgent)')
+  console.log('   • 2 new comments\n')
 }
 
 seed()

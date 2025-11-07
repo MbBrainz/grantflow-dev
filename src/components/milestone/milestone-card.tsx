@@ -39,7 +39,7 @@ interface MilestoneCardProps {
   } | null
   approvalCount?: number
   rejectionCount?: number
-  votesNeeded?: number
+  totalCommitteeMembers?: number
   showReviewButton?: boolean
   onReviewClick?: () => void
   className?: string
@@ -55,7 +55,7 @@ export function MilestoneCard({
   userVote,
   approvalCount = 0,
   rejectionCount = 0,
-  votesNeeded,
+  totalCommitteeMembers,
   showReviewButton = false,
   onReviewClick,
   className,
@@ -89,14 +89,15 @@ export function MilestoneCard({
             <div className="flex items-center gap-4 text-sm text-gray-500">
               {milestone.amount && (
                 <div className="flex items-center gap-1">
-                  <DollarSign className="h-4 w-4" />
-                  ${milestone.amount.toLocaleString()}
+                  <DollarSign className="h-4 w-4" />$
+                  {milestone.amount.toLocaleString()}
                 </div>
               )}
               {milestone.submittedAt && (
                 <div className="flex items-center gap-1">
                   <Clock className="h-4 w-4" />
-                  Submitted {new Date(milestone.submittedAt).toLocaleDateString()}
+                  Submitted{' '}
+                  {new Date(milestone.submittedAt).toLocaleDateString()}
                 </div>
               )}
             </div>
@@ -163,19 +164,21 @@ export function MilestoneCard({
                   {userVote.vote === 'abstain' && (
                     <Clock className="h-3.5 w-3.5" />
                   )}
-                  You voted: {userVote.vote.charAt(0).toUpperCase() + userVote.vote.slice(1)}
+                  You voted:{' '}
+                  {userVote.vote.charAt(0).toUpperCase() +
+                    userVote.vote.slice(1)}
                 </Badge>
               )}
-              {votesNeeded !== undefined && (
+              {totalCommitteeMembers !== undefined && (
                 <div
                   className="flex items-center gap-1 rounded-full border border-gray-300 bg-gray-50 px-2 py-1 text-xs font-medium"
-                  title={`${approvalCount} approvals / ${rejectionCount} rejections / ${votesNeeded} needed for quorum`}
+                  title={`${approvalCount} approvals / ${rejectionCount} rejections / ${totalCommitteeMembers} total committee members`}
                 >
                   <span className="text-green-600">{approvalCount}</span>
                   <span className="text-gray-400">/</span>
                   <span className="text-red-600">{rejectionCount}</span>
                   <span className="text-gray-400">/</span>
-                  <span className="text-gray-900">{votesNeeded}</span>
+                  <span className="text-gray-900">{totalCommitteeMembers}</span>
                 </div>
               )}
             </div>
@@ -275,7 +278,6 @@ export function MilestoneCard({
                 </Button>
               </div>
             )}
-
           </div>
         )}
       </div>
@@ -325,4 +327,3 @@ export function MilestoneCard({
     </div>
   )
 }
-

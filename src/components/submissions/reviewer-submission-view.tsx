@@ -85,13 +85,11 @@ export function ReviewerSubmissionView({
 
   // Calculate quorum requirement from committee settings
   const committee = submission.reviewerGroup
-  const committeeSettings = committee?.settings as {
-    votingThreshold?: number
-    requiredApprovalPercentage?: number
-  } | null
-  const votingThreshold = committeeSettings?.votingThreshold ?? 0.5
-  const activeMemberCount = 5 // TODO: Get actual active member count from committee
-  const votesNeeded = Math.ceil(activeMemberCount * votingThreshold)
+  // Get actual active member count from committee
+  const activeMemberCount =
+    committee && 'members' in committee && Array.isArray(committee.members)
+      ? committee.members.length
+      : 0
 
   return (
     <div className="space-y-6">
@@ -201,7 +199,8 @@ export function ReviewerSubmissionView({
 
           <div className="space-y-3">
             {milestonesNeedingReview.map(milestone => {
-              const milestoneNumber = milestones.findIndex(m => m.id === milestone.id) + 1
+              const milestoneNumber =
+                milestones.findIndex(m => m.id === milestone.id) + 1
               return (
                 <MilestoneCard
                   key={milestone.id}
@@ -419,20 +418,28 @@ export function ReviewerSubmissionView({
               const isExpanded = expandedMilestones.has(milestone.id)
 
               return (
-                <div key={milestone.id} id={`milestone-${milestone.id}`} className="scroll-mt-6">
+                <div
+                  key={milestone.id}
+                  id={`milestone-${milestone.id}`}
+                  className="scroll-mt-6"
+                >
                   <MilestoneCard
                     milestone={milestone}
                     milestoneNumber={index + 1}
                     variant="list"
                     isExpanded={isExpanded}
                     onToggleExpand={() => toggleMilestone(milestone.id)}
-                    userVote={userMilestoneReview ? {
-                      vote: userMilestoneReview.vote!,
-                      feedback: userMilestoneReview.feedback,
-                    } : null}
+                    userVote={
+                      userMilestoneReview
+                        ? {
+                            vote: userMilestoneReview.vote!,
+                            feedback: userMilestoneReview.feedback,
+                          }
+                        : null
+                    }
                     approvalCount={milestoneApproves}
                     rejectionCount={milestoneRejects}
-                    votesNeeded={votesNeeded}
+                    totalCommitteeMembers={activeMemberCount}
                     showReviewButton={
                       milestone.status === 'in-review' &&
                       !userMilestoneReview &&
@@ -445,105 +452,104 @@ export function ReviewerSubmissionView({
                   >
                     {isExpanded && (
                       <>
-
-                      {/* Already Reviewed Message */}
-                      {userMilestoneReview && (
-                        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                          <p className="flex items-center gap-2 text-sm text-blue-800">
-                            <CheckCircle className="h-4 w-4" />
-                            You have already reviewed this milestone
+                        {/* Already Reviewed Message */}
+                        {userMilestoneReview && (
+                          <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                            <p className="flex items-center gap-2 text-sm text-blue-800">
+                              <CheckCircle className="h-4 w-4" />
+                              You have already reviewed this milestone
+                              {userMilestoneReview.feedback && (
+                                <span className="ml-2">
+                                  - Click to view your feedback
+                                </span>
+                              )}
+                            </p>
                             {userMilestoneReview.feedback && (
-                              <span className="ml-2">
-                                - Click to view your feedback
-                              </span>
+                              <div className="mt-2 rounded bg-white p-3 text-sm text-gray-700">
+                                <span className="font-medium">
+                                  Your feedback:{' '}
+                                </span>
+                                {userMilestoneReview.feedback}
+                              </div>
                             )}
-                          </p>
-                          {userMilestoneReview.feedback && (
-                            <div className="mt-2 rounded bg-white p-3 text-sm text-gray-700">
-                              <span className="font-medium">
-                                Your feedback:{' '}
-                              </span>
-                              {userMilestoneReview.feedback}
+                          </div>
+                        )}
+
+                        {/* Multisig Payment Approval - Only for SEPARATED workflow */}
+                        {submission.reviewerGroup?.settings?.multisig &&
+                          submission.reviewerGroup.settings.multisig
+                            .approvalWorkflow === 'separated' &&
+                          milestone.status === 'completed' &&
+                          submission.userContext?.isCommitteeReviewer && (
+                            <div className="mt-4">
+                              <MilestoneVotingPanel
+                                multisigConfig={
+                                  submission.reviewerGroup.settings.multisig
+                                }
+                                milestoneId={milestone.id}
+                                submissionId={submission.id}
+                                milestoneAmount={milestone.amount ?? 0}
+                                isCommitteeMember={
+                                  submission.userContext?.isCommitteeReviewer ??
+                                  false
+                                }
+                                userWalletAddress={
+                                  currentUser?.walletAddress ??
+                                  '0xForALackOfBetterPlaceholder'
+                                }
+                              />
                             </div>
                           )}
-                        </div>
-                      )}
 
-                      {/* Multisig Payment Approval - Only for SEPARATED workflow */}
-                      {submission.reviewerGroup?.settings?.multisig &&
-                        submission.reviewerGroup.settings.multisig
-                          .approvalWorkflow === 'separated' &&
-                        milestone.status === 'completed' &&
-                        submission.userContext?.isCommitteeReviewer && (
-                          <div className="mt-4">
-                            <MilestoneVotingPanel
-                              multisigConfig={
-                                submission.reviewerGroup.settings.multisig
-                              }
-                              milestoneId={milestone.id}
-                              submissionId={submission.id}
-                              milestoneAmount={milestone.amount ?? 0}
-                              isCommitteeMember={
-                                submission.userContext?.isCommitteeReviewer ??
-                                false
-                              }
-                              userWalletAddress={
-                                currentUser?.walletAddress ??
-                                '0xForALackOfBetterPlaceholder'
-                              }
-                            />
-                          </div>
-                        )}
-
-                      {/* Multisig Payment Approval - MERGED workflow (review + payment together) */}
-                      {submission.reviewerGroup?.settings?.multisig &&
-                        submission.reviewerGroup.settings.multisig
-                          .approvalWorkflow === 'merged' &&
-                        milestone.status === 'in-review' &&
-                        !userMilestoneReview &&
-                        submission.userContext?.isCommitteeReviewer && (
-                          <div className="mt-4">
-                            <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
-                              <p className="mb-2 text-sm font-medium text-blue-800">
-                                🔗 Merged Approval Workflow
-                              </p>
-                              <p className="text-sm text-gray-700">
-                                This committee uses a merged workflow. When you
-                                click "Review This Milestone" above, you'll
-                                approve the milestone AND sign the blockchain
-                                transaction in one step.
-                              </p>
+                        {/* Multisig Payment Approval - MERGED workflow (review + payment together) */}
+                        {submission.reviewerGroup?.settings?.multisig &&
+                          submission.reviewerGroup.settings.multisig
+                            .approvalWorkflow === 'merged' &&
+                          milestone.status === 'in-review' &&
+                          !userMilestoneReview &&
+                          submission.userContext?.isCommitteeReviewer && (
+                            <div className="mt-4">
+                              <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                                <p className="mb-2 text-sm font-medium text-blue-800">
+                                  🔗 Merged Approval Workflow
+                                </p>
+                                <p className="text-sm text-gray-700">
+                                  This committee uses a merged workflow. When
+                                  you click "Review This Milestone" above,
+                                  you'll approve the milestone AND sign the
+                                  blockchain transaction in one step.
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                      {/* Show voting status for MERGED workflow after user has voted */}
-                      {submission.reviewerGroup?.settings?.multisig &&
-                        submission.reviewerGroup.settings.multisig
-                          .approvalWorkflow === 'merged' &&
-                        (milestone.status === 'in-review' ||
-                          milestone.status === 'completed') &&
-                        userMilestoneReview &&
-                        submission.userContext?.isCommitteeReviewer && (
-                          <div className="mt-4">
-                            <MilestoneVotingPanel
-                              multisigConfig={
-                                submission.reviewerGroup.settings.multisig
-                              }
-                              milestoneId={milestone.id}
-                              submissionId={submission.id}
-                              milestoneAmount={milestone.amount ?? 0}
-                              isCommitteeMember={
-                                submission.userContext?.isCommitteeReviewer ??
-                                false
-                              }
-                              userWalletAddress={
-                                currentUser?.walletAddress ??
-                                '0xForALackOfBetterPlaceholder'
-                              }
-                            />
-                          </div>
-                        )}
+                        {/* Show voting status for MERGED workflow after user has voted */}
+                        {submission.reviewerGroup?.settings?.multisig &&
+                          submission.reviewerGroup.settings.multisig
+                            .approvalWorkflow === 'merged' &&
+                          (milestone.status === 'in-review' ||
+                            milestone.status === 'completed') &&
+                          userMilestoneReview &&
+                          submission.userContext?.isCommitteeReviewer && (
+                            <div className="mt-4">
+                              <MilestoneVotingPanel
+                                multisigConfig={
+                                  submission.reviewerGroup.settings.multisig
+                                }
+                                milestoneId={milestone.id}
+                                submissionId={submission.id}
+                                milestoneAmount={milestone.amount ?? 0}
+                                isCommitteeMember={
+                                  submission.userContext?.isCommitteeReviewer ??
+                                  false
+                                }
+                                userWalletAddress={
+                                  currentUser?.walletAddress ??
+                                  '0xForALackOfBetterPlaceholder'
+                                }
+                              />
+                            </div>
+                          )}
                       </>
                     )}
                   </MilestoneCard>
