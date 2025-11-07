@@ -1795,9 +1795,9 @@ async function seed() {
 
   console.log('Creating milestones...')
 
-  const [milestone1] = await db
-    .insert(milestones)
-    .values({
+  // Define milestones for each submission as arrays to ensure proper ordering
+  const approvedSubmissionMilestones = [
+    {
       submissionId: approvedSubmission.id,
       groupId: infraCommittee.id,
       title: 'Architecture Design & Setup',
@@ -1811,7 +1811,7 @@ async function seed() {
       ],
       amount: 20000,
       dueDate: new Date('2024-02-15'),
-      status: 'completed',
+      status: 'completed' as const,
       deliverables: [
         { description: 'System architecture document' },
         { description: 'Development setup guide' },
@@ -1830,12 +1830,8 @@ async function seed() {
       reviewedAt: new Date('2024-02-12T14:30:00Z'),
       createdAt: new Date('2024-01-20T09:00:00Z'),
       updatedAt: new Date('2024-02-12T14:30:00Z'),
-    })
-    .returning()
-
-  const [milestone2] = await db
-    .insert(milestones)
-    .values({
+    },
+    {
       submissionId: approvedSubmission.id,
       groupId: infraCommittee.id,
       title: 'Core SDK Development',
@@ -1848,8 +1844,8 @@ async function seed() {
         'Initial testing',
       ],
       amount: 30000,
-      dueDate: new Date('2024-03-30'),
-      status: 'changes-requested',
+      dueDate: new Date('2024-03-15'),
+      status: 'completed' as const,
       deliverables: [
         { description: 'Core SDK modules' },
         { description: 'API wrappers' },
@@ -1857,14 +1853,24 @@ async function seed() {
         { description: 'Test suite' },
       ],
       githubRepoUrl: 'https://github.com/nextgen-sdk/sdk',
+      githubCommitHash: 'core789xyz012',
+      codeAnalysis: JSON.stringify({
+        filesChanged: 42,
+        linesAdded: 2800,
+        testCoverage: 88,
+        components: [
+          'Core API',
+          'Utilities',
+          'Developer tools',
+          'Test framework',
+        ],
+      }),
+      submittedAt: new Date('2024-03-10T10:00:00Z'),
+      reviewedAt: new Date('2024-03-12T14:30:00Z'),
       createdAt: new Date('2024-01-20T09:00:00Z'),
-      updatedAt: new Date('2024-02-15T09:00:00Z'),
-    })
-    .returning()
-
-  const [_milestone3] = await db
-    .insert(milestones)
-    .values({
+      updatedAt: new Date('2024-03-12T14:30:00Z'),
+    },
+    {
       submissionId: approvedSubmission.id,
       groupId: infraCommittee.id,
       title: 'Testing & Documentation',
@@ -1878,7 +1884,7 @@ async function seed() {
       ],
       amount: 25000,
       dueDate: new Date('2024-04-30'),
-      status: 'pending',
+      status: 'in-review' as const,
       deliverables: [
         { description: 'Test suite' },
         { description: 'API documentation' },
@@ -1886,13 +1892,18 @@ async function seed() {
         { description: 'Tutorial content' },
       ],
       githubRepoUrl: 'https://github.com/nextgen-sdk/sdk',
+      githubCommitHash: 'docs456test789',
+      codeAnalysis: JSON.stringify({
+        filesChanged: 35,
+        linesAdded: 2100,
+        testCoverage: 92,
+        components: ['Test suite', 'Documentation', 'Examples', 'Tutorials'],
+      }),
+      submittedAt: new Date('2024-04-25T10:00:00Z'),
       createdAt: new Date('2024-01-20T09:00:00Z'),
-    })
-    .returning()
-
-  const [_milestone4] = await db
-    .insert(milestones)
-    .values({
+      updatedAt: new Date('2024-04-25T10:00:00Z'),
+    },
+    {
       submissionId: approvedSubmission.id,
       groupId: infraCommittee.id,
       title: 'Production Release',
@@ -1906,7 +1917,7 @@ async function seed() {
       ],
       amount: 25000,
       dueDate: new Date('2024-05-15'),
-      status: 'pending',
+      status: 'pending' as const,
       deliverables: [
         { description: 'Production release' },
         { description: 'npm package' },
@@ -1915,13 +1926,21 @@ async function seed() {
       ],
       githubRepoUrl: 'https://github.com/nextgen-sdk/sdk',
       createdAt: new Date('2024-01-20T09:00:00Z'),
-    })
+    },
+  ]
+
+  // Insert milestones for approvedSubmission in batch (maintains order)
+  const approvedSubmissionMilestoneResults = await db
+    .insert(milestones)
+    .values(approvedSubmissionMilestones)
     .returning()
 
+  const [milestone1, milestone2, milestone3, milestone4] =
+    approvedSubmissionMilestoneResults
+
   // Milestones for Web3 State Management Library (infraApprovedWithMilestones)
-  const [web3StateMilestone1] = await db
-    .insert(milestones)
-    .values({
+  const web3StateMilestones = [
+    {
       submissionId: infraApprovedWithMilestones.id,
       groupId: infraCommittee.id,
       title: 'Core State Management Implementation',
@@ -1935,7 +1954,7 @@ async function seed() {
       ],
       amount: 1000,
       dueDate: new Date('2024-02-20'),
-      status: 'in-review',
+      status: 'in-review' as const,
       deliverables: [
         { description: 'Core hooks implementation' },
         { description: 'Transaction tracking system' },
@@ -1953,12 +1972,8 @@ async function seed() {
       submittedAt: new Date('2024-02-18T10:00:00Z'),
       createdAt: new Date('2024-01-15T09:00:00Z'),
       updatedAt: new Date('2024-02-18T10:00:00Z'),
-    })
-    .returning()
-
-  const [_web3StateMilestone2] = await db
-    .insert(milestones)
-    .values({
+    },
+    {
       submissionId: infraApprovedWithMilestones.id,
       groupId: infraCommittee.id,
       title: 'Advanced Features & Documentation',
@@ -1972,7 +1987,7 @@ async function seed() {
       ],
       amount: 1000,
       dueDate: new Date('2024-03-30'),
-      status: 'pending',
+      status: 'pending' as const,
       deliverables: [
         { description: 'Multi-chain integration' },
         { description: 'Optimistic update system' },
@@ -1981,12 +1996,8 @@ async function seed() {
       ],
       githubRepoUrl: 'https://github.com/nft-gaming-studio/web3-state',
       createdAt: new Date('2024-01-15T09:00:00Z'),
-    })
-    .returning()
-
-  const [_web3StateMilestone3] = await db
-    .insert(milestones)
-    .values({
+    },
+    {
       submissionId: infraApprovedWithMilestones.id,
       groupId: infraCommittee.id,
       title: 'Production Release & Package Publishing',
@@ -2000,7 +2011,7 @@ async function seed() {
       ],
       amount: 500,
       dueDate: new Date('2024-04-15'),
-      status: 'pending',
+      status: 'pending' as const,
       deliverables: [
         { description: 'Production build' },
         { description: 'npm package published' },
@@ -2009,14 +2020,64 @@ async function seed() {
       ],
       githubRepoUrl: 'https://github.com/nft-gaming-studio/web3-state',
       createdAt: new Date('2024-01-15T09:00:00Z'),
-    })
+    },
+  ]
+
+  const web3StateMilestoneResults = await db
+    .insert(milestones)
+    .values(web3StateMilestones)
     .returning()
 
+  const [web3StateMilestone1, _web3StateMilestone2, _web3StateMilestone3] =
+    web3StateMilestoneResults
+
   // Milestones for Zero-Knowledge Proof Development Toolkit (infraInReviewSubmission2)
-  // Note: Milestone 1 is created later as zkMilestone1 (in-review status)
-  const [_zkToolkitMilestone2] = await db
-    .insert(milestones)
-    .values({
+  const zkToolkitMilestones = [
+    {
+      submissionId: infraInReviewSubmission2.id,
+      groupId: infraCommittee.id,
+      title: 'Visual Circuit Designer & Multi-Proof System Compiler',
+      description:
+        'Develop the visual circuit designer interface with support for multiple zero-knowledge proof systems including Groth16, PLONK, and STARK.',
+      requirements: [
+        'Interactive visual circuit designer',
+        'Multi-proof system compiler (Groth16, PLONK, STARK)',
+        'Circuit optimization algorithms',
+        'Proof generation benchmarking',
+        'Export to multiple ZK frameworks',
+        'Comprehensive testing suite',
+      ],
+      amount: 35000,
+      dueDate: new Date('2024-02-28'), // Overdue!
+      status: 'pending' as const,
+      deliverables: [
+        { description: 'Visual circuit designer' },
+        { description: 'Multi-proof compiler' },
+        { description: 'Optimization algorithms' },
+        { description: 'Benchmarking suite' },
+        { description: 'Framework exports' },
+        { description: 'Test suite' },
+      ],
+      githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
+      githubCommitHash: 'zk123jkl456mno',
+      codeAnalysis: JSON.stringify({
+        filesChanged: 52,
+        linesAdded: 4100,
+        testCoverage: 91,
+        components: [
+          'Visual designer',
+          'Multi-proof compiler',
+          'Optimizer',
+          'Benchmarker',
+        ],
+        complexityScore: 94,
+        innovationScore: 97,
+      }),
+      submittedAt: new Date('2024-02-26T16:20:00Z'),
+      createdAt: new Date('2024-01-20T09:00:00Z'),
+      updatedAt: new Date('2024-02-26T16:20:00Z'),
+    },
+    {
       submissionId: infraInReviewSubmission2.id,
       groupId: infraCommittee.id,
       title: 'Developer SDK & Framework Integrations',
@@ -2032,7 +2093,7 @@ async function seed() {
       ],
       amount: 25000,
       dueDate: new Date('2024-05-30'),
-      status: 'pending',
+      status: 'pending' as const,
       deliverables: [
         { description: 'Multi-language SDK suite' },
         { description: 'Framework integration plugins' },
@@ -2041,12 +2102,8 @@ async function seed() {
       ],
       githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
       createdAt: new Date('2024-01-20T09:00:00Z'),
-    })
-    .returning()
-
-  const [_zkToolkitMilestone3] = await db
-    .insert(milestones)
-    .values({
+    },
+    {
       submissionId: infraInReviewSubmission2.id,
       groupId: infraCommittee.id,
       title: 'Performance Optimization & Benchmarking Suite',
@@ -2061,7 +2118,7 @@ async function seed() {
       ],
       amount: 25000,
       dueDate: new Date('2024-07-15'),
-      status: 'pending',
+      status: 'pending' as const,
       deliverables: [
         { description: 'Optimization engine' },
         { description: 'Benchmarking suite' },
@@ -2070,12 +2127,8 @@ async function seed() {
       ],
       githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
       createdAt: new Date('2024-01-20T09:00:00Z'),
-    })
-    .returning()
-
-  const [_zkToolkitMilestone4] = await db
-    .insert(milestones)
-    .values({
+    },
+    {
       submissionId: infraInReviewSubmission2.id,
       groupId: infraCommittee.id,
       title: 'Documentation, Tutorials & Enterprise Features',
@@ -2091,7 +2144,7 @@ async function seed() {
       ],
       amount: 20000,
       dueDate: new Date('2024-08-30'),
-      status: 'pending',
+      status: 'pending' as const,
       deliverables: [
         { description: 'Documentation website' },
         { description: 'Tutorial content' },
@@ -2100,8 +2153,20 @@ async function seed() {
       ],
       githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
       createdAt: new Date('2024-01-20T09:00:00Z'),
-    })
+    },
+  ]
+
+  const zkToolkitMilestoneResults = await db
+    .insert(milestones)
+    .values(zkToolkitMilestones)
     .returning()
+
+  const [
+    zkMilestone4,
+    _zkToolkitMilestone2,
+    _zkToolkitMilestone3,
+    _zkToolkitMilestone4,
+  ] = zkToolkitMilestoneResults
 
   // ============================================================================
   // ADDITIONAL MILESTONES FOR ALEX CHEN TO REVIEW
@@ -2259,53 +2324,7 @@ async function seed() {
     .returning()
 
   // SCENARIO 4: Milestone that needs urgent review (overdue)
-  const [zkMilestone1] = await db
-    .insert(milestones)
-    .values({
-      submissionId: infraInReviewSubmission2.id, // ZK Toolkit
-      groupId: infraCommittee.id,
-      title: 'Visual Circuit Designer & Multi-Proof System Compiler',
-      description:
-        'Develop the visual circuit designer interface with support for multiple zero-knowledge proof systems including Groth16, PLONK, and STARK.',
-      requirements: [
-        'Interactive visual circuit designer',
-        'Multi-proof system compiler (Groth16, PLONK, STARK)',
-        'Circuit optimization algorithms',
-        'Proof generation benchmarking',
-        'Export to multiple ZK frameworks',
-        'Comprehensive testing suite',
-      ],
-      amount: 35000,
-      dueDate: new Date('2024-02-28'), // Overdue!
-      status: 'in-review',
-      deliverables: [
-        { description: 'Visual circuit designer' },
-        { description: 'Multi-proof compiler' },
-        { description: 'Optimization algorithms' },
-        { description: 'Benchmarking suite' },
-        { description: 'Framework exports' },
-        { description: 'Test suite' },
-      ],
-      githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
-      githubCommitHash: 'zk123jkl456mno',
-      codeAnalysis: JSON.stringify({
-        filesChanged: 52,
-        linesAdded: 4100,
-        testCoverage: 91,
-        components: [
-          'Visual designer',
-          'Multi-proof compiler',
-          'Optimizer',
-          'Benchmarker',
-        ],
-        complexityScore: 94,
-        innovationScore: 97,
-      }),
-      submittedAt: new Date('2024-02-26T16:20:00Z'),
-      createdAt: new Date('2024-01-20T09:00:00Z'),
-      updatedAt: new Date('2024-02-26T16:20:00Z'),
-    })
-    .returning()
+  // Note: zkMilestone4 is now created above in zkToolkitMilestones array
 
   // SCENARIO 5: Milestone 2 - pending until milestone 1 is completed
   const [web3Milestone2] = await db
@@ -2416,6 +2435,28 @@ async function seed() {
     })
     .returning()
 
+  const [milestone3Discussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: approvedSubmission.id,
+      milestoneId: milestone3.id,
+      groupId: infraCommittee.id,
+      type: 'milestone',
+      isPublic: true,
+    })
+    .returning()
+
+  const [_milestone4Discussion] = await db
+    .insert(discussions)
+    .values({
+      submissionId: approvedSubmission.id,
+      milestoneId: milestone4.id,
+      groupId: infraCommittee.id,
+      type: 'milestone',
+      isPublic: true,
+    })
+    .returning()
+
   const [web3Milestone1Discussion] = await db
     .insert(discussions)
     .values({
@@ -2465,7 +2506,7 @@ async function seed() {
     .insert(discussions)
     .values({
       submissionId: infraInReviewSubmission2.id,
-      milestoneId: zkMilestone1.id,
+      milestoneId: zkMilestone4.id,
       groupId: infraCommittee.id,
       type: 'milestone',
       isPublic: true,
@@ -2519,9 +2560,41 @@ async function seed() {
       discussionId: milestone2Discussion.id,
       authorId: teamMember1.id,
       content:
-        'Core development is progressing well. About 70% complete with the main API wrappers implemented.',
+        'Milestone 2 complete! Core SDK development is finished with all API wrappers, utilities, and developer tools implemented.',
       messageType: 'comment',
-      createdAt: new Date('2024-03-15T14:00:00Z'),
+      createdAt: new Date('2024-03-10T10:00:00Z'),
+    },
+    {
+      discussionId: milestone2Discussion.id,
+      authorId: reviewer1.id,
+      content:
+        'Excellent core SDK implementation! The API wrappers are well-designed and the code quality is high. Approving this milestone.',
+      messageType: 'comment',
+      createdAt: new Date('2024-03-11T10:00:00Z'),
+    },
+    {
+      discussionId: milestone2Discussion.id,
+      authorId: reviewer2.id,
+      content:
+        'The utility libraries are comprehensive and the test suite provides good coverage. Approved!',
+      messageType: 'comment',
+      createdAt: new Date('2024-03-12T14:30:00Z'),
+    },
+    {
+      discussionId: milestone3Discussion.id,
+      authorId: teamMember1.id,
+      content:
+        'Milestone 3 submitted! Testing & documentation complete with 92% test coverage and comprehensive API documentation.',
+      messageType: 'comment',
+      createdAt: new Date('2024-04-25T10:00:00Z'),
+    },
+    {
+      discussionId: milestone3Discussion.id,
+      authorId: reviewer2.id,
+      content:
+        'The documentation is comprehensive and the test coverage exceeds 90%. Great work!',
+      messageType: 'comment',
+      createdAt: new Date('2024-04-26T11:00:00Z'),
     },
     {
       discussionId: web3Milestone1Discussion.id,
@@ -2658,6 +2731,50 @@ async function seed() {
       isBinding: false,
       createdAt: new Date('2024-02-12T09:00:00Z'),
     },
+    // Milestone 2 - Completed
+    {
+      submissionId: approvedSubmission.id,
+      milestoneId: milestone2.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer1.id,
+      discussionId: milestone2Discussion.id,
+      vote: 'approve',
+      feedback:
+        'Excellent core SDK implementation! The API wrappers are well-designed and the code quality is high.',
+      reviewType: 'milestone',
+      weight: 1,
+      isBinding: false,
+      createdAt: new Date('2024-03-11T10:00:00Z'),
+    },
+    {
+      submissionId: approvedSubmission.id,
+      milestoneId: milestone2.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer2.id,
+      discussionId: milestone2Discussion.id,
+      vote: 'approve',
+      feedback:
+        'The utility libraries are comprehensive and the test suite provides good coverage. Approved!',
+      reviewType: 'milestone',
+      weight: 1,
+      isBinding: false,
+      createdAt: new Date('2024-03-12T14:30:00Z'),
+    },
+    // Milestone 3 - In Review
+    {
+      submissionId: approvedSubmission.id,
+      milestoneId: milestone3.id,
+      groupId: infraCommittee.id,
+      reviewerId: reviewer2.id,
+      discussionId: milestone3Discussion.id,
+      vote: 'approve',
+      feedback:
+        'The documentation is comprehensive and the test coverage exceeds 90%. Great work!',
+      reviewType: 'milestone',
+      weight: 1,
+      isBinding: false,
+      createdAt: new Date('2024-04-26T11:00:00Z'),
+    },
     // Web3 State Management Milestone 1 - Needs Alex's review
     {
       submissionId: infraApprovedWithMilestones.id,
@@ -2713,7 +2830,7 @@ async function seed() {
     // ZK Milestone 1 - Has one approve vote, needs Alex's review (URGENT - overdue)
     {
       submissionId: infraInReviewSubmission2.id,
-      milestoneId: zkMilestone1.id,
+      milestoneId: zkMilestone4.id,
       groupId: infraCommittee.id,
       reviewerId: reviewer2.id,
       discussionId: zkMilestone1Discussion.id,
@@ -2755,17 +2872,23 @@ async function seed() {
     processedAt: new Date('2024-02-12T16:15:00Z'),
   })
 
-  // Pending payout (milestone 2 not yet completed)
+  // Completed payout for milestone 2
   await db.insert(payouts).values({
     submissionId: approvedSubmission.id,
     milestoneId: milestone2.id,
     groupId: infraCommittee.id,
     amount: 30000,
-    status: 'pending',
-    triggeredBy: teamMember1.id,
+    transactionHash:
+      '0x2345678901bcdef2345678901bcdef2345678901bcdef2345678901bcdef',
+    blockExplorerUrl:
+      'https://etherscan.io/tx/0x2345678901bcdef2345678901bcdef2345678901bcdef2345678901bcdef',
+    status: 'completed',
+    triggeredBy: reviewer1.id,
+    approvedBy: reviewer1.id,
     walletFrom: infraCommittee.walletAddress,
     walletTo: teamMember1.walletAddress,
-    createdAt: new Date('2024-03-15T14:30:00Z'),
+    createdAt: new Date('2024-03-12T16:00:00Z'),
+    processedAt: new Date('2024-03-12T16:15:00Z'),
   })
 
   // ============================================================================
@@ -2977,7 +3100,7 @@ async function seed() {
       groupId: infraCommittee.id,
       type: 'milestone_submitted',
       submissionId: infraInReviewSubmission2.id,
-      milestoneId: zkMilestone1.id,
+      milestoneId: zkMilestone4.id,
       discussionId: zkMilestone1Discussion.id,
       read: false,
       content:
@@ -3068,13 +3191,18 @@ async function seed() {
   console.log('   • 1 REJECTED (with feedback)')
 
   console.log(`\n🎯 Created ${12} milestones across approved submissions:`)
-  console.log('   • 1 COMPLETED (with payout)')
-  console.log('   • 1 CHANGES-REQUESTED')
-  console.log('   • 6 IN-REVIEW (submitted, awaiting approval)')
-  console.log('   • 4 PENDING')
+  console.log('   • 2 COMPLETED (with payouts) - Next-Gen Developer SDK')
+  console.log(
+    '   • 1 IN-REVIEW - Next-Gen Developer SDK (Testing & Documentation)'
+  )
+  console.log('   • 1 PENDING - Next-Gen Developer SDK (Production Release)')
+  console.log(
+    '   • 6 IN-REVIEW (other submissions, submitted, awaiting approval)'
+  )
+  console.log('   • 2 PENDING (other submissions)')
 
   console.log(`\n💬 Created active discussions with messages and reviews`)
-  console.log(`💰 Created example payouts (completed and pending)`)
+  console.log(`💰 Created ${2} completed payouts and example pending payouts`)
   console.log(`🔔 Created test notifications for various scenarios`)
 
   console.log('\n🧪 TEST SCENARIOS AVAILABLE:')
