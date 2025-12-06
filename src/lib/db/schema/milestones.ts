@@ -70,6 +70,8 @@ export const milestones = pgTable('milestones', {
   codeAnalysis: text('code_analysis'), // AI analysis of code changes
   submittedAt: timestamp('submitted_at'),
   reviewedAt: timestamp('reviewed_at'),
+  rejectionCount: integer('rejection_count').default(0), // Track number of rejections (for analytics)
+  lastRejectedAt: timestamp('last_rejected_at'), // Track when last rejected (for analytics)
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })

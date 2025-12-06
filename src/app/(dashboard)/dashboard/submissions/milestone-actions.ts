@@ -194,8 +194,11 @@ export const submitMilestone = validatedActionWithUser(
         }
       }
 
-      // Verify milestone can be submitted (status should be 'pending' or 'in_progress')
-      if (!['pending', 'in_progress'].includes(milestone.status ?? '')) {
+      // Verify milestone can be submitted (status should be 'pending', 'in_progress', or 'rejected')
+      // Rejected milestones can be resubmitted (unlimited attempts, no cooldown)
+      if (
+        !['pending', 'in_progress', 'rejected'].includes(milestone.status ?? '')
+      ) {
         console.log(
           '[submitMilestone]: Milestone cannot be submitted in current status',
           {
@@ -204,7 +207,7 @@ export const submitMilestone = validatedActionWithUser(
           }
         )
         return {
-          error: `Cannot submit milestone with status: ${milestone.status}`,
+          error: `Cannot submit milestone with status: ${milestone.status}. Only pending, in-progress, or rejected milestones can be submitted.`,
         }
       }
 
@@ -248,15 +251,18 @@ export const submitMilestone = validatedActionWithUser(
       }
 
       // Update milestone with submission data
+      // Store commit SHAs and URLs - full details can be fetched from GitHub when viewing
+      const commitData = data.selectedCommits.map(sha => ({
+        sha,
+        shortSha: sha.substring(0, 7),
+        url: `${submission.githubRepoUrl}/commit/${sha}`, // Construct GitHub URL
+      }))
+
       const updateData = {
         deliverables: [
           {
             description: data.deliverables,
-            commits: data.selectedCommits.map(sha => ({
-              sha,
-              shortSha: sha.substring(0, 7),
-              url: `${submission.githubRepoUrl}/commit/${sha}`, // Construct GitHub URL
-            })),
+            commits: commitData,
             submittedAt: new Date().toISOString(),
             submittedBy: user.id,
           },

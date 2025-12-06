@@ -1,7 +1,7 @@
 'use server'
 
 import { z } from 'zod'
-import { and, eq, isNull } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 import { db } from '@/lib/db/drizzle'
 import type { NewReview } from '@/lib/db/schema'
 import {
@@ -610,22 +610,45 @@ async function checkQuorumAndUpdateStatus(params: {
 
     // Determine new status based on votes
     if (milestoneId) {
-      // Milestone status: 'completed', 'rejected', or 'changes-requested'
-      let milestoneStatus: 'completed' | 'rejected' | 'changes-requested'
+      // Milestone status: 'completed' or 'rejected' (single rejection status)
+      let milestoneStatus: 'completed' | 'rejected'
 
       if (approvalPercentage >= requiredApprovalPercentage) {
         milestoneStatus = 'completed'
-      } else if (rejectVotes > approveVotes) {
-        milestoneStatus = 'rejected'
       } else {
-        milestoneStatus = 'changes-requested'
+        milestoneStatus = 'rejected' // Single rejection status - work needs revision
       }
 
       console.log('[checkQuorumAndUpdateStatus]: Outcome determined', {
         approvalPercentage,
         requiredApprovalPercentage,
         newStatus: milestoneStatus,
+        approveVotes,
+        rejectVotes,
+        totalVotes,
       })
+
+      // Get milestone and submission details for notifications
+      const milestone = await db.query.milestones.findFirst({
+        where: eq(milestones.id, milestoneId),
+        with: {
+          submission: {
+            columns: {
+              id: true,
+              submitterId: true,
+              title: true,
+            },
+          },
+        },
+      })
+
+      if (!milestone) {
+        console.warn(
+          '[checkQuorumAndUpdateStatus]: Milestone not found',
+          milestoneId
+        )
+        return
+      }
 
       // Update milestone status
       await db
@@ -634,6 +657,11 @@ async function checkQuorumAndUpdateStatus(params: {
           status: milestoneStatus,
           reviewedAt: new Date(),
           updatedAt: new Date(),
+          // Track rejection for analytics
+          ...(milestoneStatus === 'rejected' && {
+            rejectionCount: sql`COALESCE(${milestones.rejectionCount}, 0) + 1`,
+            lastRejectedAt: new Date(),
+          }),
         })
         .where(eq(milestones.id, milestoneId))
 
@@ -641,6 +669,57 @@ async function checkQuorumAndUpdateStatus(params: {
         milestoneId,
         newStatus: milestoneStatus,
       })
+
+      // Create notifications when milestone is rejected
+      if (milestoneStatus === 'rejected' && milestone.submission) {
+        try {
+          const { createNotification } =
+            await import('@/lib/db/writes/notifications')
+
+          // Get rejection feedback summary from reviews
+          const rejectionReviews = allReviews.filter(r => r.vote === 'reject')
+          const feedbackSummary = rejectionReviews
+            .map(r => r.feedback)
+            .filter(Boolean)
+            .slice(0, 3) // First 3 feedback items
+            .join('; ')
+
+          // Notify grantee (submitter)
+          await createNotification({
+            userId: milestone.submission.submitterId,
+            type: 'milestone_rejected',
+            content: JSON.stringify({
+              title: `Milestone "${milestone.title}" rejected`,
+              message: `Your submission for milestone "${milestone.title}" has been rejected. Please review the feedback and resubmit when ready.`,
+              actionUrl: `/dashboard/submissions/${milestone.submission.id}`,
+              metadata: {
+                milestoneId,
+                milestoneTitle: milestone.title,
+                feedbackSummary:
+                  feedbackSummary || 'Review feedback from reviewers',
+                rejectionCount: (milestone.rejectionCount ?? 0) + 1,
+              },
+            }),
+            submissionId: milestone.submission.id,
+            milestoneId,
+            groupId: milestone.groupId,
+          })
+
+          console.log(
+            '[checkQuorumAndUpdateStatus]: Created rejection notification for grantee',
+            {
+              milestoneId,
+              submitterId: milestone.submission.submitterId,
+            }
+          )
+        } catch (notificationError) {
+          console.error(
+            '[checkQuorumAndUpdateStatus]: Failed to create rejection notification',
+            notificationError
+          )
+          // Don't fail the whole operation for notification errors
+        }
+      }
     } else {
       // Submission status: 'approved', 'rejected', or 'changes-requested'
       let submissionStatus: 'approved' | 'rejected' | 'changes-requested'

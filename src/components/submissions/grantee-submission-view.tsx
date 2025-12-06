@@ -21,8 +21,10 @@ import {
   Github,
   ExternalLink,
   Lock,
+  FileText,
 } from 'lucide-react'
 import { MilestoneSubmissionForm } from '@/components/milestone-submission-form'
+import { MilestoneSubmissionViewDialog } from '@/components/milestone/milestone-submission-view-dialog'
 import { submitMilestone } from '@/app/(dashboard)/dashboard/submissions/milestone-actions'
 
 import type { SubmissionWithMilestones, User, Milestone } from '@/lib/db/schema'
@@ -57,6 +59,19 @@ export function GranteeSubmissionView({
     | 'deliverables'
     | 'githubRepoUrl'
     | 'githubCommitHash'
+  > | null>(null)
+  const [viewingMilestone, setViewingMilestone] = useState<Pick<
+    Milestone,
+    | 'id'
+    | 'title'
+    | 'description'
+    | 'status'
+    | 'deliverables'
+    | 'submittedAt'
+    | 'githubCommitHash'
+    | 'amount'
+    | 'dueDate'
+    | 'requirements'
   > | null>(null)
 
   // Determine current stage and required actions
@@ -179,8 +194,48 @@ export function GranteeSubmissionView({
     setSubmittingMilestone(milestone)
   }
 
+  // Check if milestone has been submitted (has deliverables or submittedAt)
+  const hasMilestoneBeenSubmitted = (
+    milestone: Pick<Milestone, 'deliverables' | 'submittedAt'>
+  ): boolean => {
+    if (milestone.submittedAt) return true
+
+    if (!milestone.deliverables) return false
+
+    try {
+      // Check if deliverables is an array with items
+      if (Array.isArray(milestone.deliverables)) {
+        return milestone.deliverables.length > 0
+      }
+
+      // Check if deliverables is an object (single submission)
+      if (typeof milestone.deliverables === 'object') {
+        return Object.keys(milestone.deliverables).length > 0
+      }
+
+      // Check if deliverables is a string (JSON)
+      if (typeof milestone.deliverables === 'string') {
+        const parsed = JSON.parse(milestone.deliverables) as
+          | unknown[]
+          | Record<string, unknown>
+        return Array.isArray(parsed)
+          ? parsed.length > 0
+          : typeof parsed === 'object' && parsed !== null
+            ? Object.keys(parsed).length > 0
+            : false
+      }
+
+      return false
+    } catch {
+      return false
+    }
+  }
+
   const canSubmitMilestone = (
-    milestone: Pick<Milestone, 'id' | 'status' | 'createdAt'>
+    milestone: Pick<
+      Milestone,
+      'id' | 'status' | 'createdAt' | 'deliverables' | 'submittedAt'
+    >
   ) => {
     // Check if submission is approved first
     if (submission.status !== 'approved') {
@@ -191,8 +246,9 @@ export function GranteeSubmissionView({
     }
 
     // Check basic requirements
+    // Allow resubmission for rejected milestones (unlimited attempts, no cooldown)
     if (
-      !['pending', 'in_progress'].includes(milestone.status) ||
+      !['pending', 'in_progress', 'rejected'].includes(milestone.status) ||
       currentUser?.id !== submission.submitterId
     ) {
       return { canSubmit: false, reason: 'Not available for submission' }
@@ -419,17 +475,36 @@ export function GranteeSubmissionView({
         {activeTab === 'milestones' && (
           <div className="space-y-6">
             {submittingMilestone ? (
-              <MilestoneSubmissionForm
-                milestone={submittingMilestone}
-                submissionRepoUrl={submission.githubRepoUrl}
-                previousMilestoneCommitSha={getPreviousMilestoneCommitSha(
-                  [...(submission.milestones ?? [])]
-                    .sort((a, b) => a.id - b.id)
-                    .findIndex(m => m.id === submittingMilestone.id) ?? 0
-                )}
-                onSubmit={handleMilestoneSubmission}
-                onCancel={() => setSubmittingMilestone(null)}
-              />
+              <div className="space-y-4">
+                <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
+                  <div className="flex items-start gap-3">
+                    <Target className="mt-0.5 h-5 w-5 text-blue-600" />
+                    <div>
+                      <h3 className="font-semibold text-blue-900">
+                        Submit Milestone: {submittingMilestone.title}
+                      </h3>
+                      <p className="mt-1 text-sm text-blue-700">
+                        {submittingMilestone.status === 'pending'
+                          ? 'This milestone is ready to be submitted. Select commits and provide a deliverables description.'
+                          : submittingMilestone.status === 'rejected'
+                            ? 'This milestone was rejected. Please address the feedback and resubmit with updated work.'
+                            : 'Update your milestone submission with new commits and deliverables.'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+                <MilestoneSubmissionForm
+                  milestone={submittingMilestone}
+                  submissionRepoUrl={submission.githubRepoUrl}
+                  previousMilestoneCommitSha={getPreviousMilestoneCommitSha(
+                    [...(submission.milestones ?? [])]
+                      .sort((a, b) => a.id - b.id)
+                      .findIndex(m => m.id === submittingMilestone.id) ?? 0
+                  )}
+                  onSubmit={handleMilestoneSubmission}
+                  onCancel={() => setSubmittingMilestone(null)}
+                />
+              </div>
             ) : (
               <>
                 <div className="flex items-center justify-between">
@@ -464,8 +539,8 @@ export function GranteeSubmissionView({
                                     ? 'bg-green-500'
                                     : milestone.status === 'in-review'
                                       ? 'bg-yellow-500'
-                                      : milestone.status === 'changes-requested'
-                                        ? 'bg-orange-500'
+                                      : milestone.status === 'rejected'
+                                        ? 'bg-red-500'
                                         : milestone.status === 'pending'
                                           ? 'bg-gray-400'
                                           : 'bg-gray-400'
@@ -490,9 +565,8 @@ export function GranteeSubmissionView({
                                       ? 'bg-green-100 text-green-800'
                                       : milestone.status === 'in-review'
                                         ? 'bg-yellow-100 text-yellow-800'
-                                        : milestone.status ===
-                                            'changes-requested'
-                                          ? 'bg-orange-100 text-orange-800'
+                                        : milestone.status === 'rejected'
+                                          ? 'bg-red-100 text-red-800'
                                           : milestone.status === 'pending'
                                             ? 'bg-blue-100 text-blue-800'
                                             : 'bg-gray-100 text-gray-800'
@@ -503,6 +577,27 @@ export function GranteeSubmissionView({
                                 {(() => {
                                   const { canSubmit, reason } =
                                     canSubmitMilestone(milestone)
+                                  const hasBeenSubmitted =
+                                    hasMilestoneBeenSubmitted(milestone)
+
+                                  // If milestone has been submitted, show View Submission button
+                                  if (hasBeenSubmitted) {
+                                    return (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() =>
+                                          setViewingMilestone(milestone)
+                                        }
+                                        className="flex items-center gap-1"
+                                      >
+                                        <FileText className="h-3 w-3" />
+                                        View Submission
+                                      </Button>
+                                    )
+                                  }
+
+                                  // Otherwise, show Submit or Blocked based on canSubmit
                                   return canSubmit ? (
                                     <Button
                                       variant="outline"
@@ -689,6 +784,24 @@ export function GranteeSubmissionView({
           </div>
         </div>
       </Card>
+
+      {/* Milestone Submission View Dialog */}
+      {viewingMilestone && (
+        <MilestoneSubmissionViewDialog
+          milestone={{
+            ...viewingMilestone,
+            submission: {
+              githubRepoUrl: submission.githubRepoUrl,
+            },
+          }}
+          open={!!viewingMilestone}
+          onOpenChange={open => {
+            if (!open) {
+              setViewingMilestone(null)
+            }
+          }}
+        />
+      )}
     </div>
   )
 }
