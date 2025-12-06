@@ -46,6 +46,7 @@ export interface SignUpState extends ActionState {
   email?: string
   password?: string
   name?: string
+  redirect?: string
 }
 
 async function signInStateHandler(data: SignInInput): Promise<SignInState> {
@@ -91,13 +92,10 @@ async function signInStateHandler(data: SignInInput): Promise<SignInState> {
     logActivity(user.id, ActivityType.SIGN_IN),
   ])
 
-  const redirectTo = data.redirect
-  if (redirectTo === 'checkout') {
-    // Redirect to pricing page instead (no Stripe integration)
-    redirect('/pricing')
-  }
-
-  redirect('/dashboard')
+  // Return redirect URL in state instead of calling redirect()
+  // This works better with useActionState which expects return values
+  const redirectTo = data.redirect === 'checkout' ? '/pricing' : '/dashboard'
+  return { redirect: redirectTo }
 }
 
 async function signUpStateHandler(data: SignUpInput): Promise<SignUpState> {
@@ -134,7 +132,9 @@ async function signUpStateHandler(data: SignUpInput): Promise<SignUpState> {
     logActivity(newUser.id, ActivityType.SIGN_UP),
   ])
 
-  redirect('/dashboard')
+  // Return redirect URL in state instead of calling redirect()
+  // This works better with useActionState which expects return values
+  return { redirect: '/dashboard' }
 }
 
 export async function signInState(
@@ -344,6 +344,7 @@ export interface PasswordState extends ActionState {
 
 export interface DeleteState extends ActionState {
   password?: string
+  redirect?: string
 }
 
 export interface AccountFormState extends ActionState {
@@ -425,7 +426,10 @@ export const deleteAccountState = validatedActionWithUserState<
 
   await logActivity(user.id, ActivityType.DELETE_ACCOUNT)
   ;(await cookies()).delete('session')
-  redirect('/sign-in')
+
+  // Return redirect URL in state instead of calling redirect()
+  // This works better with useActionState which expects return values
+  return { redirect: '/sign-in' }
 })
 
 export const updateAccountState = validatedActionWithUserState<

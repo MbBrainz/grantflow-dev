@@ -186,16 +186,16 @@ async function seed() {
           'security_review',
           'final_approval',
         ],
-        // multisig: {
-        //   multisigAddress: MULTISIG_ADDRESS,
-        //   signatories: [SIGNATORY_1_ADDRESS, SIGNATORY_2_ADDRESS],
-        //   threshold: 2,
-        //   approvalWorkflow: 'merged',
-        //   requireAllSignatories: true,
-        //   votingTimeoutBlocks: 50400, // ~7 days on Polkadot (6s blocks)
-        //   automaticExecution: true,
-        //   network: 'paseo',
-        // },
+        multisig: {
+          multisigAddress: MULTISIG_ADDRESS,
+          signatories: [SIGNATORY_1_ADDRESS, SIGNATORY_2_ADDRESS],
+          threshold: 2,
+          approvalWorkflow: 'merged',
+          requireAllSignatories: true,
+          votingTimeoutBlocks: 50400, // ~7 days on Polkadot (6s blocks)
+          automaticExecution: true,
+          network: 'paseo',
+        },
       },
     })
     .returning()
@@ -2176,8 +2176,8 @@ async function seed() {
     'Creating additional milestones for Alex Chen review scenarios...'
   )
 
-  // SCENARIO 1: Recently submitted milestone - needs Alex's review
-  const [testingFrameworkMilestone1] = await db
+  // SCENARIO 1: Pending milestone - submission is still pending, so milestone cannot be in-review
+  const [_testingFrameworkMilestone1] = await db
     .insert(milestones)
     .values({
       submissionId: infraPendingSubmission1.id, // Advanced Blockchain Testing Framework
@@ -2195,7 +2195,7 @@ async function seed() {
       ],
       amount: 40000,
       dueDate: new Date('2024-03-15'),
-      status: 'in-review',
+      status: 'pending',
       deliverables: [
         { description: 'Core fuzzing engine' },
         { description: 'Property-based testing library' },
@@ -2205,28 +2205,12 @@ async function seed() {
         { description: 'Framework integrations' },
       ],
       githubRepoUrl: 'https://github.com/nextgen-sdk/testing-framework',
-      githubCommitHash: 'fuzzing123abc456',
-      codeAnalysis: JSON.stringify({
-        filesChanged: 45,
-        linesAdded: 3200,
-        testCoverage: 92,
-        components: [
-          'Fuzzing engine',
-          'Property testing',
-          'Gas analyzer',
-          'Vulnerability scanner',
-        ],
-        securityScore: 95,
-        performanceScore: 88,
-      }),
-      submittedAt: new Date('2024-02-20T14:30:00Z'),
       createdAt: new Date('2024-02-10T09:00:00Z'),
-      updatedAt: new Date('2024-02-20T14:30:00Z'),
     })
     .returning()
 
-  // SCENARIO 2: Milestone with changes requested - team resubmitted
-  const [analyticsMilestone1] = await db
+  // SCENARIO 2: Pending milestone - submission is still pending, so milestone cannot be in-review
+  const [_analyticsMilestone1] = await db
     .insert(milestones)
     .values({
       submissionId: infraPendingSubmission2.id, // Real-time Blockchain Analytics Dashboard
@@ -2244,7 +2228,7 @@ async function seed() {
       ],
       amount: 25000,
       dueDate: new Date('2024-03-20'),
-      status: 'in-review',
+      status: 'pending',
       deliverables: [
         { description: 'Real-time data pipeline' },
         { description: 'Analytics dashboard' },
@@ -2254,23 +2238,7 @@ async function seed() {
         { description: 'Historical data system' },
       ],
       githubRepoUrl: 'https://github.com/l2-research-group/analytics-dash',
-      githubCommitHash: 'analytics789def012',
-      codeAnalysis: JSON.stringify({
-        filesChanged: 38,
-        linesAdded: 2800,
-        testCoverage: 89,
-        components: [
-          'Data pipeline',
-          'Analytics engine',
-          'Dashboard',
-          'Alerting system',
-        ],
-        performanceScore: 94,
-        scalabilityScore: 91,
-      }),
-      submittedAt: new Date('2024-02-22T11:15:00Z'),
       createdAt: new Date('2024-02-12T09:00:00Z'),
-      updatedAt: new Date('2024-02-22T11:15:00Z'),
     })
     .returning()
 
@@ -2355,23 +2323,7 @@ async function seed() {
         { description: 'Cross-chain features' },
       ],
       githubRepoUrl: 'https://github.com/nft-gaming-studio/web3-state',
-      githubCommitHash: 'web3abc789def456',
-      codeAnalysis: JSON.stringify({
-        filesChanged: 28,
-        linesAdded: 1950,
-        testCoverage: 90,
-        components: [
-          'Multi-chain support',
-          'Optimistic updates',
-          'Advanced caching',
-          'Error handling',
-        ],
-        reliabilityScore: 93,
-        performanceScore: 91,
-      }),
-      submittedAt: new Date('2024-02-24T13:30:00Z'),
       createdAt: new Date('2024-01-15T09:00:00Z'),
-      updatedAt: new Date('2024-02-24T13:30:00Z'),
     })
     .returning()
 
@@ -2469,27 +2421,8 @@ async function seed() {
     .returning()
 
   // Discussions for new milestones
-  const [testingFrameworkMilestone1Discussion] = await db
-    .insert(discussions)
-    .values({
-      submissionId: infraPendingSubmission1.id,
-      milestoneId: testingFrameworkMilestone1.id,
-      groupId: infraCommittee.id,
-      type: 'milestone',
-      isPublic: true,
-    })
-    .returning()
-
-  const [analyticsMilestone1Discussion] = await db
-    .insert(discussions)
-    .values({
-      submissionId: infraPendingSubmission2.id,
-      milestoneId: analyticsMilestone1.id,
-      groupId: infraCommittee.id,
-      type: 'milestone',
-      isPublic: true,
-    })
-    .returning()
+  // NOTE: testingFrameworkMilestone1 and analyticsMilestone1 are pending milestones
+  // (their submissions are still pending), so no discussions are created yet
 
   const [graphqlMilestone1Discussion] = await db
     .insert(discussions)
@@ -2614,41 +2547,8 @@ async function seed() {
     },
 
     // Messages for new milestone discussions
-    // Testing Framework Milestone 1 - Recently submitted, needs Alex's review
-    {
-      discussionId: testingFrameworkMilestone1Discussion.id,
-      authorId: teamMember1.id,
-      content:
-        'Milestone 1 complete! The fuzzing engine is working excellently with 95% security score. We found 12 potential vulnerabilities in test contracts.',
-      messageType: 'comment',
-      createdAt: new Date('2024-02-20T14:30:00Z'),
-    },
-    {
-      discussionId: testingFrameworkMilestone1Discussion.id,
-      authorId: teamMember1.id,
-      content:
-        'The gas optimization analyzer is particularly impressive - it identified 23% gas savings opportunities in our test suite.',
-      messageType: 'comment',
-      createdAt: new Date('2024-02-20T15:00:00Z'),
-    },
-
-    // Analytics Milestone 1 - Resubmitted after changes
-    {
-      discussionId: analyticsMilestone1Discussion.id,
-      authorId: teamMember3.id,
-      content:
-        'Milestone resubmitted! We addressed all the feedback from the previous review. The real-time pipeline now handles 10,000+ TPS with sub-second latency.',
-      messageType: 'comment',
-      createdAt: new Date('2024-02-22T11:15:00Z'),
-    },
-    {
-      discussionId: analyticsMilestone1Discussion.id,
-      authorId: teamMember3.id,
-      content:
-        'The multi-chain data aggregation is working perfectly. We now support Ethereum, Polygon, and Arbitrum with unified metrics.',
-      messageType: 'comment',
-      createdAt: new Date('2024-02-22T11:45:00Z'),
-    },
+    // NOTE: testingFrameworkMilestone1 and analyticsMilestone1 are pending milestones
+    // (their submissions are still pending), so no messages exist yet
 
     // GraphQL Milestone 1 - Resubmitted after rejection
     {
@@ -2792,24 +2692,8 @@ async function seed() {
     },
 
     // Reviews for new milestones - Different voting scenarios for Alex Chen
-    // Testing Framework Milestone 1 - No reviews yet, needs Alex's first review
-    // (No reviews added - Alex needs to be the first reviewer)
-
-    // Analytics Milestone 1 - Has one approve vote, needs Alex's review
-    {
-      submissionId: infraPendingSubmission2.id,
-      milestoneId: analyticsMilestone1.id,
-      groupId: infraCommittee.id,
-      reviewerId: reviewer2.id,
-      discussionId: analyticsMilestone1Discussion.id,
-      vote: 'approve',
-      feedback:
-        'Excellent improvements! The real-time pipeline performance is impressive and the multi-chain support is well-implemented.',
-      reviewType: 'milestone',
-      weight: 1,
-      isBinding: false,
-      createdAt: new Date('2024-02-23T10:00:00Z'),
-    },
+    // NOTE: testingFrameworkMilestone1 and analyticsMilestone1 are pending milestones
+    // (their submissions are still pending), so no reviews exist yet
 
     // GraphQL Milestone 1 - Has one approve vote, needs Alex's review
     {
@@ -3049,35 +2933,8 @@ async function seed() {
     // ADDITIONAL NOTIFICATIONS FOR ALEX CHEN - New Milestone Reviews
     // ============================================================================
 
-    // Testing Framework Milestone 1 - Needs Alex's first review
-    {
-      userId: reviewer1.id,
-      groupId: infraCommittee.id,
-      type: 'milestone_submitted',
-      submissionId: infraPendingSubmission1.id,
-      milestoneId: testingFrameworkMilestone1.id,
-      discussionId: testingFrameworkMilestone1Discussion.id,
-      read: false,
-      content:
-        'New milestone submitted for review: "Core Testing Infrastructure & Fuzzing Engine" - Advanced Blockchain Testing Framework',
-      priority: 'high',
-      createdAt: new Date('2024-02-20T14:30:00Z'),
-    },
-
-    // Analytics Milestone 1 - Needs Alex's review (has one approve vote)
-    {
-      userId: reviewer1.id,
-      groupId: infraCommittee.id,
-      type: 'milestone_submitted',
-      submissionId: infraPendingSubmission2.id,
-      milestoneId: analyticsMilestone1.id,
-      discussionId: analyticsMilestone1Discussion.id,
-      read: false,
-      content:
-        'Milestone review needed: "Real-time Data Pipeline & Core Analytics Engine" - 1 of 2 votes received',
-      priority: 'high',
-      createdAt: new Date('2024-02-22T11:15:00Z'),
-    },
+    // NOTE: testingFrameworkMilestone1 and analyticsMilestone1 are pending milestones
+    // (their submissions are still pending), so no notifications exist yet
 
     // GraphQL Milestone 1 - Needs Alex's review (has one approve vote)
     {
@@ -3112,19 +2969,8 @@ async function seed() {
     // Note: web3Milestone2 and testingFrameworkMilestone2 are pending (milestone 1 not completed yet)
     // Notifications will be created once milestone 1 is completed and milestone 2 is submitted
 
-    // Additional milestone activity notifications
-    {
-      userId: reviewer1.id,
-      groupId: infraCommittee.id,
-      type: 'new_comment',
-      submissionId: infraPendingSubmission1.id,
-      discussionId: testingFrameworkMilestone1Discussion.id,
-      read: false,
-      content:
-        'New comment on "Core Testing Infrastructure & Fuzzing Engine" milestone by John Developer',
-      priority: 'normal',
-      createdAt: new Date('2024-02-20T15:00:00Z'),
-    },
+    // NOTE: No notifications for testingFrameworkMilestone1 since it's a pending milestone
+    // (submission is still pending)
     {
       userId: reviewer1.id,
       groupId: infraCommittee.id,

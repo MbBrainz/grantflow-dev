@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { useActionState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import { signIn as nextAuthSignIn } from 'next-auth/react'
 import { Button } from '@/components/ui/button'
 import AsyncButton from '@/components/ui/async-button'
@@ -15,6 +15,7 @@ import { useToast } from '@/lib/hooks/use-toast'
 
 export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
   const searchParams = useSearchParams()
+  const router = useRouter()
   const redirect = searchParams.get('redirect')
   const priceId = searchParams.get('priceId')
   const inviteId = searchParams.get('inviteId')
@@ -27,6 +28,13 @@ export function Login({ mode = 'signin' }: { mode?: 'signin' | 'signup' }) {
     action as (prevState: State, formData: FormData) => Promise<State>,
     initialState
   )
+
+  // Handle redirects from server action state
+  useEffect(() => {
+    if (state?.redirect) {
+      router.push(state.redirect)
+    }
+  }, [state?.redirect, router])
 
   // Show toast notifications for errors
   useEffect(() => {

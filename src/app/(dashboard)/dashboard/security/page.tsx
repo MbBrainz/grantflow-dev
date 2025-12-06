@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { Lock, Trash2, Loader2 } from 'lucide-react'
 import { useActionState } from 'react'
+import { useRouter } from 'next/navigation'
 import {
   updatePasswordState,
   deleteAccountState,
@@ -14,7 +15,7 @@ import {
 } from '@/app/(login)/actions'
 import type { User } from '@/lib/db/schema'
 import useSWR from 'swr'
-import { Suspense } from 'react'
+import { Suspense, useEffect } from 'react'
 import { fetcher } from '@/lib/utils'
 
 function PasswordSection({
@@ -231,6 +232,7 @@ function SecurityContent({
 }
 
 export default function SecurityPage() {
+  const router = useRouter()
   const [passwordState, passwordAction, isPasswordPending] = useActionState(
     updatePasswordState,
     {} as PasswordState
@@ -240,6 +242,13 @@ export default function SecurityPage() {
     deleteAccountState,
     {} as DeleteState
   )
+
+  // Handle redirects from delete account action
+  useEffect(() => {
+    if (deleteState?.redirect) {
+      router.push(deleteState.redirect)
+    }
+  }, [deleteState?.redirect, router])
 
   return (
     <section className="flex-1 p-4 lg:p-8">

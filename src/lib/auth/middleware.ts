@@ -16,6 +16,21 @@ interface ZodLike {
   }
 }
 
+/**
+ * Checks if an error is a Next.js redirect error and re-throws it.
+ * Next.js redirect() throws a special error that must propagate for redirects to work.
+ */
+export function rethrowIfRedirectError(error: unknown): void {
+  if (
+    error instanceof Error &&
+    'digest' in error &&
+    typeof error.digest === 'string' &&
+    error.digest.startsWith('NEXT_REDIRECT')
+  ) {
+    throw error
+  }
+}
+
 // ✅ NEW: Authenticated actions accept plain objects
 type ValidatedActionWithUserFunction<TInput, TOutput extends ActionState> = (
   data: TInput,
@@ -140,6 +155,9 @@ export function validatedActionState<
           : never
       )
     } catch (error) {
+      // Re-throw NEXT_REDIRECT errors - they need to propagate for Next.js to handle redirects
+      rethrowIfRedirectError(error)
+
       console.error('[validatedActionState]: Action failed', error)
       return {
         ...prevState,
@@ -226,6 +244,9 @@ export function validatedActionWithUserState<
         user
       )
     } catch (error) {
+      // Re-throw NEXT_REDIRECT errors - they need to propagate for Next.js to handle redirects
+      rethrowIfRedirectError(error)
+
       console.error('[validatedActionWithUserState]: Action failed', error)
       return {
         ...prevState,
