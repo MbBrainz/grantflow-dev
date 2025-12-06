@@ -98,7 +98,7 @@ export function ReviewerVoting({
   const selectedVote = watch('vote')
 
   // Check if current user is a reviewer
-  const isReviewer = currentUser && currentUser.primaryRole === 'committee'
+  const isReviewer = currentUser?.primaryRole === 'committee'
 
   // Check if current user has already voted
   const userVote = existingVotes.find(
@@ -124,9 +124,8 @@ export function ReviewerVoting({
           currentUser: currentUser?.id,
         })
 
-        const { submitReview } = await import(
-          '@/app/(dashboard)/dashboard/submissions/actions'
-        )
+        const { submitReview } =
+          await import('@/app/(dashboard)/dashboard/submissions/actions')
 
         // Call the action with typed data object (no FormData!)
         const result = await submitReview(data)

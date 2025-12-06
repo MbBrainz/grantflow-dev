@@ -476,7 +476,8 @@ export function ReviewerSubmissionView({
                         )}
 
                         {/* Multisig Payment Approval - Only for SEPARATED workflow */}
-                        {submission.reviewerGroup?.settings?.multisig &&
+                        {submission.reviewerGroup?.settings?.multisig
+                          ?.approvalWorkflow === 'separated' &&
                           submission.reviewerGroup.settings.multisig
                             .approvalWorkflow === 'separated' &&
                           milestone.status === 'completed' &&
@@ -502,9 +503,8 @@ export function ReviewerSubmissionView({
                           )}
 
                         {/* Multisig Payment Approval - MERGED workflow (review + payment together) */}
-                        {submission.reviewerGroup?.settings?.multisig &&
-                          submission.reviewerGroup.settings.multisig
-                            .approvalWorkflow === 'merged' &&
+                        {submission.reviewerGroup?.settings?.multisig
+                          ?.approvalWorkflow === 'merged' &&
                           milestone.status === 'in-review' &&
                           !userMilestoneReview &&
                           submission.userContext?.isCommitteeReviewer && (
@@ -524,9 +524,8 @@ export function ReviewerSubmissionView({
                           )}
 
                         {/* Show voting status for MERGED workflow after user has voted */}
-                        {submission.reviewerGroup?.settings?.multisig &&
-                          submission.reviewerGroup.settings.multisig
-                            .approvalWorkflow === 'merged' &&
+                        {submission.reviewerGroup?.settings?.multisig
+                          ?.approvalWorkflow === 'merged' &&
                           (milestone.status === 'in-review' ||
                             milestone.status === 'completed') &&
                           userMilestoneReview &&
