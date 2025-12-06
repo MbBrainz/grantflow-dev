@@ -29,10 +29,17 @@ import {
   AlertCircle,
   Loader2,
   XCircle,
+  Info,
 } from 'lucide-react'
 import { useToast } from '@/lib/hooks/use-toast'
 import { useMultisigApproval } from '@/lib/hooks/use-multisig-approval'
 import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
+import { MultisigFlowExplanation } from './multisig-flow-explanation'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import {
   initiateMultisigApproval as initiatePolkadotApproval,
   approveMultisigCall,
@@ -98,6 +105,16 @@ export function MilestoneVotingPanel({
     !!voteCount &&
     !voteCount.thresholdMet &&
     !hasCurrentUserApproved
+  const canInitiate = !existingApproval && !!activeAddress && isSignatory
+
+  // Determine current step for flow explanation
+  const currentStep = canExecute
+    ? 'execute'
+    : canApprove
+      ? 'approve'
+      : canInitiate
+        ? 'initiate'
+        : null
 
   // Load approval status on mount and when dialog opens
   useEffect(() => {
@@ -409,6 +426,16 @@ export function MilestoneVotingPanel({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Multisig Flow Explanation */}
+        {isConnected && (
+          <MultisigFlowExplanation
+            currentStep={currentStep}
+            threshold={multisigConfig.threshold}
+            currentApprovals={voteCount?.approvals ?? 0}
+            totalSignatories={multisigConfig.signatories.length}
+          />
+        )}
+
         {/* Wallet Connection Section */}
         {!isConnected ? (
           <div className="rounded-lg border border-blue-200 bg-blue-50 p-4">
@@ -516,27 +543,97 @@ export function MilestoneVotingPanel({
 
                 {/* Action Buttons */}
                 {canExecute ? (
-                  <Button
-                    onClick={handleExecute}
-                    disabled={isProcessing}
-                    className="w-full"
-                  >
-                    {isProcessing && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Execute Transaction
-                  </Button>
+                  <div className="space-y-2">
+                    <Card className="border-green-200 bg-green-50 p-3">
+                      <div className="flex items-start gap-2">
+                        <CheckCircle className="h-4 w-4 flex-shrink-0 text-green-600" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-green-900">
+                            Threshold Met - Ready to Execute
+                          </p>
+                          <p className="mt-1 text-xs text-green-700">
+                            {voteCount.approvals} of {voteCount.threshold}{' '}
+                            signatures collected. Clicking will execute the
+                            payment transaction on the blockchain.
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={handleExecute}
+                          disabled={isProcessing}
+                          className="w-full"
+                        >
+                          {isProcessing && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Execute Transaction
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <div className="space-y-1">
+                          <p className="font-semibold">Execute Transaction</p>
+                          <p className="text-xs">
+                            This will execute the multisig payment transaction
+                            on the blockchain. The payment will be sent to the
+                            grantee&apos;s wallet address.
+                          </p>
+                          <p className="mt-2 text-xs font-medium">
+                            Blockchain Action: multisig.as_multi
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                 ) : canApprove ? (
-                  <Button
-                    onClick={handleApproveVote}
-                    disabled={isProcessing}
-                    className="w-full"
-                  >
-                    {isProcessing && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Approve Transaction
-                  </Button>
+                  <div className="space-y-2">
+                    <Card className="border-blue-200 bg-blue-50 p-3">
+                      <div className="flex items-start gap-2">
+                        <Info className="h-4 w-4 flex-shrink-0 text-blue-600" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-blue-900">
+                            Add Your Approval
+                          </p>
+                          <p className="mt-1 text-xs text-blue-700">
+                            {voteCount.approvals} of {voteCount.threshold}{' '}
+                            signatures collected. Clicking will add your
+                            signature to the existing transaction. You need{' '}
+                            {voteCount.threshold - voteCount.approvals} more
+                            signature(s) before execution.
+                          </p>
+                        </div>
+                      </div>
+                    </Card>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          onClick={handleApproveVote}
+                          disabled={isProcessing}
+                          className="w-full"
+                        >
+                          {isProcessing && (
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          )}
+                          Approve Transaction
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <div className="space-y-1">
+                          <p className="font-semibold">Approve Transaction</p>
+                          <p className="text-xs">
+                            This will add your signature to the existing
+                            multisig transaction. Each approval brings the
+                            transaction closer to execution.
+                          </p>
+                          <p className="mt-2 text-xs font-medium">
+                            Blockchain Action: multisig.approve_as_multi
+                          </p>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                 ) : (
                   <Card className="border-gray-200 bg-gray-50 p-4">
                     <div className="flex items-center gap-2">
@@ -568,16 +665,56 @@ export function MilestoneVotingPanel({
                   </div>
                 </Card>
 
-                <Button
-                  onClick={handleInitialApproval}
-                  disabled={isProcessing}
-                  className="w-full"
-                >
-                  {isProcessing && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  Initiate Multisig Approval
-                </Button>
+                <div className="space-y-2">
+                  <Card className="border-green-200 bg-green-50 p-3">
+                    <div className="flex items-start gap-2">
+                      <Info className="h-4 w-4 flex-shrink-0 text-green-600" />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-green-900">
+                          Create New Multisig Transaction
+                        </p>
+                        <p className="mt-1 text-xs text-green-700">
+                          Clicking will create a new on-chain multisig
+                          transaction for this milestone payment. This requires{' '}
+                          {multisigConfig.threshold} of{' '}
+                          {multisigConfig.signatories.length} signatures to
+                          execute. Your signature will be automatically
+                          included.
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={handleInitialApproval}
+                        disabled={isProcessing}
+                        className="w-full"
+                      >
+                        {isProcessing && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Initiate Multisig Approval
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <div className="space-y-1">
+                        <p className="font-semibold">
+                          Initiate Multisig Approval
+                        </p>
+                        <p className="text-xs">
+                          This will create a new multisig transaction on the
+                          blockchain. The transaction will require{' '}
+                          {multisigConfig.threshold} signatures before it can be
+                          executed.
+                        </p>
+                        <p className="mt-2 text-xs font-medium">
+                          Blockchain Action: multisig.as_multi_threshold_1
+                        </p>
+                      </div>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </>
             )}
           </>

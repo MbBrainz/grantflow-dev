@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import AsyncButton from '@/components/ui/async-button'
 import {
@@ -10,6 +10,15 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import { useToast } from '@/lib/hooks/use-toast'
 
 // Removed checkbox import - will use HTML input instead
 import {
@@ -23,6 +32,7 @@ import {
   AlertTriangle,
   ExternalLink,
   FileText,
+  Loader2,
 } from 'lucide-react'
 import type { GitHubCommit } from '@/lib/github/simple-client'
 import { getCommitsSince } from '@/lib/github/simple-client'
@@ -63,11 +73,31 @@ export function MilestoneSubmissionForm({
   onSubmit,
   onCancel,
 }: MilestoneSubmissionFormProps) {
+  const { toast } = useToast()
   const [commits, setCommits] = useState<Commit[]>([])
   const [selectedCommits, setSelectedCommits] = useState<Set<string>>(new Set())
   const [deliverables, setDeliverables] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
+  const [, setPendingCancel] = useState(false)
+
+  // Track initial values to detect unsaved changes
+  const initialDeliverablesRef = useRef('')
+  const initialSelectedCommitsRef = useRef<Set<string>>(new Set())
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = () => {
+    const deliverablesChanged =
+      deliverables.trim() !== initialDeliverablesRef.current.trim()
+    const commitsChanged =
+      selectedCommits.size !== initialSelectedCommitsRef.current.size ||
+      Array.from(selectedCommits).some(
+        sha => !initialSelectedCommitsRef.current.has(sha)
+      )
+    return deliverablesChanged || commitsChanged
+  }
 
   // Parse requirements from milestone
   const requirements = milestone.requirements ?? [
@@ -102,6 +132,7 @@ export function MilestoneSubmissionForm({
           // Auto-select all commits by default (as per requirement)
           const autoSelected = new Set(fetchedCommits.map(commit => commit.sha))
           setSelectedCommits(autoSelected)
+          initialSelectedCommitsRef.current = new Set(autoSelected)
 
           console.log('[MilestoneSubmissionForm]: Auto-selected commits', {
             count: autoSelected.size,
@@ -171,6 +202,7 @@ export function MilestoneSubmissionForm({
     }
 
     setError(null)
+    setIsSubmitting(true)
 
     try {
       await onSubmit({
@@ -187,6 +219,17 @@ export function MilestoneSubmissionForm({
           selectedCommitsCount: selectedCommits.size,
         }
       )
+
+      // Show success toast
+      toast({
+        title: 'Milestone Submitted Successfully!',
+        description: 'Your milestone submission is now awaiting review.',
+        variant: 'success',
+      })
+
+      // Update initial values to reflect submitted state
+      initialDeliverablesRef.current = trimmedDeliverables
+      initialSelectedCommitsRef.current = new Set(selectedCommits)
     } catch (err) {
       console.error(
         '[MilestoneSubmissionForm]: Error submitting milestone',
@@ -198,8 +241,38 @@ export function MilestoneSubmissionForm({
           ? err.message
           : 'Failed to submit milestone. Please try again.'
       setError(errorMessage)
+
+      // Show error toast
+      toast({
+        title: 'Submission Failed',
+        description: errorMessage,
+        variant: 'destructive',
+      })
+
       throw err // Re-throw for AsyncButton
+    } finally {
+      setIsSubmitting(false)
     }
+  }
+
+  const handleCancel = () => {
+    if (hasUnsavedChanges() && !isSubmitting) {
+      setPendingCancel(true)
+      setShowUnsavedDialog(true)
+    } else {
+      onCancel()
+    }
+  }
+
+  const handleConfirmCancel = () => {
+    setShowUnsavedDialog(false)
+    setPendingCancel(false)
+    onCancel()
+  }
+
+  const handleDismissCancel = () => {
+    setShowUnsavedDialog(false)
+    setPendingCancel(false)
   }
 
   const formatDate = (dateString: string) => {
@@ -288,7 +361,12 @@ export function MilestoneSubmissionForm({
               <CardTitle>Select Commits</CardTitle>
             </div>
             {commits.length > 0 && (
-              <Button variant="outline" size="sm" onClick={handleSelectAll}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSelectAll}
+                disabled={isSubmitting}
+              >
                 {selectedCommits.size === commits.length
                   ? 'Deselect All'
                   : 'Select All'}
@@ -361,7 +439,8 @@ export function MilestoneSubmissionForm({
                       type="checkbox"
                       checked={selectedCommits.has(commit.sha)}
                       onChange={() => handleCommitToggle(commit.sha)}
-                      className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      disabled={isSubmitting}
+                      className="mt-1 h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-50"
                     />
 
                     <div className="min-w-0 flex-1">
@@ -434,6 +513,7 @@ export function MilestoneSubmissionForm({
               placeholder="Provide a detailed description of what you've delivered for this milestone. Explain how the selected commits demonstrate completion of the requirements..."
               value={deliverables}
               onChange={e => setDeliverables(e.target.value)}
+              disabled={isSubmitting}
               required
             />
             <div className="flex items-center justify-between">
@@ -459,27 +539,83 @@ export function MilestoneSubmissionForm({
 
       {/* Submit Actions */}
       <div className="flex justify-between">
-        <Button variant="outline" onClick={onCancel}>
+        <Button
+          variant="outline"
+          onClick={handleCancel}
+          disabled={isSubmitting}
+        >
           Cancel
         </Button>
 
         <AsyncButton
           onClick={handleSubmit}
-          disabled={selectedCommits.size === 0 || !deliverables.trim()}
+          disabled={
+            isSubmitting ||
+            selectedCommits.size === 0 ||
+            !deliverables.trim() ||
+            deliverables.trim().length < 10
+          }
           className="flex items-center gap-2"
           loadingContent={
             <>
-              <Clock className="h-4 w-4 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
               Submitting...
             </>
           }
         >
-          <CheckCircle className="h-4 w-4" />
-          Submit Milestone
+          {isSubmitting ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Submitting...
+            </>
+          ) : (
+            <>
+              <CheckCircle className="h-4 w-4" />
+              Submit Milestone
+            </>
+          )}
         </AsyncButton>
       </div>
 
-      {error && (
+      {/* Unsaved Changes Confirmation Dialog */}
+      <Dialog open={showUnsavedDialog} onOpenChange={setShowUnsavedDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Unsaved Changes</DialogTitle>
+            <DialogDescription>
+              You have unsaved changes. Are you sure you want to cancel? Your
+              changes will be lost.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={handleDismissCancel}>
+              Continue Editing
+            </Button>
+            <Button variant="destructive" onClick={handleConfirmCancel}>
+              Discard Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Loading Overlay */}
+      {isSubmitting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <Card className="p-6">
+            <div className="flex flex-col items-center gap-4">
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+              <div className="text-center">
+                <p className="font-semibold">Submitting Milestone</p>
+                <p className="text-sm text-gray-600">
+                  Please wait while we process your submission...
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {error && !isSubmitting && (
         <div className="flex items-center gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-red-700">
           <AlertTriangle className="h-5 w-5" />
           <span>{error}</span>

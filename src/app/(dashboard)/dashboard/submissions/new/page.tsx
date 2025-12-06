@@ -498,6 +498,18 @@ export default function NewSubmissionPage() {
     }
   }, [grantPrograms])
 
+  // Calculate milestone totals for validation
+  const milestoneAmounts = formData.milestones.map(m => m.amount)
+  const milestoneValidation = validateMilestoneAmounts(
+    formData.totalAmount,
+    milestoneAmounts
+  )
+  const milestonesTotal = milestoneValidation.milestonesTotal ?? 0
+  const totalAmount = parseFloat(formData.totalAmount) || 0
+  const percentage = totalAmount > 0 ? (milestonesTotal / totalAmount) * 100 : 0
+  const remainingAmount = totalAmount - milestonesTotal
+  const isMilestoneAmountsValid = milestoneValidation.isValid
+
   // Get missing fields for validation feedback
   const getMissingFields = () => {
     const missing: string[] = []
@@ -556,6 +568,17 @@ export default function NewSubmissionPage() {
       })
     }
 
+    // Add milestone amount validation error if present
+    if (
+      formData.totalAmount &&
+      !isNaN(parseFloat(formData.totalAmount)) &&
+      parseFloat(formData.totalAmount) > 0 &&
+      !isMilestoneAmountsValid &&
+      milestoneValidation.error
+    ) {
+      missing.push(`Milestone Amounts: ${milestoneValidation.error}`)
+    }
+
     return missing
   }
 
@@ -579,7 +602,8 @@ export default function NewSubmissionPage() {
         !isNaN(parseFloat(m.amount)) &&
         parseFloat(m.amount) > 0 &&
         m.dueDate
-    )
+    ) &&
+    isMilestoneAmountsValid
 
   // Grant program selection step
   if (step === 'program') {
@@ -835,6 +859,113 @@ export default function NewSubmissionPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
+            {/* Milestone Amount Summary */}
+            {formData.totalAmount &&
+              !isNaN(parseFloat(formData.totalAmount)) &&
+              parseFloat(formData.totalAmount) > 0 && (
+                <div
+                  className={`rounded-lg border p-4 ${
+                    !isMilestoneAmountsValid
+                      ? 'border-red-300 bg-red-50 dark:border-red-800 dark:bg-red-950/20'
+                      : 'border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950/20'
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">
+                        Milestone Total:
+                      </span>
+                      <span
+                        className={`text-sm font-semibold ${
+                          !isMilestoneAmountsValid
+                            ? 'text-red-700 dark:text-red-400'
+                            : 'text-green-700 dark:text-green-400'
+                        }`}
+                      >
+                        $
+                        {milestonesTotal.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}{' '}
+                        / $
+                        {totalAmount.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}{' '}
+                        ({percentage.toFixed(1)}%)
+                      </span>
+                    </div>
+                    {!isMilestoneAmountsValid && (
+                      <p className="text-sm text-red-700 dark:text-red-400">
+                        {milestoneValidation.error}
+                      </p>
+                    )}
+                    {isMilestoneAmountsValid && (
+                      <p className="text-sm text-green-700 dark:text-green-400">
+                        ✓ Milestone amounts match total funding amount
+                      </p>
+                    )}
+                    {remainingAmount !== 0 && (
+                      <p
+                        className={`text-xs ${
+                          remainingAmount > 0
+                            ? 'text-muted-foreground'
+                            : 'text-red-600 dark:text-red-400'
+                        }`}
+                      >
+                        {remainingAmount > 0
+                          ? `Remaining: $${remainingAmount.toLocaleString(
+                              'en-US',
+                              {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              }
+                            )}`
+                          : `Exceeds by: $${Math.abs(
+                              remainingAmount
+                            ).toLocaleString('en-US', {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}`}
+                      </p>
+                    )}
+                    {/* Milestone Breakdown */}
+                    {formData.milestones.length > 0 && (
+                      <div className="mt-3 space-y-1 border-t pt-2">
+                        <p className="text-muted-foreground text-xs font-medium">
+                          Breakdown:
+                        </p>
+                        <div className="space-y-1">
+                          {formData.milestones.map((milestone, index) => {
+                            const amount = parseFloat(milestone.amount) || 0
+                            const milestonePercentage =
+                              totalAmount > 0 ? (amount / totalAmount) * 100 : 0
+                            return (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between text-xs"
+                              >
+                                <span className="text-muted-foreground">
+                                  Milestone {index + 1}:{' '}
+                                  {milestone.title || 'Untitled'}
+                                </span>
+                                <span className="font-medium">
+                                  $
+                                  {amount.toLocaleString('en-US', {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}{' '}
+                                  ({milestonePercentage.toFixed(1)}%)
+                                </span>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             {formData.milestones.map((milestone, index) => (
               <div key={index} className="space-y-4 rounded-lg border p-4">
                 <div className="flex items-center justify-between">
@@ -954,6 +1085,92 @@ export default function NewSubmissionPage() {
             >
               Add Another Milestone
             </Button>
+
+            {/* Calculated Total Milestone Amount - Read Only */}
+            <div className="space-y-2">
+              <Label htmlFor="milestone-total-calculated">
+                Total Milestone Amount (Calculated) *
+              </Label>
+              <div className="relative">
+                <Input
+                  id="milestone-total-calculated"
+                  type="text"
+                  value={`$${milestonesTotal.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}`}
+                  readOnly
+                  className={`bg-muted cursor-not-allowed ${
+                    !isMilestoneAmountsValid
+                      ? 'border-red-300 text-red-700 dark:border-red-800 dark:text-red-400'
+                      : milestonesTotal > 0
+                        ? 'border-green-300 text-green-700 dark:border-green-800 dark:text-green-400'
+                        : ''
+                  }`}
+                  aria-label="Total milestone amount (automatically calculated)"
+                />
+                <div className="text-muted-foreground absolute top-1/2 right-3 -translate-y-1/2 text-xs">
+                  {totalAmount > 0 && (
+                    <span
+                      className={
+                        !isMilestoneAmountsValid
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-green-600 dark:text-green-400'
+                      }
+                    >
+                      {percentage.toFixed(1)}% of grant
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="space-y-1">
+                {totalAmount > 0 && (
+                  <p
+                    className={`text-xs ${
+                      !isMilestoneAmountsValid
+                        ? 'text-red-600 dark:text-red-400'
+                        : isMilestoneAmountsValid
+                          ? 'text-green-600 dark:text-green-400'
+                          : 'text-muted-foreground'
+                    }`}
+                  >
+                    {!isMilestoneAmountsValid ? (
+                      <>
+                        <span className="font-medium">⚠️ Warning:</span>{' '}
+                        {milestoneValidation.error}
+                      </>
+                    ) : remainingAmount === 0 ? (
+                      <>
+                        <span className="font-medium">✓ Valid:</span> Milestone
+                        amounts match total funding amount
+                      </>
+                    ) : remainingAmount > 0 ? (
+                      <>
+                        <span className="font-medium">ℹ️ Info:</span> $
+                        {remainingAmount.toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}{' '}
+                        remaining to allocate
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-medium">⚠️ Warning:</span> Exceeds
+                        by $
+                        {Math.abs(remainingAmount).toLocaleString('en-US', {
+                          minimumFractionDigits: 2,
+                          maximumFractionDigits: 2,
+                        })}
+                      </>
+                    )}
+                  </p>
+                )}
+                <p className="text-muted-foreground text-xs">
+                  This amount is automatically calculated from individual
+                  milestone amounts above
+                </p>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

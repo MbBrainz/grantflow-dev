@@ -1,8 +1,7 @@
 ---
 description: "Comprehensive tech stack guide: Next.js 15, React 19, shadcn/ui, Vercel AI SDK, Drizzle ORM, Tailwind CSS. Framework patterns, best practices, and component architecture."
-globs: ["**/*"]
+alwaysApply: false
 ---
-
 # Composed Claude Code Configuration
 
 This configuration combines: Next.js 15, shadcn/ui, Vercel AI SDK, Drizzle ORM, Tailwind CSS

@@ -1,8 +1,8 @@
 ---
 description: "Server Actions Convention: Always use validatedActionWithUser pattern with Zod schemas for type-safe, authenticated actions. Includes drizzle-zod integration patterns."
-globs: ["**/actions.ts", "**/*-actions.ts", "src/app/**/*.ts"]
+globs: src/**/actions.ts,src/**/*-actions.ts,src/app/**/*.ts
+alwaysApply: false
 ---
-
 # Server Actions Convention
 
 ## Always Use `validatedActionWithUser`

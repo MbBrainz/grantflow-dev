@@ -26,6 +26,7 @@ import {
 import { MilestoneSubmissionForm } from '@/components/milestone-submission-form'
 import { MilestoneSubmissionViewDialog } from '@/components/milestone/milestone-submission-view-dialog'
 import { submitMilestone } from '@/app/(dashboard)/dashboard/submissions/milestone-actions'
+import { useToast } from '@/lib/hooks/use-toast'
 
 import type { SubmissionWithMilestones, User, Milestone } from '@/lib/db/schema'
 
@@ -43,6 +44,7 @@ export function GranteeSubmissionView({
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   onVoteSubmitted,
 }: GranteeSubmissionViewProps) {
+  const { toast } = useToast()
   const reviews = submission.reviews ?? []
   const [activeTab, setActiveTab] = useState<
     'status' | 'feedback' | 'milestones'
@@ -169,13 +171,24 @@ export function GranteeSubmissionView({
       // Close the submission form
       setSubmittingMilestone(null)
 
-      // Refresh the page to show updated data
-      window.location.reload()
+      // Show success toast (the form component also shows one, but this ensures it's visible)
+      toast({
+        title: 'Milestone Submitted Successfully!',
+        description: 'Your milestone submission is now awaiting review.',
+        variant: 'success',
+      })
+
+      // Refresh the page after a short delay to show the toast
+      setTimeout(() => {
+        window.location.reload()
+      }, 1500)
     } catch (error) {
       console.error(
         '[GranteeSubmissionView]: Error submitting milestone',
         error
       )
+
+      // Error toast is handled by the form component
       throw error
     }
   }

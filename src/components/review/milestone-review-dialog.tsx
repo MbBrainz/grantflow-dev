@@ -8,6 +8,12 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { MetadataGrid } from '@/components/ui/metadata-grid'
 import { InfoBox } from '@/components/ui/info-box'
+import { MultisigFlowExplanation } from '@/components/milestone/multisig-flow-explanation'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
 import {
   CheckCircle,
   XCircle,
@@ -20,6 +26,7 @@ import {
   AlertCircle,
   X,
   Wallet,
+  Info,
 } from 'lucide-react'
 import { submitReview } from '@/app/(dashboard)/dashboard/submissions/actions'
 import { useToast } from '@/lib/hooks/use-toast'
@@ -587,7 +594,9 @@ export function MilestoneReviewDialog({
                 </p>
                 {!isConnected && (
                   <div>
-                    <p className="mb-2 text-sm font-medium">Connect your wallet:</p>
+                    <p className="mb-2 text-sm font-medium">
+                      Connect your wallet:
+                    </p>
                     <div className="flex flex-wrap gap-2">
                       {connectors.length > 0 ? (
                         connectors.map(connector => (
@@ -606,8 +615,8 @@ export function MilestoneReviewDialog({
                         ))
                       ) : (
                         <p className="text-sm text-blue-600">
-                          No Polkadot wallet extensions detected. Please
-                          install Polkadot.js, Talisman, or SubWallet.
+                          No Polkadot wallet extensions detected. Please install
+                          Polkadot.js, Talisman, or SubWallet.
                         </p>
                       )}
                     </div>
@@ -779,6 +788,29 @@ export function MilestoneReviewDialog({
             )}
 
             <div className="border-t pt-6">
+              {/* Multisig Flow Explanation for Merged Workflow */}
+              {isMergedWorkflow &&
+                multisigConfig &&
+                isConnected &&
+                !isLoadingApproval && (
+                  <div className="mb-6">
+                    <MultisigFlowExplanation
+                      currentStep={
+                        existingApproval
+                          ? selectedVote === 'approve'
+                            ? 'approve'
+                            : null
+                          : selectedVote === 'approve'
+                            ? 'initiate'
+                            : null
+                      }
+                      threshold={multisigConfig.threshold}
+                      currentApprovals={0} // Would need to fetch this if available
+                      totalSignatories={multisigConfig.signatories.length}
+                    />
+                  </div>
+                )}
+
               {/* Existing Approval Status */}
               {isMergedWorkflow && (
                 <div className="mb-6">
@@ -797,12 +829,12 @@ export function MilestoneReviewDialog({
                         <AlertCircle className="h-5 w-5 text-blue-600" />
                         <div className="flex-1">
                           <p className="font-medium text-blue-900">
-                            Existing Multisig Approval Found
+                            Existing Multisig Transaction Found
                           </p>
                           <p className="mt-1 text-sm text-blue-700">
-                            There's already an active multisig transaction for
-                            this milestone. Your approval will be added to the
-                            existing transaction.
+                            There&apos;s already an active multisig transaction
+                            for this milestone. If you approve, your signature
+                            will be added to the existing transaction.
                           </p>
                           <div className="mt-2 text-xs text-blue-600">
                             Call Hash: {existingApproval?.callHash ?? 'Unknown'}
@@ -819,8 +851,9 @@ export function MilestoneReviewDialog({
                             Ready to Create New Multisig Transaction
                           </p>
                           <p className="mt-1 text-sm text-green-700">
-                            No existing approval found. Your approval will
-                            create a new multisig transaction.
+                            No existing approval found. If you approve, a new
+                            multisig transaction will be created on the
+                            blockchain.
                           </p>
                         </div>
                       </div>
@@ -850,12 +883,42 @@ export function MilestoneReviewDialog({
                           className="flex flex-1 cursor-pointer items-center gap-2"
                         >
                           <CheckCircle className="h-4 w-4 text-green-600" />
-                          <div>
-                            <p className="font-medium text-green-900">
-                              Approve
-                            </p>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium text-green-900">
+                                Approve
+                              </p>
+                              {isMergedWorkflow && multisigConfig && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Info className="h-3 w-3 text-green-600" />
+                                  </TooltipTrigger>
+                                  <TooltipContent className="max-w-xs">
+                                    <div className="space-y-1">
+                                      <p className="font-semibold">
+                                        On-Chain Approval Required
+                                      </p>
+                                      <p className="text-xs">
+                                        Approving will create or add to a
+                                        multisig transaction on the blockchain.
+                                        This requires {multisigConfig.threshold}{' '}
+                                        of {multisigConfig.signatories.length}{' '}
+                                        signatures before payment can be
+                                        executed.
+                                      </p>
+                                    </div>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
                             <p className="text-xs text-green-700">
                               Milestone meets all requirements
+                              {isMergedWorkflow &&
+                                multisigConfig &&
+                                isConnected &&
+                                (existingApproval
+                                  ? '. Your signature will be added to the existing transaction.'
+                                  : '. This will create a new multisig transaction.')}
                             </p>
                           </div>
                         </Label>
@@ -924,19 +987,41 @@ export function MilestoneReviewDialog({
                   >
                     Cancel
                   </Button>
-                  <Button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={
-                      !selectedVote || isSubmitting || isSigningMultisig
-                    }
-                  >
-                    {isSigningMultisig
-                      ? 'Signing Transaction...'
-                      : isSubmitting
-                        ? 'Submitting Review...'
-                        : 'Submit Review'}
-                  </Button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        type="button"
+                        onClick={handleSubmit}
+                        disabled={
+                          !selectedVote || isSubmitting || isSigningMultisig
+                        }
+                      >
+                        {isSigningMultisig
+                          ? 'Signing Transaction...'
+                          : isSubmitting
+                            ? 'Submitting Review...'
+                            : 'Submit Review'}
+                      </Button>
+                    </TooltipTrigger>
+                    {isMergedWorkflow &&
+                      selectedVote === 'approve' &&
+                      multisigConfig && (
+                        <TooltipContent className="max-w-xs">
+                          <div className="space-y-1">
+                            <p className="font-semibold">What Happens Next</p>
+                            <p className="text-xs">
+                              {existingApproval
+                                ? 'Your signature will be added to the existing multisig transaction (multisig.approve_as_multi), then your review vote will be recorded.'
+                                : 'A new multisig transaction will be created (multisig.as_multi_threshold_1), then your review vote will be recorded.'}
+                            </p>
+                            <p className="mt-2 text-xs font-medium">
+                              Requires {multisigConfig.threshold} signatures to
+                              execute payment
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      )}
+                  </Tooltip>
                 </div>
               </div>
             </div>
