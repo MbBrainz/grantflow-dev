@@ -21,10 +21,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import {
-  Card,
-  CardContent,
-} from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { postMessageToSubmission } from '../discussion-actions'
 import type { SubmissionWithMilestones } from '@/lib/db/schema'
 import type { User } from '@/lib/db/schema'
@@ -123,7 +120,9 @@ export function SubmissionDetailView({
     }
     try {
       const parsed = JSON.parse(submission.labels)
-      return Array.isArray(parsed) ? parsed.filter(label => typeof label === 'string') : []
+      return Array.isArray(parsed)
+        ? parsed.filter(label => typeof label === 'string')
+        : []
     } catch {
       return []
     }
@@ -145,7 +144,7 @@ export function SubmissionDetailView({
               <h1 className="text-2xl font-semibold sm:text-3xl">
                 {displayTitle}
               </h1>
-              <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+              <div className="text-muted-foreground flex flex-wrap items-center gap-3 text-sm">
                 <span className="flex items-center gap-1.5">
                   <Hash className="h-4 w-4" />
                   Submission #{submission.id}
@@ -168,7 +167,7 @@ export function SubmissionDetailView({
               </Badge>
               <Badge
                 variant="outline"
-                className="flex items-center gap-1.5 rounded-full text-xs uppercase tracking-wide text-muted-foreground"
+                className="text-muted-foreground flex items-center gap-1.5 rounded-full text-xs tracking-wide uppercase"
               >
                 <Eye className="h-3.5 w-3.5" />
                 Viewing as: {context.viewType}
@@ -177,35 +176,35 @@ export function SubmissionDetailView({
           </div>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <div className="rounded-lg border border-border/70 bg-muted/30 p-4 shadow-sm">
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+            <div className="border-border/70 bg-muted/30 rounded-lg border p-4 shadow-sm">
+              <div className="text-foreground mb-2 flex items-center gap-2 text-sm font-medium">
                 <Users className="h-4 w-4 text-blue-600" />
                 Committee Votes
               </div>
               <p className="text-xl font-semibold">
                 {metrics.approveVotes}/{metrics.totalVotes}
               </p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Approve / Total votes
               </p>
             </div>
 
-            <div className="rounded-lg border border-border/70 bg-muted/30 p-4 shadow-sm">
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+            <div className="border-border/70 bg-muted/30 rounded-lg border p-4 shadow-sm">
+              <div className="text-foreground mb-2 flex items-center gap-2 text-sm font-medium">
                 <DollarSign className="h-4 w-4 text-emerald-600" />
                 Funding
               </div>
               <p className="text-xl font-semibold">{funding}</p>
-              <p className="text-xs text-muted-foreground">Requested amount</p>
+              <p className="text-muted-foreground text-xs">Requested amount</p>
             </div>
 
-            <div className="rounded-lg border border-border/70 bg-muted/30 p-4 shadow-sm">
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+            <div className="border-border/70 bg-muted/30 rounded-lg border p-4 shadow-sm">
+              <div className="text-foreground mb-2 flex items-center gap-2 text-sm font-medium">
                 <Target className="h-4 w-4 text-orange-500" />
                 Milestone Progress
               </div>
               <div className="mt-3">
-                <div className="h-2 w-full rounded-full bg-muted">
+                <div className="bg-muted h-2 w-full rounded-full">
                   <div
                     className={`h-2 rounded-full ${
                       metrics.milestoneProgressPercent === 100
@@ -217,7 +216,7 @@ export function SubmissionDetailView({
                     style={{ width: `${metrics.milestoneProgressPercent}%` }}
                   />
                 </div>
-                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                <div className="text-muted-foreground mt-2 flex items-center justify-between text-xs">
                   <span>
                     {metrics.completedMilestones}/{metrics.totalMilestones}{' '}
                     completed
@@ -227,8 +226,8 @@ export function SubmissionDetailView({
               </div>
             </div>
 
-            <div className="rounded-lg border border-border/70 bg-muted/30 p-4 shadow-sm">
-              <div className="mb-2 flex items-center gap-2 text-sm font-medium text-foreground">
+            <div className="border-border/70 bg-muted/30 rounded-lg border p-4 shadow-sm">
+              <div className="text-foreground mb-2 flex items-center gap-2 text-sm font-medium">
                 <Clock className="h-4 w-4 text-purple-500" />
                 Timeline
               </div>
@@ -237,25 +236,25 @@ export function SubmissionDetailView({
                   ? `${metrics.daysSinceApplied} days`
                   : 'Unknown'}
               </p>
-              <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="text-muted-foreground mt-2 flex items-center gap-2 text-xs">
                 <MessageSquare className="h-3.5 w-3.5" />
                 {metrics.totalMessages} messages across discussions
               </div>
             </div>
           </div>
 
-          <div className="grid gap-3 border-t border-dashed border-border pt-4 text-sm sm:grid-cols-2">
+          <div className="border-border grid gap-3 border-t border-dashed pt-4 text-sm sm:grid-cols-2">
             {submission.grantProgram && (
               <Link
                 href={`/dashboard/programs/${submission.grantProgram.id}`}
-                className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/40 px-4 py-3 transition-colors hover:border-primary/40 hover:bg-background dark:hover:border-primary/60"
+                className="border-border/60 bg-muted/40 hover:border-primary/40 hover:bg-background dark:hover:border-primary/60 flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors"
               >
-                <Layers className="h-5 w-5 text-muted-foreground" />
+                <Layers className="text-muted-foreground h-5 w-5" />
                 <div className="flex flex-col">
-                  <span className="text-xs font-medium uppercase text-muted-foreground">
+                  <span className="text-muted-foreground text-xs font-medium uppercase">
                     Program
                   </span>
-                  <span className="font-medium text-primary">
+                  <span className="text-primary font-medium">
                     {submission.grantProgram.name}
                   </span>
                 </div>
@@ -264,14 +263,14 @@ export function SubmissionDetailView({
             {submission.reviewerGroup && (
               <Link
                 href={`/dashboard/committees/${submission.reviewerGroup.id}`}
-                className="flex items-center gap-3 rounded-lg border border-border/60 bg-muted/40 px-4 py-3 transition-colors hover:border-primary/40 hover:bg-background dark:hover:border-primary/60"
+                className="border-border/60 bg-muted/40 hover:border-primary/40 hover:bg-background dark:hover:border-primary/60 flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors"
               >
-                <Users className="h-5 w-5 text-muted-foreground" />
+                <Users className="text-muted-foreground h-5 w-5" />
                 <div className="flex flex-col">
-                  <span className="text-xs font-medium uppercase text-muted-foreground">
+                  <span className="text-muted-foreground text-xs font-medium uppercase">
                     Committee
                   </span>
-                  <span className="font-medium text-primary">
+                  <span className="text-primary font-medium">
                     {submission.reviewerGroup.name}
                   </span>
                 </div>
@@ -280,16 +279,16 @@ export function SubmissionDetailView({
           </div>
 
           {hasSummaryContent && (
-            <div className="border-t border-dashed border-border pt-4">
-              <div className="mb-4 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+            <div className="border-border border-t border-dashed pt-4">
+              <div className="text-muted-foreground mb-4 flex items-center gap-2 text-sm font-semibold tracking-wide uppercase">
                 <Award className="h-4 w-4 text-blue-600" />
                 Project Summary
               </div>
               <div className="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-                <div className="space-y-4 text-sm leading-6 text-muted-foreground">
+                <div className="text-muted-foreground space-y-4 text-sm leading-6">
                   {submission.executiveSummary && (
                     <div>
-                      <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-foreground/70">
+                      <h4 className="text-foreground/70 mb-1 text-xs font-semibold tracking-wide uppercase">
                         Executive Summary
                       </h4>
                       <p className="text-foreground/80">
@@ -300,7 +299,7 @@ export function SubmissionDetailView({
 
                   {submission.description && (
                     <div>
-                      <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-foreground/70">
+                      <h4 className="text-foreground/70 mb-1 text-xs font-semibold tracking-wide uppercase">
                         Project Goals
                       </h4>
                       <p className="text-foreground/80">
@@ -311,7 +310,7 @@ export function SubmissionDetailView({
 
                   {submission.postGrantPlan && (
                     <div>
-                      <h4 className="mb-1 text-xs font-semibold uppercase tracking-wide text-foreground/70">
+                      <h4 className="text-foreground/70 mb-1 text-xs font-semibold tracking-wide uppercase">
                         Post-Grant Development
                       </h4>
                       <p className="text-foreground/80">
@@ -321,9 +320,9 @@ export function SubmissionDetailView({
                   )}
                 </div>
 
-                <div className="space-y-4 text-sm text-muted-foreground">
+                <div className="text-muted-foreground space-y-4 text-sm">
                   <div>
-                    <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground/70">
+                    <h4 className="text-foreground/70 mb-2 text-xs font-semibold tracking-wide uppercase">
                       Project Information
                     </h4>
                     <div className="space-y-2">
@@ -342,7 +341,7 @@ export function SubmissionDetailView({
                           href={submission.githubRepoUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="flex items-center gap-2 text-foreground transition-colors hover:text-primary"
+                          className="text-foreground hover:text-primary flex items-center gap-2 transition-colors"
                         >
                           <GitBranch className="h-3.5 w-3.5" />
                           View Code
@@ -353,12 +352,16 @@ export function SubmissionDetailView({
 
                   {projectLabels.length > 0 && (
                     <div>
-                      <h4 className="mb-2 text-xs font-semibold uppercase tracking-wide text-foreground/70">
+                      <h4 className="text-foreground/70 mb-2 text-xs font-semibold tracking-wide uppercase">
                         Project Tags
                       </h4>
                       <div className="flex flex-wrap gap-2">
                         {projectLabels.map(label => (
-                          <Badge key={label} variant="outline" className="text-xs">
+                          <Badge
+                            key={label}
+                            variant="outline"
+                            className="text-xs"
+                          >
                             {label}
                           </Badge>
                         ))}

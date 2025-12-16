@@ -36,9 +36,7 @@ export function calculateSubmissionMetrics(
       ? 0
       : Math.round((completedMilestones / totalMilestones) * 100)
 
-  const appliedAt = submission.appliedAt
-    ? new Date(submission.appliedAt)
-    : null
+  const appliedAt = submission.appliedAt ? new Date(submission.appliedAt) : null
   const daysSinceApplied =
     appliedAt == null
       ? null

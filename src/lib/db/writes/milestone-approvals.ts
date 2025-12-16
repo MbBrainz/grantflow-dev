@@ -27,6 +27,9 @@ export async function createMilestoneApproval(data: {
   approvalWorkflow: 'merged' | 'separated'
   payoutAmount?: string
   beneficiaryAddress: string
+  // Child bounty tracking
+  parentBountyId: number // Parent bounty ID from committee config
+  childBountyId?: number // Predicted child bounty ID (set during initiation)
 }) {
   console.log('[db/writes/milestone-approvals]: Creating approval', {
     ...data,
@@ -46,6 +49,8 @@ export async function createMilestoneApproval(data: {
       approvalWorkflow: data.approvalWorkflow,
       payoutAmount: data.payoutAmount,
       beneficiaryAddress: data.beneficiaryAddress,
+      parentBountyId: data.parentBountyId,
+      childBountyId: data.childBountyId,
     })
     .returning()
 
@@ -263,19 +268,35 @@ export async function completeMilestoneApproval(params: {
   milestoneId: number
   executionTxHash: string
   executionBlockNumber: number
+  // Child bounty tracking (optional - set when executing childBounty type)
+  childBountyId?: number
 }) {
   console.log('[db/writes/milestone-approvals]: Completing approval', params)
 
   const results = await db.transaction(async tx => {
+    // Build the update object
+    const approvalUpdates: {
+      status: 'executed'
+      executedAt: Date
+      executionTxHash: string
+      executionBlockNumber: number
+      childBountyId?: number
+    } = {
+      status: 'executed',
+      executedAt: new Date(),
+      executionTxHash: params.executionTxHash,
+      executionBlockNumber: params.executionBlockNumber,
+    }
+
+    // Include childBountyId if provided (for childBounty call type)
+    if (params.childBountyId !== undefined) {
+      approvalUpdates.childBountyId = params.childBountyId
+    }
+
     // Update approval status
     const [updatedApproval] = await tx
       .update(milestoneApprovals)
-      .set({
-        status: 'executed',
-        executedAt: new Date(),
-        executionTxHash: params.executionTxHash,
-        executionBlockNumber: params.executionBlockNumber,
-      })
+      .set(approvalUpdates)
       .where(eq(milestoneApprovals.id, params.approvalId))
       .returning()
 

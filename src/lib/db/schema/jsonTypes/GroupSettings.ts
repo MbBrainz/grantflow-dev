@@ -13,6 +13,11 @@ export interface MultisigConfig {
   votingTimeoutBlocks: number // How long before vote expires
   automaticExecution: boolean // Auto-execute on threshold or manual trigger
   network: 'polkadot' | 'kusama' | 'paseo' // Which Polkadot network
+
+  // Child Bounty configuration (required for on-chain payout indexing)
+  // Payouts use childBounties pallet for proper on-chain indexing by Subscan/Subsquare
+  parentBountyId: number // Parent bounty ID on-chain
+  curatorProxyAddress: string // Proxy account that acts as curator for child bounties
 }
 
 export interface GroupSettings {

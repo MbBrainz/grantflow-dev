@@ -1,8 +1,8 @@
 ---
 description: "UX Feedback Requirements: All user actions must have immediate, clear feedback. Buttons must disable, show loaders, and provide success/error toasts."
-globs: ["src/components/**/*.tsx", "src/app/**/*.tsx"]
+globs: *.tsx
+alwaysApply: false
 ---
-
 # UX Feedback Requirements
 
 UX is extremely important. When a user performs an action like clicking a button, there must **ALWAYS** be clear and simple user feedback.

@@ -195,6 +195,8 @@ async function seed() {
           votingTimeoutBlocks: 50400, // ~7 days on Polkadot (6s blocks)
           automaticExecution: true,
           network: 'paseo',
+          parentBountyId: 0, // Default parent bounty ID
+          curatorProxyAddress: MULTISIG_ADDRESS, // Use multisig as curator for seed data
         },
       },
     })

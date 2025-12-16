@@ -157,15 +157,21 @@ export function MilestoneVotingPanel({
         )
       }
 
+      const beneficiaryAddress = submissionResult.submission.walletAddress
+      if (!beneficiaryAddress) {
+        throw new Error('Submission does not have a wallet address for payout')
+      }
+
       // Create Polkadot multisig transaction
       const polkadotResult = await initiatePolkadotApproval({
         client,
         multisigConfig,
         milestoneId,
+        milestoneTitle: `Milestone ${milestoneId}`,
         payoutAmount: BigInt(milestoneAmount),
+        beneficiaryAddress,
         initiatorAddress: activeAddress,
         signer,
-        useBatch: true,
         network: multisigConfig.network ?? 'paseo',
       })
 
@@ -178,6 +184,8 @@ export function MilestoneVotingPanel({
         initiatorWalletAddress: activeAddress,
         callHash: polkadotResult.callHash,
         callDataHex: u8aToString(polkadotResult.callData),
+        predictedChildBountyId: polkadotResult.predictedChildBountyId,
+        parentBountyId: multisigConfig.parentBountyId,
       })
 
       toast({

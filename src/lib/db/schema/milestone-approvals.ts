@@ -60,6 +60,9 @@ export const milestoneApprovals = pgTable('milestone_approvals', {
   executedAt: timestamp('executed_at'),
   executionTxHash: varchar('execution_tx_hash', { length: 128 }), // Final execution transaction
   executionBlockNumber: integer('execution_block_number'),
+  // Child Bounty tracking fields (used for on-chain indexing by Subscan/Subsquare)
+  childBountyId: integer('child_bounty_id'), // On-chain child bounty ID (set after execution)
+  parentBountyId: integer('parent_bounty_id').notNull(), // Parent bounty ID from committee config
 })
 
 export const milestoneApprovalsRelations = relations(

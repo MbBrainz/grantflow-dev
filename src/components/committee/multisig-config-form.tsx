@@ -8,11 +8,13 @@
  * - Signatories (committee member wallet addresses)
  * - Approval pattern (combined vs separated approval/payment)
  * - Network selection (Polkadot, Kusama, Paseo)
+ * - Child bounty configuration with automatic curator fetching
  */
 
 'use client'
 
 import { useState } from 'react'
+import { useApi, useSwitchChain } from '@luno-kit/react'
 import { Label } from '@/components/ui/label'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -25,8 +27,18 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Loader2, Plus, Trash2, AlertCircle } from 'lucide-react'
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  AlertCircle,
+  RefreshCw,
+  CheckCircle,
+} from 'lucide-react'
 import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
+import { getParentBounty } from '@/lib/polkadot/child-bounty'
+import { useToast } from '@/lib/hooks/use-toast'
+import { chains } from '@/lib/polkadot/chains'
 
 interface MultisigConfigFormProps {
   initialConfig?: MultisigConfig
@@ -39,6 +51,7 @@ export function MultisigConfigForm({
   onSave,
   isLoading = false,
 }: MultisigConfigFormProps) {
+  const { toast } = useToast()
   const [config, setConfig] = useState<MultisigConfig>(
     initialConfig ?? {
       multisigAddress: '',
@@ -49,11 +62,114 @@ export function MultisigConfigForm({
       votingTimeoutBlocks: 50400, // ~7 days on Polkadot (6s blocks)
       automaticExecution: true,
       network: 'paseo',
+      parentBountyId: 0, // Required: ID of the parent bounty for child bounties
+      curatorProxyAddress: '', // Required: Proxy account controlled by multisig
     }
   )
 
   const [newSignatory, setNewSignatory] = useState('')
   const [isSaving, setIsSaving] = useState(false)
+  const [isFetchingCurator, setIsFetchingCurator] = useState(false)
+  const [bountyStatus, setBountyStatus] = useState<string | null>(null)
+
+  // Get the API client and chain switching functionality
+  const { api: client } = useApi()
+  const { switchChainAsync, currentChainId } = useSwitchChain()
+
+  // Get the target chain for the selected network
+  const targetChain = chains[config.network]
+  const isCorrectChain = currentChainId === targetChain?.genesisHash
+
+  // Fetch curator from chain based on parent bounty ID
+  const handleFetchCurator = async () => {
+    if (config.parentBountyId < 0) {
+      toast({
+        title: 'Invalid Bounty ID',
+        description: 'Please enter a valid parent bounty ID first.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsFetchingCurator(true)
+    setBountyStatus(null)
+
+    try {
+      // Switch to the correct chain if needed
+      if (!isCorrectChain && targetChain) {
+        toast({
+          title: 'Switching Network',
+          description: `Connecting to ${targetChain.name}...`,
+        })
+        await switchChainAsync({ chainId: targetChain.genesisHash })
+        // Wait a bit for the client to be ready after switching
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+
+      if (!client) {
+        toast({
+          title: 'Not Connected',
+          description:
+            'Please wait for the blockchain connection to establish and try again.',
+          variant: 'destructive',
+        })
+        return
+      }
+
+      const bounty = await getParentBounty(client, config.parentBountyId)
+
+      if (!bounty) {
+        toast({
+          title: 'Bounty Not Found',
+          description: `No bounty found with ID ${config.parentBountyId} on ${config.network}.`,
+          variant: 'destructive',
+        })
+        setBountyStatus('not_found')
+        return
+      }
+
+      setBountyStatus(bounty.status.type)
+
+      if (bounty.status.curator) {
+        setConfig(prev => ({
+          ...prev,
+          curatorProxyAddress: bounty.status.curator?.address() ?? '',
+        }))
+        toast({
+          title: 'Curator Found',
+          description: `Curator address loaded from bounty #${config.parentBountyId}.`,
+        })
+      } else {
+        toast({
+          title: 'No Curator Assigned',
+          description: `Bounty #${config.parentBountyId} is in "${bounty.status.type}" status and has no curator assigned yet.`,
+          variant: 'destructive',
+        })
+      }
+    } catch (error) {
+      console.error('[MultisigConfigForm]: Failed to fetch curator', error)
+      toast({
+        title: 'Fetch Failed',
+        description:
+          error instanceof Error
+            ? error.message
+            : 'Failed to fetch bounty information.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsFetchingCurator(false)
+    }
+  }
+
+  // Auto-fetch curator when parent bounty ID changes (debounced)
+  const handleParentBountyIdChange = (value: number) => {
+    setConfig(prev => ({
+      ...prev,
+      parentBountyId: value,
+    }))
+    // Reset status when bounty ID changes
+    setBountyStatus(null)
+  }
 
   const handleAddSignatory = () => {
     if (!newSignatory.trim()) return
@@ -108,6 +224,16 @@ export function MultisigConfigForm({
       return
     }
 
+    if (config.parentBountyId < 0) {
+      alert('Please enter a valid parent bounty ID (0 or greater)')
+      return
+    }
+
+    if (!config.curatorProxyAddress) {
+      alert('Please enter a curator proxy address')
+      return
+    }
+
     setIsSaving(true)
     try {
       await onSave(config)
@@ -123,7 +249,9 @@ export function MultisigConfigForm({
     config.multisigAddress &&
     config.signatories.length >= 2 &&
     config.threshold >= 2 &&
-    config.threshold <= config.signatories.length
+    config.threshold <= config.signatories.length &&
+    config.parentBountyId >= 0 &&
+    config.curatorProxyAddress
 
   return (
     <div className="space-y-6">
@@ -255,6 +383,109 @@ export function MultisigConfigForm({
         </p>
       </div>
 
+      {/* Child Bounty Configuration */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">
+            Child Bounty Configuration
+          </CardTitle>
+          <CardDescription>
+            Settings for Polkadot child bounty payouts. Payouts are processed
+            through the childBounties pallet for proper on-chain indexing.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* Parent Bounty ID */}
+          <div className="space-y-2">
+            <Label htmlFor="parentBountyId">Parent Bounty ID</Label>
+            <div className="flex gap-2">
+              <Input
+                id="parentBountyId"
+                type="number"
+                min={0}
+                placeholder="e.g., 42"
+                value={config.parentBountyId}
+                onChange={e =>
+                  handleParentBountyIdChange(
+                    Math.max(0, parseInt(e.target.value) || 0)
+                  )
+                }
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleFetchCurator}
+                disabled={isFetchingCurator}
+                className="shrink-0"
+              >
+                {isFetchingCurator ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                )}
+                {isFetchingCurator ? 'Fetching...' : 'Fetch Curator'}
+              </Button>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              The ID of the parent bounty on-chain. Click &quot;Fetch
+              Curator&quot; to automatically load the curator address from the
+              chain.
+            </p>
+            {bountyStatus && (
+              <div
+                className={`mt-2 flex items-center gap-2 rounded-md px-3 py-2 text-xs ${
+                  bountyStatus === 'Active'
+                    ? 'bg-green-50 text-green-700 dark:bg-green-950 dark:text-green-300'
+                    : bountyStatus === 'not_found'
+                      ? 'bg-red-50 text-red-700 dark:bg-red-950 dark:text-red-300'
+                      : 'bg-yellow-50 text-yellow-700 dark:bg-yellow-950 dark:text-yellow-300'
+                }`}
+              >
+                {bountyStatus === 'Active' ? (
+                  <CheckCircle className="h-4 w-4" />
+                ) : (
+                  <AlertCircle className="h-4 w-4" />
+                )}
+                <span>
+                  {bountyStatus === 'not_found'
+                    ? 'Bounty not found'
+                    : `Bounty status: ${bountyStatus}`}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Curator Proxy Address */}
+          <div className="space-y-2">
+            <Label htmlFor="curatorProxyAddress">Curator Proxy Address</Label>
+            <Input
+              id="curatorProxyAddress"
+              placeholder="Enter curator proxy address or fetch from chain"
+              value={config.curatorProxyAddress}
+              onChange={e =>
+                setConfig({ ...config, curatorProxyAddress: e.target.value })
+              }
+            />
+            <p className="text-muted-foreground text-xs">
+              The curator account for the parent bounty. This is automatically
+              populated when you fetch from the chain, but can be updated
+              manually if needed.
+            </p>
+          </div>
+
+          {/* Info box about bounty setup */}
+          <div className="bg-muted/50 rounded-lg border p-3">
+            <p className="text-muted-foreground text-xs">
+              <strong>Note:</strong> Before using child bounty payouts, ensure
+              your parent bounty is set up on-chain with an active curator. The
+              curator address is fetched from the chain and stored locally.
+              Click &quot;Fetch Curator&quot; to update it if the on-chain
+              curator changes.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Approval Workflow */}
       <Card>
         <CardHeader>
@@ -308,16 +539,27 @@ export function MultisigConfigForm({
 
       {/* Validation warning */}
       {!isValid && (
-        <div className="flex items-start gap-2 rounded-lg border border-orange-200 bg-orange-50 p-4">
-          <AlertCircle className="mt-0.5 h-5 w-5 text-orange-600" />
+        <div className="flex items-start gap-2 rounded-lg border border-orange-200 bg-orange-50 p-4 dark:border-orange-800 dark:bg-orange-950">
+          <AlertCircle className="mt-0.5 h-5 w-5 text-orange-600 dark:text-orange-400" />
           <div className="flex-1">
-            <p className="text-sm font-medium text-orange-900">
+            <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
               Configuration incomplete
             </p>
-            <p className="mt-1 text-xs text-orange-800">
-              Please provide multisig address and at least 2 signatories with a
-              threshold of at least 2.
-            </p>
+            <ul className="mt-1 list-inside list-disc text-xs text-orange-800 dark:text-orange-200">
+              {!config.multisigAddress && <li>Multisig address is required</li>}
+              {config.signatories.length < 2 && (
+                <li>At least 2 signatories are required</li>
+              )}
+              {config.threshold < 2 && <li>Threshold must be at least 2</li>}
+              {config.threshold > config.signatories.length && (
+                <li>Threshold cannot exceed number of signatories</li>
+              )}
+              {!config.curatorProxyAddress && (
+                <li>
+                  Curator proxy address is required for child bounty payouts
+                </li>
+              )}
+            </ul>
           </div>
         </div>
       )}

@@ -42,6 +42,9 @@ const initiateApprovalSchema = z.object({
     index: z.number().int(),
   }),
   reviewId: z.number().int().positive().optional(), // Link to review for merged workflow
+  // Child bounty tracking (required for on-chain indexing)
+  parentBountyId: z.number().int().positive(),
+  predictedChildBountyId: z.number().int().positive(),
 })
 
 const castVoteSchema = z.object({
@@ -50,6 +53,10 @@ const castVoteSchema = z.object({
   signatureType: z.enum(['signed', 'rejected']),
   txHash: z.string().min(1, 'Transaction hash is required'),
   reviewId: z.number().int().positive().optional(), // Link to review for merged workflow
+  // Auto-execution tracking (when this vote hits quorum)
+  wasExecuted: z.boolean().optional(),
+  executionBlockNumber: z.number().int().optional(),
+  childBountyId: z.number().int().optional(), // Actual child bounty ID after execution
 })
 
 const finalizeApprovalSchema = z.object({
@@ -148,7 +155,7 @@ export const initiateMultisigApproval = validatedActionWithUser(
         }
       }
 
-      // Create approval record
+      // Create approval record with child bounty tracking
       const approval = await createMilestoneApproval({
         milestoneId: data.milestoneId,
         groupId: milestone.groupId,
@@ -160,6 +167,9 @@ export const initiateMultisigApproval = validatedActionWithUser(
         approvalWorkflow: data.approvalWorkflow,
         payoutAmount: milestone.amount?.toString(),
         beneficiaryAddress: submission.walletAddress,
+        // Child bounty tracking
+        parentBountyId: data.parentBountyId,
+        childBountyId: data.predictedChildBountyId,
       })
 
       // Record initiator's signature (first signatory is automatic)
@@ -258,6 +268,7 @@ export const castMultisigVote = validatedActionWithUser(
       }
 
       // Record the signature
+      // If this vote triggered execution (wasExecuted=true), mark as final approval
       await createMultisigSignature({
         approvalId: data.approvalId,
         reviewId: data.reviewId, // Link to review if merged workflow
@@ -266,7 +277,7 @@ export const castMultisigVote = validatedActionWithUser(
         signatureType: data.signatureType,
         txHash: data.txHash,
         isInitiator: false,
-        isFinalApproval: false,
+        isFinalApproval: data.wasExecuted ?? false,
       })
 
       // Check if threshold is met
@@ -278,7 +289,72 @@ export const castMultisigVote = validatedActionWithUser(
         voteCount,
         threshold: multisigConfig.threshold,
         thresholdMet,
+        wasExecuted: data.wasExecuted,
       })
+
+      // If this vote also executed the transaction, complete the approval
+      if (data.wasExecuted && data.executionBlockNumber) {
+        console.log(
+          '[multisig-actions]: Vote triggered execution, completing approval'
+        )
+
+        // Complete the approval and update milestone
+        await completeMilestoneApproval({
+          approvalId: data.approvalId,
+          milestoneId: approval.milestoneId,
+          executionTxHash: data.txHash, // The tx that executed is the same as the vote tx
+          executionBlockNumber: data.executionBlockNumber,
+          childBountyId: data.childBountyId, // Track actual child bounty ID if available
+        })
+
+        // Create payout record
+        if (approval.payoutAmount) {
+          await createPayout({
+            submissionId: approval.milestone.submissionId,
+            milestoneId: approval.milestoneId,
+            groupId: approval.groupId,
+            amount: parseInt(approval.payoutAmount),
+            transactionHash: data.txHash,
+            blockExplorerUrl: `https://paseo.subscan.io/extrinsic/${data.txHash}`,
+            triggeredBy: approval.initiatorId,
+            walletFrom: multisigConfig.multisigAddress,
+            walletTo: approval.beneficiaryAddress,
+          })
+        }
+
+        // Notify submission owner
+        try {
+          await createNotification({
+            userId: approval.milestone.submissionId, // Need to get actual submitter ID
+            type: 'milestone_completed',
+            content: `Milestone "${approval.milestone.title}" has been approved and payment has been executed.`,
+            submissionId: approval.milestone.submissionId,
+            milestoneId: approval.milestoneId,
+            groupId: approval.groupId,
+          })
+        } catch (notificationError) {
+          console.error(
+            '[multisig-actions]: Failed to send notification',
+            notificationError
+          )
+          // Don't fail the operation for notification errors
+        }
+
+        // Revalidate paths
+        revalidatePath(
+          `/dashboard/submissions/${approval.milestone.submissionId}`
+        )
+        revalidatePath('/dashboard/review')
+        revalidatePath('/dashboard/submissions')
+
+        return {
+          success: true,
+          message: 'Milestone approved and payment executed successfully',
+          thresholdMet: true,
+          wasExecuted: true,
+          votesNeeded: 0,
+        }
+      }
 
       // Notify relevant parties
       // TODO: Implement notifications
@@ -293,6 +369,7 @@ export const castMultisigVote = validatedActionWithUser(
         success: true,
         message: 'Vote recorded successfully',
         thresholdMet,
+        wasExecuted: false,
         votesNeeded: Math.max(
           0,
           multisigConfig.threshold - voteCount.approvals

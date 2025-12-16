@@ -43,14 +43,13 @@ import type { GroupSettings } from '@/lib/db/schema/jsonTypes/GroupSettings'
 import {
   initiateMultisigApproval,
   castMultisigVote,
-  finalizeMultisigApproval,
   getMilestoneApprovalStatus,
 } from '@/app/(dashboard)/dashboard/submissions/multisig-actions'
 import { getSubmissionDetails } from '@/app/(dashboard)/dashboard/submissions/actions'
 import {
   initiateMultisigApproval as initiatePolkadotApproval,
-  approveMultisigCall,
-  finalizeMultisigCall,
+  approveOrExecuteMultisigCall,
+  willHitQuorum,
 } from '@/lib/polkadot/multisig'
 import { chains } from '@/lib/polkadot/chains'
 import { u8aToHex } from 'dedot/utils'
@@ -247,19 +246,25 @@ export function MilestoneReviewDialog({
           submissionResult.error ?? 'Failed to get submission details'
         )
       }
+      if (!submissionResult.submission?.walletAddress) {
+        throw new Error('Submission beneficiary address not found')
+      }
+      const beneficiaryAddress = submissionResult.submission.walletAddress
+
       // Create Polkadot multisig transaction
       const polkadotResult = await initiatePolkadotApproval({
         client,
         multisigConfig,
         milestoneId: milestone.id,
+        milestoneTitle: milestone.title,
         payoutAmount: BigInt(milestone.amount ?? 0),
+        beneficiaryAddress,
         initiatorAddress: address,
         signer: selectedSigner,
-        useBatch: true,
         network: multisigConfig.network ?? 'paseo', // Use network from config
       })
 
-      // Record the approval in database
+      // Record the approval in database (with bounty tracking)
       console.log('[MilestoneReviewDialog]: Recording approval in database', {
         milestoneId: milestone.id,
         timepoint: polkadotResult.timepoint,
@@ -268,6 +273,8 @@ export function MilestoneReviewDialog({
         initiatorWalletAddress: address,
         callHash: polkadotResult.callHash,
         callDataHex: u8aToHex(polkadotResult.callData),
+        predictedChildBountyId: polkadotResult.predictedChildBountyId,
+        parentBountyId: multisigConfig.parentBountyId,
       })
       await initiateMultisigApproval({
         milestoneId: milestone.id,
@@ -277,6 +284,9 @@ export function MilestoneReviewDialog({
         initiatorWalletAddress: address,
         callHash: polkadotResult.callHash,
         callDataHex: u8aToHex(polkadotResult.callData),
+        // Child bounty tracking
+        predictedChildBountyId: polkadotResult.predictedChildBountyId,
+        parentBountyId: multisigConfig.parentBountyId,
       })
 
       toast({
@@ -308,12 +318,6 @@ export function MilestoneReviewDialog({
       )
     }
 
-    toast({
-      title: 'Adding Your Approval',
-      description:
-        'Adding your signature to the existing multisig transaction.',
-    })
-
     // Validate timepoint exists
     if (
       !existingApproval.timepoint ||
@@ -332,66 +336,7 @@ export function MilestoneReviewDialog({
     }
 
     try {
-      // Approve the existing multisig call on Polkadot
-      const polkadotResult = await approveMultisigCall({
-        client,
-        callHash: existingApproval.callHash,
-        timepoint: existingApproval.timepoint,
-        threshold: multisigConfig.threshold,
-        allSignatories: multisigConfig.signatories,
-        approverAddress: address,
-        signer: selectedSigner,
-        network: multisigConfig.network ?? 'paseo', // Use network from config
-      })
-
-      // Record the vote in database
-      await castMultisigVote({
-        approvalId: existingApproval.id,
-        signatoryAddress: address,
-        signatureType: 'signed',
-        txHash: polkadotResult.txHash,
-      })
-
-      toast({
-        title: 'Approval Added',
-        description: `Your signature has been added. Transaction hash: ${polkadotResult.txHash.slice(0, 10)}...`,
-      })
-
-      // Check if threshold is met and we need to finalize
-      if (polkadotResult.thresholdMet) {
-        await handleFinalApproval()
-      }
-    } catch (error) {
-      console.error('[MilestoneReviewDialog]: Failed to add approval', error)
-      throw error
-    }
-  }
-
-  const handleFinalApproval = async () => {
-    console.log(
-      '[MilestoneReviewDialog]: Handling final approval - executing transaction'
-    )
-
-    if (
-      !account ||
-      !address ||
-      !multisigConfig ||
-      !existingApproval ||
-      !selectedSigner ||
-      !client
-    ) {
-      throw new Error(
-        'Missing account, multisig config, existing approval, or signer'
-      )
-    }
-
-    toast({
-      title: 'Executing Final Transaction',
-      description: 'Threshold met! Executing the multisig transaction.',
-    })
-
-    try {
-      // Get submission details for beneficiary address
+      // Get submission details for beneficiary address (needed for potential execution)
       const submissionResult = await getSubmissionDetails(submissionId)
       if (submissionResult.error || !submissionResult.success) {
         throw new Error(
@@ -403,43 +348,80 @@ export function MilestoneReviewDialog({
       }
       const beneficiaryAddress = submissionResult.submission.walletAddress
 
-      // Execute the final multisig transaction
-      const polkadotResult = await finalizeMultisigCall({
+      // Get current approval count to check if this vote will hit quorum
+      const approvalStatus = await getMilestoneApprovalStatus(milestone.id)
+      const currentApprovals =
+        approvalStatus.status === 'active'
+          ? (approvalStatus.votes?.approvals ?? 0)
+          : 0
+
+      // Check if this vote will hit quorum (for display purposes)
+      const willExecute = willHitQuorum(
+        currentApprovals,
+        multisigConfig.threshold
+      )
+
+      toast({
+        title: willExecute
+          ? 'Executing Final Approval'
+          : 'Adding Your Approval',
+        description: willExecute
+          ? 'Threshold will be met! Executing the multisig transaction.'
+          : 'Adding your signature to the existing multisig transaction.',
+      })
+
+      // Use approveOrExecuteMultisigCall which handles quorum detection automatically
+      // If quorum is hit, it will execute atomically (approval + execution in one tx)
+      const polkadotResult = await approveOrExecuteMultisigCall({
         client,
-        callData: new Uint8Array(
-          JSON.parse(existingApproval.callData) as number[]
-        ),
+        currentApprovals,
+        callDataHex: existingApproval.callData,
+        callHash: existingApproval.callHash,
+        timepoint: existingApproval.timepoint,
         threshold: multisigConfig.threshold,
         allSignatories: multisigConfig.signatories,
-        executorAddress: address,
+        approverAddress: address,
         signer: selectedSigner,
         beneficiaryAddress,
         payoutAmount: BigInt(milestone.amount ?? 0),
         milestoneId: milestone.id,
-        useBatch: true,
-        network: multisigConfig.network ?? 'paseo', // Use network from config
+        milestoneTitle: milestone.title,
+        multisigConfig,
+        network: multisigConfig.network ?? 'paseo',
       })
 
-      // Finalize the approval in database
-      await finalizeMultisigApproval({
+      // Record the vote in database (with execution info if it was executed)
+      await castMultisigVote({
         approvalId: existingApproval.id,
         signatoryAddress: address,
-        executionTxHash: polkadotResult.txHash,
+        signatureType: 'signed',
+        txHash: polkadotResult.txHash,
+        wasExecuted: polkadotResult.wasExecuted,
         executionBlockNumber: polkadotResult.blockNumber,
+        // childBountyId would be extracted from chain events if using childBounty workflow
       })
 
-      toast({
-        title: 'Transaction Executed Successfully!',
-        description: `Payment completed. Execution hash: ${polkadotResult.txHash.slice(0, 10)}...`,
-      })
+      if (polkadotResult.wasExecuted) {
+        toast({
+          title: 'Transaction Executed Successfully!',
+          description: `Payment completed. Execution hash: ${polkadotResult.txHash.slice(0, 10)}...`,
+        })
+      } else {
+        toast({
+          title: 'Approval Added',
+          description: `Your signature has been added. Transaction hash: ${polkadotResult.txHash.slice(0, 10)}...`,
+        })
+      }
     } catch (error) {
-      console.error(
-        '[MilestoneReviewDialog]: Failed to execute final approval',
-        error
-      )
+      console.error('[MilestoneReviewDialog]: Failed to add approval', error)
       throw error
     }
   }
+
+  // NOTE: handleFinalApproval is no longer needed as a separate function
+  // The quorum detection and execution is now handled automatically in
+  // approveOrExecuteMultisigCall - when the vote hits quorum, it combines
+  // approval + execution in one atomic transaction
 
   const handleSubmit = async () => {
     if (!selectedVote) {

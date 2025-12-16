@@ -60,8 +60,24 @@ interface MultisigConfig {
   votingTimeoutBlocks: number                  // Blocks before expiry
   automaticExecution: boolean                  // Auto-execute on threshold
   network: 'polkadot' | 'kusama' | 'paseo'   // Which network
+  
+  // Child Bounty Configuration (required)
+  parentBountyId: number                       // Parent bounty ID for child bounty payouts
+  curatorProxyAddress: string                  // Curator account for child bounties
 }
 ```
+
+### Child Bounty Payout System
+
+All milestone payouts use the `childBounties` pallet for proper on-chain indexing. Each payout creates a child bounty under the committee's parent bounty with a 5-call atomic bundle:
+
+1. `addChildBounty` - Create child bounty with milestone amount
+2. `proposeCurator` - Assign curator (proxy controlled by multisig)
+3. `acceptCurator` - Curator accepts role
+4. `awardChildBounty` - Award to grantee wallet address
+5. `claimChildBounty` - Execute payout to grantee
+
+The curator address can be automatically fetched from the chain using the "Fetch Curator" button in the configuration form.
 
 ## Workflow Patterns
 
@@ -134,6 +150,11 @@ Admin interface for configuring committee multisig settings.
 - Signatory management (add/remove wallet addresses)
 - Threshold configuration
 - Approval workflow selection (merged/separated)
+- **Child Bounty Configuration:**
+  - Parent Bounty ID input
+  - Curator address input with "Fetch from Chain" button
+  - Auto-fetches curator from on-chain bounty status
+  - Shows bounty status indicator (Active/Proposed/Not Found)
 
 Integrated into committee management page at `/dashboard/committees/[id]/manage`.
 
@@ -269,27 +290,26 @@ Location: `src/lib/polkadot/multisig.ts`
 Core functions for interacting with Polkadot multisig pallet.
 
 **Key Functions:**
-- `createTransferCall()`: Creates a balance transfer call
-- `createBatchedPaymentCall()`: Combines transfer + remark atomically
 - `initiateMultisigApproval()`: First signatory publishes call and votes
 - `approveMultisigCall()`: Intermediate signatories approve
-- `finalizeMultisigCall()`: Final signatory executes payment
-- `queryPendingMultisigs()`: Check pending multisig calls
+- `approveOrExecuteMultisigCall()`: Smart approval that auto-executes when quorum is hit
+- `willHitQuorum()`: Check if next approval will trigger execution
+- `isQuorumMet()`: Check if quorum is already met
 
-**Note:** These functions are currently stubbed with TODOs. To enable actual blockchain interaction:
+### Child Bounty Utilities
+Location: `src/lib/polkadot/child-bounty.ts`
 
-1. Install dependencies:
-```bash
-pnpm add polkadot-api @polkadot-api/descriptors
-```
+Functions for creating child bounty payouts with proper on-chain indexing.
 
-2. Generate chain descriptors:
-```bash
-# See: https://papi.how/recipes/codegen
-pnpm dlx @polkadot-api/codegen
-```
+**Key Functions:**
+- `getNextChildBountyId()`: Query next available child bounty ID
+- `getParentBounty()`: Query parent bounty info including curator address
+- `getParentBountyCurator()`: Convenience function to get just the curator
+- `createChildBountyBundle()`: Create 5-call atomic bundle for milestone payout
+- `createPayoutCall()`: Main entry point for creating payout transactions
+- `getChildBounty()`: Query existing child bounty by ID
 
-3. Update `src/lib/polkadot/client.ts` and `src/lib/polkadot/multisig.ts` to use typed API
+**Dependencies:** The project uses `dedot` for blockchain interactions and `@luno-kit/react` for wallet connection. These are already installed and configured.
 
 ## Database Queries
 
@@ -313,7 +333,13 @@ Location: `src/lib/db/writes/milestone-approvals.ts`
    - Set threshold (number of required approvals)
    - Note the multisig address
 
-2. **Configure in GrantFlow**
+2. **Set Up Parent Bounty**
+   - Create a parent bounty on-chain using Polkadot.js Apps
+   - Note the bounty ID after creation
+   - Ensure the bounty is funded and has an active curator
+   - The curator should be an account controlled by your multisig (proxy recommended)
+
+3. **Configure in GrantFlow**
    - Navigate to `/dashboard/committees/[id]/manage`
    - Scroll to "Multisig Account" section
    - Enter multisig address
@@ -321,9 +347,13 @@ Location: `src/lib/db/writes/milestone-approvals.ts`
    - Set threshold
    - Choose approval workflow (merged recommended)
    - Select network (Polkadot/Kusama/Paseo)
+   - **Child Bounty Configuration:**
+     - Enter the Parent Bounty ID
+     - Click "Fetch Curator" to auto-load curator address from chain
+     - Or manually enter the curator proxy address
    - Save configuration
 
-3. **Fund Multisig Wallet**
+4. **Fund Multisig Wallet**
    - Transfer funds to the multisig address to cover grant payments
    - Ensure sufficient balance for transaction fees
 
@@ -424,7 +454,7 @@ Location: `src/lib/db/writes/milestone-approvals.ts`
 
 - [Polkadot Multisig Documentation](https://wiki.polkadot.network/docs/learn-account-multisig)
 - [Polkadot.js Apps](https://polkadot.js.org/apps/)
-- [Polkadot API Documentation](https://papi.how/)
+- [dedot Documentation](https://docs.dedot.dev/)
 - [Substrate Multisig Pallet](https://paritytech.github.io/substrate/master/pallet_multisig/index.html)
 - [Block Explorers](https://polkadot.subscan.io/)
 

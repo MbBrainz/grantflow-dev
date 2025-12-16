@@ -6,13 +6,13 @@
  * - Handling first-signatory-votes pattern (asMulti publishes + votes)
  * - Subsequent approvals with approveAsMulti
  * - Final execution with full call data
+ * - Quorum detection to combine approval + execution atomically
+ * - Child bounty workflow support for proper on-chain indexing
  *
  * Note: Using dedot for simplified Polkadot API interactions
  */
 
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import type { LegacyClient } from 'dedot'
 import { encodeAddress, hexToU8a } from 'dedot/utils'
@@ -23,10 +23,14 @@ import {
   checkMultisigPayoutBalance,
   createInsufficientBalanceError,
 } from './balance'
+import { createPayoutCall, type ChildBountyParams } from './child-bounty'
 import type { Signer, HexString } from '@luno-kit/react/types'
 
 // Re-export Signer as PolkadotSigner for backward compatibility
 export type PolkadotSigner = Signer
+
+// Re-export child bounty types for convenience
+export type { ChildBountyParams }
 
 /**
  * Multisig event interface
@@ -142,40 +146,84 @@ export interface InitiateApprovalResult {
   callData: Uint8Array
   timepoint: Timepoint
   blockNumber: number
+  predictedChildBountyId: number
+}
+
+/**
+ * Result from approving or executing a multisig call
+ */
+export interface ApproveOrExecuteResult {
+  txHash: string
+  blockNumber: number
+  wasExecuted: boolean
+  executionSuccess?: boolean
+  executionError?: string
+}
+
+/**
+ * Check if the next approval will hit the quorum threshold
+ *
+ * @param currentApprovals - Number of current approvals
+ * @param threshold - Required threshold for execution
+ * @returns true if the next approval will trigger execution
+ */
+export function willHitQuorum(
+  currentApprovals: number,
+  threshold: number
+): boolean {
+  return currentApprovals + 1 >= threshold
+}
+
+/**
+ * Check if the quorum has already been met
+ *
+ * @param currentApprovals - Number of current approvals
+ * @param threshold - Required threshold for execution
+ * @returns true if quorum is already met
+ */
+export function isQuorumMet(
+  currentApprovals: number,
+  threshold: number
+): boolean {
+  return currentApprovals >= threshold
 }
 
 /**
  * Initiate milestone approval with first vote
  * This publishes the multisig call on-chain AND counts as the first approval
  *
+ * Uses childBounties pallet for proper on-chain indexing.
+ *
  * @param beneficiaryAddress - Recipient wallet address
  * @param payoutAmount - Amount to pay in base units (planck)
  * @param milestoneId - Milestone identifier for on-chain remark
+ * @param milestoneTitle - Milestone title for child bounty description
  * @param threshold - Number of approvals required
  * @param allSignatories - All committee member wallet addresses
  * @param initiatorAddress - Address of the member initiating
  * @param signer - Polkadot signer instance
- * @param useBatch - Whether to use batch_all for atomic execution
  */
 export async function initiateMultisigApproval(params: {
   client: LegacyClient
   multisigConfig: MultisigConfig
   milestoneId: number
+  milestoneTitle?: string
   payoutAmount: bigint
+  beneficiaryAddress: string
   initiatorAddress: string
   signer: PolkadotSigner
-  useBatch?: boolean
   network?: NetworkType
 }): Promise<InitiateApprovalResult> {
   const {
     client,
     multisigConfig,
     milestoneId,
+    milestoneTitle = `Milestone ${milestoneId}`,
     payoutAmount,
+    beneficiaryAddress,
     initiatorAddress: rawInitiatorAddress,
     signer,
-    useBatch = true,
-    network = 'paseo', // Default to Paseo for backward compatibility
+    network = 'paseo',
   } = params
 
   // const initiatorAddress = encodeAddress(rawInitiatorAddress, getNetworkSS58Format(network))
@@ -183,13 +231,13 @@ export async function initiateMultisigApproval(params: {
 
   console.log('[initiateMultisigApproval]: Initiating approval', {
     milestoneId,
-    beneficiaryAddress: multisigConfig.multisigAddress,
+    beneficiaryAddress,
     amount: payoutAmount.toString(),
     threshold: multisigConfig.threshold,
     signatoryCount: multisigConfig.signatories.length,
     initiatorAddress,
     rawInitiatorAddress,
-    useBatch,
+    parentBountyId: multisigConfig.parentBountyId,
   })
 
   // Check initiator balance for transaction fees
@@ -249,23 +297,20 @@ export async function initiateMultisigApproval(params: {
   }
 
   try {
-    // Create the payment call (batched or simple)
-    const paymentCall = useBatch
-      ? createBatchedPaymentCall(
-          params.client,
-          multisigConfig.multisigAddress,
-          payoutAmount,
-          milestoneId
-        )
-      : createTransferCall(
-          params.client,
-          multisigConfig.multisigAddress,
-          payoutAmount
-        )
+    // Create the child bounty payout call
+    const payoutResult = await createPayoutCall(client, {
+      beneficiaryAddress,
+      amount: payoutAmount,
+      milestoneId,
+      milestoneTitle,
+      parentBountyId: multisigConfig.parentBountyId,
+      curatorAddress: multisigConfig.curatorProxyAddress,
+      curatorFee: BigInt(0),
+    })
 
-    // Get call data and hash (using type assertion - dedot API types need refinement)
-    const callData = hexToU8a(paymentCall.callHex)
-    const callHash = paymentCall.hash
+    // Get call data and hash
+    const callData = hexToU8a(payoutResult.callHex)
+    const callHash = payoutResult.callHash
 
     // Get sorted other signatories
     const otherSignatories = getOtherSignatories(
@@ -280,13 +325,17 @@ export async function initiateMultisigApproval(params: {
     }
 
     // Create multisig as_multi call (first signatory publishes AND votes)
-    const multisigCall = params.client.tx.multisig.asMulti(
+    // The call from createPayoutCall is typed as unknown due to dedot's generic types
+    /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
+    const innerCall = payoutResult.call as any
+    const multisigCall = client.tx.multisig.asMulti(
       multisigConfig.threshold,
       otherSignatories,
       undefined, // First call has no timepoint
-      paymentCall.call,
+      innerCall,
       maxWeight
     )
+    /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
 
     console.log('[initiateMultisigApproval]: Submitting multisig call', {
       threshold: multisigConfig.threshold,
@@ -295,6 +344,7 @@ export async function initiateMultisigApproval(params: {
       multisigAddress: multisigConfig.multisigAddress,
       initiatorAddress,
       otherSignatories,
+      predictedChildBountyId: payoutResult.predictedChildBountyId,
     })
 
     // Sign and submit the transaction
@@ -441,14 +491,16 @@ export async function initiateMultisigApproval(params: {
       timepoint,
       txHash,
       blockNumber,
+      predictedChildBountyId: payoutResult.predictedChildBountyId,
     })
 
     return {
-      txHash: txHash ?? (callHash as string),
-      callHash: callHash as string,
+      txHash: txHash ?? callHash,
+      callHash,
       callData,
       timepoint,
       blockNumber,
+      predictedChildBountyId: payoutResult.predictedChildBountyId,
     }
   } catch (error) {
     console.error(
@@ -577,6 +629,7 @@ export async function approveMultisigCall(params: {
     const _unsub = await approvalCall.signAndSend(
       approverAddress,
       { signer },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (result: any) => {
         console.log('[approveMultisigCall]: Transaction status:', result.status)
       }
@@ -594,6 +647,331 @@ export async function approveMultisigCall(params: {
     }
   } catch (error) {
     console.error('[approveMultisigCall]: Failed to approve call', error)
+    throw error
+  }
+}
+
+/**
+ * Approve or execute a multisig call based on quorum detection
+ *
+ * This function combines approval and execution logic:
+ * - If the next approval will hit quorum, it uses `asMulti` with full call data
+ *   to combine approval + execution in one atomic transaction
+ * - Otherwise, it uses `approveAsMulti` to just add the approval
+ *
+ * This provides better UX by automatically executing when threshold is met.
+ *
+ * @param currentApprovals - Number of existing approvals for this call
+ * @param callData - Full call data (hex string) needed for execution
+ * @param callHash - Hash of the multisig call
+ * @param timepoint - Block height and extrinsic index from first approval
+ * @param threshold - Number of approvals required
+ * @param allSignatories - All committee member wallet addresses
+ * @param approverAddress - Address of the member approving
+ * @param signer - Polkadot signer instance
+ * @param beneficiaryAddress - Recipient address (needed for call reconstruction)
+ * @param payoutAmount - Payment amount (needed for call reconstruction)
+ * @param milestoneId - Milestone ID (needed for call reconstruction)
+ * @param milestoneTitle - Milestone title (needed for call reconstruction)
+ * @param multisigConfig - Full multisig configuration
+ * @param network - Network type
+ */
+export async function approveOrExecuteMultisigCall(params: {
+  client: LegacyClient
+  currentApprovals: number
+  callDataHex: string
+  callHash: string
+  timepoint: Timepoint
+  threshold: number
+  allSignatories: string[]
+  approverAddress: string
+  signer: PolkadotSigner
+  beneficiaryAddress: string
+  payoutAmount: bigint
+  milestoneId: number
+  milestoneTitle?: string
+  multisigConfig: MultisigConfig
+  network?: NetworkType
+}): Promise<ApproveOrExecuteResult> {
+  const {
+    client,
+    currentApprovals,
+    callHash,
+    timepoint,
+    threshold,
+    allSignatories,
+    approverAddress: rawApproverAddress,
+    signer,
+    beneficiaryAddress,
+    payoutAmount,
+    milestoneId,
+    milestoneTitle = `Milestone ${milestoneId}`,
+    multisigConfig,
+    network = 'paseo',
+  } = params
+
+  // Convert approver address to the target network format
+  const approverAddress = encodeAddress(
+    rawApproverAddress,
+    getNetworkSS58Format(network)
+  )
+
+  // Determine if this approval will hit quorum
+  const willExecute = willHitQuorum(currentApprovals, threshold)
+
+  console.log('[approveOrExecuteMultisigCall]: Processing approval', {
+    callHash,
+    timepoint,
+    approverAddress,
+    currentApprovals,
+    threshold,
+    willExecute,
+  })
+
+  // Check approver balance for transaction fees
+  console.log('[approveOrExecuteMultisigCall]: Checking approver balance')
+  const approverBalanceCheck = await checkTransactionFeeBalance(
+    client,
+    approverAddress,
+    network
+  )
+
+  if (!approverBalanceCheck.hasBalance) {
+    const errorMessage = createInsufficientBalanceError(
+      approverAddress,
+      approverBalanceCheck,
+      network,
+      'initiator'
+    )
+    console.error(
+      '[approveOrExecuteMultisigCall]: Approver has insufficient balance',
+      {
+        approverAddress,
+        balance: approverBalanceCheck.balance.transferable.toString(),
+        required: approverBalanceCheck.required?.toString(),
+      }
+    )
+    throw new Error(errorMessage)
+  }
+
+  try {
+    // Get sorted other signatories
+    const otherSignatories = getOtherSignatories(
+      allSignatories,
+      approverAddress
+    )
+
+    // Calculate max weight for the call execution
+    const maxWeight = {
+      refTime: 1000000000n, // 1 second
+      proofSize: 1000000n, // 1MB
+    }
+
+    let txHash: string | null = null
+    let blockNumber = 0
+    let executionSuccess = false
+    let executionError: string | undefined
+
+    if (willExecute) {
+      // This approval will hit quorum - use asMulti with full call data to execute
+      console.log(
+        '[approveOrExecuteMultisigCall]: Will hit quorum, executing with asMulti'
+      )
+
+      // Reconstruct the payout call
+      const payoutResult = await createPayoutCall(client, {
+        beneficiaryAddress,
+        amount: payoutAmount,
+        milestoneId,
+        milestoneTitle,
+        parentBountyId: multisigConfig.parentBountyId,
+        curatorAddress: multisigConfig.curatorProxyAddress,
+        curatorFee: BigInt(0),
+      })
+
+      // Create asMulti call with full call data and timepoint
+      // The call from createPayoutCall is typed as unknown due to dedot's generic types
+      /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
+      const innerCall = payoutResult.call as any
+      const executeCall = client.tx.multisig.asMulti(
+        threshold,
+        otherSignatories,
+        timepoint,
+        innerCall,
+        maxWeight
+      )
+      /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-argument */
+
+      console.log('[approveOrExecuteMultisigCall]: Submitting execution call', {
+        threshold,
+        otherSignatoriesCount: otherSignatories.length,
+        timepoint,
+      })
+
+      // Sign and submit the transaction
+      const unsub = await executeCall.signAndSend(
+        approverAddress,
+        { signer },
+        result => {
+          console.log(
+            '[approveOrExecuteMultisigCall]: Transaction status:',
+            result.status.type
+          )
+
+          if (
+            result.status.type === 'BestChainBlockIncluded' ||
+            result.status.type === 'Finalized'
+          ) {
+            txHash = result.txHash
+            if (result.status.value.blockNumber) {
+              blockNumber = result.status.value.blockNumber
+            }
+
+            // Check for MultisigExecuted event
+            if (result.events) {
+              for (const record of result.events) {
+                const { event } = record
+                if (
+                  event.pallet === 'Multisig' &&
+                  event.palletEvent.name === 'MultisigExecuted'
+                ) {
+                  console.log(
+                    '[approveOrExecuteMultisigCall]: Found MultisigExecuted event'
+                  )
+                  executionSuccess = true
+                }
+                // Check for execution errors
+                if (
+                  event.pallet === 'System' &&
+                  event.palletEvent.name === 'ExtrinsicFailed'
+                ) {
+                  console.error(
+                    '[approveOrExecuteMultisigCall]: Execution failed',
+                    event.palletEvent
+                  )
+                  executionError = 'Execution failed on chain'
+                }
+              }
+            }
+          }
+        }
+      )
+
+      // Wait for finalization
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          void unsub()
+          if (!txHash) {
+            reject(new Error('Transaction timed out'))
+          } else {
+            resolve(undefined)
+          }
+        }, 30000)
+
+        const checkInterval = setInterval(() => {
+          if (txHash) {
+            clearTimeout(timeout)
+            clearInterval(checkInterval)
+            void unsub()
+            resolve(undefined)
+          }
+        }, 1000)
+      })
+
+      console.log(
+        '[approveOrExecuteMultisigCall]: Execution completed successfully',
+        {
+          txHash,
+          blockNumber,
+          executionSuccess,
+        }
+      )
+
+      return {
+        txHash: txHash ?? callHash,
+        blockNumber,
+        wasExecuted: true,
+        executionSuccess,
+        executionError,
+      }
+    } else {
+      // Just add approval, don't execute
+      console.log(
+        '[approveOrExecuteMultisigCall]: Below quorum, using approveAsMulti'
+      )
+
+      // Create approval transaction (only needs hash, not full call data)
+      const approvalCall = client.tx.multisig.approveAsMulti(
+        threshold,
+        otherSignatories,
+        timepoint,
+        callHash as HexString,
+        maxWeight
+      )
+
+      console.log('[approveOrExecuteMultisigCall]: Submitting approval', {
+        threshold,
+        otherSignatoriesCount: otherSignatories.length,
+        callHash,
+        timepoint,
+      })
+
+      // Sign and submit the transaction
+      const unsub = await approvalCall.signAndSend(
+        approverAddress,
+        { signer },
+        result => {
+          console.log(
+            '[approveOrExecuteMultisigCall]: Transaction status:',
+            result.status.type
+          )
+
+          if (
+            result.status.type === 'BestChainBlockIncluded' ||
+            result.status.type === 'Finalized'
+          ) {
+            txHash = result.txHash
+            if (result.status.value.blockNumber) {
+              blockNumber = result.status.value.blockNumber
+            }
+          }
+        }
+      )
+
+      // Wait for finalization
+      await new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          void unsub()
+          if (!txHash) {
+            reject(new Error('Transaction timed out'))
+          } else {
+            resolve(undefined)
+          }
+        }, 30000)
+
+        const checkInterval = setInterval(() => {
+          if (txHash) {
+            clearTimeout(timeout)
+            clearInterval(checkInterval)
+            void unsub()
+            resolve(undefined)
+          }
+        }, 1000)
+      })
+
+      console.log('[approveOrExecuteMultisigCall]: Approval submitted', {
+        txHash,
+        blockNumber,
+      })
+
+      return {
+        txHash: txHash ?? callHash,
+        blockNumber,
+        wasExecuted: false,
+      }
+    }
+  } catch (error) {
+    console.error('[approveOrExecuteMultisigCall]: Failed', error)
     throw error
   }
 }
@@ -735,6 +1113,7 @@ export async function finalizeMultisigCall(params: {
     const _unsub = await finalizeCall.signAndSend(
       executorAddress,
       { signer },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (result: any) => {
         console.log(
           '[finalizeMultisigCall]: Transaction status:',

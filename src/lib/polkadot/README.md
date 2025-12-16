@@ -207,8 +207,28 @@ interface MultisigConfig {
   votingTimeoutBlocks: number
   automaticExecution: boolean
   network: 'polkadot' | 'kusama' | 'paseo'
+  
+  // Child Bounty Configuration (required)
+  parentBountyId: number       // On-chain parent bounty ID for child bounty payouts
+  curatorProxyAddress: string  // Curator account that manages child bounties
 }
 ```
+
+### Child Bounty Payout Workflow
+
+All milestone payouts use the Polkadot `childBounties` pallet for proper on-chain indexing by Subscan/Subsquare. The workflow:
+
+1. **addChildBounty** - Creates child bounty under parent, allocates funds
+2. **proposeCurator** - Parent curator proposes curator for child bounty
+3. **acceptCurator** - Curator accepts the role
+4. **awardChildBounty** - Awards to beneficiary (grantee wallet)
+5. **claimChildBounty** - Pays out funds to beneficiary
+
+All 5 calls are bundled atomically using `utility.batchAll`, ensuring all-or-nothing execution.
+
+**Configuration:**
+- `parentBountyId`: Set this to the on-chain bounty ID your committee manages
+- `curatorProxyAddress`: The curator account for the parent bounty (can be fetched automatically from the chain in the UI)
 
 ## UI Components
 

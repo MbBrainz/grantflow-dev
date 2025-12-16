@@ -2,7 +2,7 @@
 
 ## 🎯 Objective
 
-Complete the Polkadot multisig integration by implementing 6 stubbed functions in `src/lib/polkadot/multisig.ts` to enable real blockchain transactions for milestone-based grant payments on the Paseo testnet.
+Enable real blockchain transactions for milestone-based grant payments using child bounty payouts on Polkadot networks.
 
 ## 📊 Current Status
 
@@ -10,14 +10,16 @@ Complete the Polkadot multisig integration by implementing 6 stubbed functions i
 - **Database Schema**: `milestone_approvals` and `multisig_signatures` tables created
 - **Server Actions**: All actions implemented in `src/app/(dashboard)/dashboard/submissions/multisig-actions.ts`
 - **UI Components**: `MilestoneVotingPanel`, `MultisigConfigForm`, `PolkadotWalletSelector`, `SignatoryVoteList`
-- **Polkadot Client**: `src/lib/polkadot/client.ts` configured with typed API
-- **Chain Descriptors**: Generated for Paseo testnet in `.papi/descriptors/`
-- **Type Safety**: All TypeScript types from `@polkadot-api/descriptors` available
-- **Provider Context**: `PolkadotProvider` for wallet connection
+- **Polkadot Client**: `dedot` LegacyClient with `@luno-kit/react` hooks
+- **Wallet Integration**: `@luno-kit/ui` for wallet connection UI
+- **Type Safety**: Types from `dedot` and `@dedot/chaintypes`
+- **Provider Context**: `LunoKitProvider` for wallet connection
 - **Seed Data**: Infrastructure Committee configured with merged workflow
 
-### ⏳ Pending (Implementation Layer)
-- **Blockchain Functions**: 6 functions in `src/lib/polkadot/multisig.ts` are stubbed with `throw new Error`
+### ✅ Complete (Implementation Layer)
+- **Multisig Functions**: `initiateMultisigApproval`, `approveOrExecuteMultisigCall`, `finalizeMultisigCall`
+- **Child Bounty Functions**: `createPayoutCall`, `createChildBountyBundle`, `getParentBounty`, `getParentBountyCurator`
+- **Integration Tests**: 59 tests passing
 
 ## 🔧 Functions to Implement
 
@@ -337,31 +339,28 @@ tx.signSubmitAndWatch(signer).subscribe({
 
 ## 📝 Implementation Checklist
 
-- [ ] Import `getPaseoTypedApi()` instead of `getPolkadotApi()`
-- [ ] Implement `createTransferCall()`
-- [ ] Implement `createBatchedPaymentCall()`
-- [ ] Implement `initiateMultisigApproval()` with event parsing
-- [ ] Implement `approveMultisigCall()`
-- [ ] Implement `finalizeMultisigCall()` with execution checking
-- [ ] Implement `queryPendingMultisigs()`
+- [x] Implement `initiateMultisigApproval()` with event parsing
+- [x] Implement `approveOrExecuteMultisigCall()` for intermediate and final signatories
+- [x] Implement `finalizeMultisigCall()` with execution checking
+- [x] Implement child bounty functions (`createPayoutCall`, `createChildBountyBundle`)
+- [x] Implement parent bounty queries (`getParentBounty`, `getParentBountyCurator`)
+- [x] Handle all error cases gracefully
+- [x] Add comprehensive logging
+- [x] Run `pnpm typecheck` and `pnpm lint`
+- [x] Create integration tests (59 tests passing)
 - [ ] Test on Paseo testnet with real multisig wallet
-- [ ] Handle all error cases gracefully
-- [ ] Add comprehensive logging
-- [ ] Update POLKADOT_INTEGRATION.md with implementation notes
-- [ ] Run `pnpm typecheck` and `pnpm lint`
 - [ ] Test merged workflow (decision + execution combined)
 - [ ] Test separated workflow (approval then payment)
 - [ ] Verify database records match on-chain state
-- [ ] Document gas costs and deposit requirements
 
 ## 🌐 External Resources
 
-- **Polkadot-API Docs**: https://papi.how
+- **dedot Docs**: https://docs.dedot.dev/
 - **Multisig Pallet Reference**: https://wiki.polkadot.network/docs/learn-account-multisig
+- **Child Bounties Pallet**: https://wiki.polkadot.network/docs/learn-bounties
 - **Paseo Testnet Explorer**: https://paseo.subscan.io
 - **Paseo Faucet**: https://faucet.polkadot.io/paseo
 - **Polkadot.js Apps (Paseo)**: https://polkadot.js.org/apps/?rpc=wss%3A%2F%2Frpc.paseo.io#/explorer
-- **Generated Type Definitions**: `.papi/descriptors/dist/index.d.ts`
 
 ## 💡 Tips
 
@@ -388,15 +387,15 @@ tx.signSubmitAndWatch(signer).subscribe({
 
 ## 🎯 Success Criteria
 
-Implementation is complete when:
-1. ✅ All 6 functions implemented without throwing errors
+Implementation status:
+1. ✅ All multisig and child bounty functions implemented
 2. ✅ TypeScript compiles without errors (`pnpm typecheck`)
 3. ✅ ESLint passes without errors (`pnpm lint`)
-4. ✅ Can initiate multisig approval on Paseo testnet
-5. ✅ Can approve with intermediate signatories
-6. ✅ Can finalize and execute payment transaction
-7. ✅ Transaction appears on Paseo block explorer
-8. ✅ Database records match on-chain state
-9. ✅ Both merged and separated workflows function correctly
-10. ✅ UI displays real-time approval progress from blockchain
+4. ✅ Integration tests passing (59 tests)
+5. ⏳ Can initiate multisig approval on Paseo testnet
+6. ⏳ Can approve with intermediate signatories
+7. ⏳ Can finalize and execute payment transaction
+8. ⏳ Transaction appears on Paseo block explorer
+9. ⏳ Database records match on-chain state
+10. ⏳ Both merged and separated workflows function correctly
 

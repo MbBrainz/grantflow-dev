@@ -1,7 +1,12 @@
 'use client'
 
 import { useState } from 'react'
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import {
   AlertCircle,
@@ -12,7 +17,7 @@ import {
   ChevronUp,
 } from 'lucide-react'
 import { CommitteeBadge } from '@/components/submissions/committee-badge'
-import type { MetadataItem } from '@/components/submissions/actionable-card';
+import type { MetadataItem } from '@/components/submissions/actionable-card'
 import { ActionableCard } from '@/components/submissions/actionable-card'
 import type { Committee } from '@/lib/db/schema'
 
@@ -111,16 +116,18 @@ function ActionCard({ action }: { action: PendingAction }) {
       ].filter(Boolean)}
       metadata={
         isSubmissionVote
-          ? [
+          ? ([
               {
                 icon: <Target className="h-4 w-4" />,
                 value: action.grantProgram?.name ?? 'General Program',
               },
-              action.grantProgram?.fundingAmount ? {
-                icon: <span>$</span>,
-                value: `$${action.grantProgram.fundingAmount.toLocaleString()}`,
-              } : undefined,
-            ].filter(Boolean) as MetadataItem[]
+              action.grantProgram?.fundingAmount
+                ? {
+                    icon: <span>$</span>,
+                    value: `$${action.grantProgram.fundingAmount.toLocaleString()}`,
+                  }
+                : undefined,
+            ].filter(Boolean) as MetadataItem[])
           : [
               {
                 icon: <Target className="h-4 w-4" />,

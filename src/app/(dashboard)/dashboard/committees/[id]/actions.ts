@@ -444,6 +444,8 @@ const UpdateMultisigConfigSchema = z.object({
   votingTimeoutBlocks: z.number().int().positive(),
   automaticExecution: z.boolean(),
   network: z.enum(['polkadot', 'kusama', 'paseo']),
+  parentBountyId: z.number().int().nonnegative('Parent bounty ID is required'),
+  curatorProxyAddress: z.string().min(1, 'Curator proxy address is required'),
 })
 
 export const updateMultisigConfig = validatedActionWithUser(
