@@ -1,7 +1,28 @@
-// Multisig configuration for committee wallet
+/**
+ * Mapping between a signatory wallet address and an optional platform user
+ * Users can self-link their wallet address to claim signatory ownership
+ */
+export interface SignatoryMapping {
+  address: string // Wallet address (SS58 format)
+  userId?: number // Optional link to platform user (self-service linking)
+}
+
+/**
+ * Multisig configuration for committee wallet
+ * Links the committee to an on-chain bounty and defines the multisig structure
+ */
 export interface MultisigConfig {
-  multisigAddress: string
-  signatories: string[] // Wallet addresses of committee members
+  // Chain identity - bounty is the source of truth
+  network: 'polkadot' | 'paseo' // Which Polkadot network
+  parentBountyId: number // Parent bounty ID on-chain
+
+  // Discovered from chain (read-only, refreshed on validation)
+  curatorProxyAddress: string // Proxy account that acts as curator for child bounties
+  multisigAddress: string // The effective multisig address controlling the proxy
+  bountyDescription?: string // Decoded bounty description from chain
+
+  // Signatories with optional user links
+  signatories: SignatoryMapping[] // Wallet addresses with optional user links
   threshold: number // Number of approvals required
 
   // Workflow configuration: How review approvals relate to blockchain execution
@@ -9,15 +30,8 @@ export interface MultisigConfig {
   // - 'merged': Review approval = blockchain signature (decision + execution in one step)
   // - 'separated': Review approval first, then separate blockchain signing (two-phase process)
 
-  requireAllSignatories: boolean // If true, all must vote (not just threshold)
   votingTimeoutBlocks: number // How long before vote expires
   automaticExecution: boolean // Auto-execute on threshold or manual trigger
-  network: 'polkadot' | 'kusama' | 'paseo' // Which Polkadot network
-
-  // Child Bounty configuration (required for on-chain payout indexing)
-  // Payouts use childBounties pallet for proper on-chain indexing by Subscan/Subsquare
-  parentBountyId: number // Parent bounty ID on-chain
-  curatorProxyAddress: string // Proxy account that acts as curator for child bounties
 }
 
 export interface GroupSettings {

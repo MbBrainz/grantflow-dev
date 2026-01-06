@@ -16,10 +16,9 @@ import { useRouter } from 'next/navigation'
 import type { User } from '@/lib/db/schema'
 import useSWR, { mutate } from 'swr'
 import { fetcher } from '@/lib/utils'
-import { LunoKitProvider } from '@luno-kit/ui'
+import { ClientLunoKitProvider } from '@/components/providers/lunokit-provider'
 import { PolkadotChainSelector } from '@/components/wallet/polkadot-chain-selector'
 import { PolkadotWalletSelector } from '@/components/wallet/polkadot-wallet-selector'
-import { config } from '@/lib/polkadot/lunokit'
 
 function UserMenu() {
   const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -113,11 +112,11 @@ function Header() {
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (
-    <LunoKitProvider config={config}>
+    <ClientLunoKitProvider>
       <section className="flex min-h-screen flex-col">
         <Header />
         {children}
       </section>
-    </LunoKitProvider>
+    </ClientLunoKitProvider>
   )
 }

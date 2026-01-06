@@ -13,7 +13,7 @@
 
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useMemo } from 'react'
 import {
   useApi,
   useSwitchChain,
@@ -58,12 +58,16 @@ import {
   getSignatoryIndex,
   normalizeToPolkadot,
 } from '@/lib/polkadot/multisig-address'
-import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
+import type {
+  MultisigConfig,
+  SignatoryMapping,
+} from '@/lib/db/schema/jsonTypes/GroupSettings'
 
 interface BountyLinkSetupProps {
   initialConfig?: Partial<MultisigConfig>
   onSave: (config: MultisigConfig) => Promise<void>
   isLoading?: boolean
+  currentUserId?: number // Current user ID for self-linking
 }
 
 type NetworkType = 'polkadot' | 'paseo'
@@ -72,12 +76,13 @@ export function BountyLinkSetup({
   initialConfig,
   onSave,
   isLoading = false,
+  currentUserId,
 }: BountyLinkSetupProps) {
   const { toast } = useToast()
 
   // Network and bounty state
   const [network, setNetwork] = useState<NetworkType>(
-    (initialConfig?.network as NetworkType) ?? 'paseo'
+    initialConfig?.network ?? 'paseo'
   )
   const [bountyId, setBountyId] = useState<number>(
     initialConfig?.parentBountyId ?? 0
@@ -89,8 +94,8 @@ export function BountyLinkSetup({
     useState<MultisigStructure | null>(null)
   const [discoveryError, setDiscoveryError] = useState<string | null>(null)
 
-  // Signatory state
-  const [signatories, setSignatories] = useState<string[]>(
+  // Signatory state - now uses SignatoryMapping with optional userId
+  const [signatories, setSignatories] = useState<SignatoryMapping[]>(
     initialConfig?.signatories ?? []
   )
   const [threshold, setThreshold] = useState<number>(
@@ -98,10 +103,13 @@ export function BountyLinkSetup({
   )
   const [newSignatory, setNewSignatory] = useState('')
 
+  // Helper to get just the addresses from signatories
+  const signatoryAddresses = signatories.map(s => s.address)
+
   // Workflow settings
-  const [approvalWorkflow, setApprovalWorkflow] = useState<'merged' | 'separated'>(
-    initialConfig?.approvalWorkflow ?? 'merged'
-  )
+  const [approvalWorkflow, setApprovalWorkflow] = useState<
+    'merged' | 'separated'
+  >(initialConfig?.approvalWorkflow ?? 'merged')
 
   // Saving state
   const [isSaving, setIsSaving] = useState(false)
@@ -123,26 +131,29 @@ export function BountyLinkSetup({
 
   // Validate signatories against discovered multisig
   const validation = useMemo(() => {
-    if (!discoveredStructure?.effectiveMultisig || signatories.length < 2) {
+    if (
+      !discoveredStructure?.effectiveMultisig ||
+      signatoryAddresses.length < 2
+    ) {
       return null
     }
     return validateMultisigConfig(
       discoveredStructure.effectiveMultisig,
-      signatories,
+      signatoryAddresses,
       threshold
     )
-  }, [discoveredStructure, signatories, threshold])
+  }, [discoveredStructure, signatoryAddresses, threshold])
 
   // Check if connected wallet is a signatory
   const walletIsSignatory = useMemo(() => {
-    if (!connectedAddress || signatories.length === 0) return false
-    return isSignatory(connectedAddress, signatories)
-  }, [connectedAddress, signatories])
+    if (!connectedAddress || signatoryAddresses.length === 0) return false
+    return isSignatory(connectedAddress, signatoryAddresses)
+  }, [connectedAddress, signatoryAddresses])
 
   const walletSignatoryIndex = useMemo(() => {
-    if (!connectedAddress || signatories.length === 0) return -1
-    return getSignatoryIndex(connectedAddress, signatories)
-  }, [connectedAddress, signatories])
+    if (!connectedAddress || signatoryAddresses.length === 0) return -1
+    return getSignatoryIndex(connectedAddress, signatoryAddresses)
+  }, [connectedAddress, signatoryAddresses])
 
   // Can save if: discovered, valid signatories, wallet is signatory
   const canSave =
@@ -222,8 +233,8 @@ export function BountyLinkSetup({
 
     // Check for duplicates (comparing normalized addresses)
     const normalizedNew = normalizeToPolkadot(trimmed)
-    const isDuplicate = signatories.some(
-      s => normalizeToPolkadot(s) === normalizedNew
+    const isDuplicate = signatoryAddresses.some(
+      addr => normalizeToPolkadot(addr) === normalizedNew
     )
     if (isDuplicate) {
       toast({
@@ -234,7 +245,19 @@ export function BountyLinkSetup({
       return
     }
 
-    setSignatories([...signatories, trimmed])
+    // Create SignatoryMapping - check if this is the current user's wallet
+    const newMapping: SignatoryMapping = {
+      address: trimmed,
+      // Auto-link if connected wallet matches and we have currentUserId
+      userId:
+        connectedAddress &&
+        currentUserId &&
+        normalizeToPolkadot(connectedAddress) === normalizedNew
+          ? currentUserId
+          : undefined,
+    }
+
+    setSignatories([...signatories, newMapping])
     setNewSignatory('')
   }
 
@@ -267,7 +290,6 @@ export function BountyLinkSetup({
         signatories,
         threshold,
         approvalWorkflow,
-        requireAllSignatories: false,
         votingTimeoutBlocks: 50400, // ~7 days
         automaticExecution: true,
       }
@@ -281,7 +303,8 @@ export function BountyLinkSetup({
       console.error('[BountyLinkSetup] Save error:', e)
       toast({
         title: 'Save Failed',
-        description: e instanceof Error ? e.message : 'Failed to save configuration',
+        description:
+          e instanceof Error ? e.message : 'Failed to save configuration',
         variant: 'destructive',
       })
     } finally {
@@ -464,7 +487,13 @@ export function BountyLinkSetup({
                 value={threshold}
                 onChange={e =>
                   setThreshold(
-                    Math.max(1, Math.min(parseInt(e.target.value) || 1, signatories.length || 1))
+                    Math.max(
+                      1,
+                      Math.min(
+                        parseInt(e.target.value) || 1,
+                        signatories.length || 1
+                      )
+                    )
                   )
                 }
                 className="w-20"
@@ -495,31 +524,65 @@ export function BountyLinkSetup({
             {/* Signatory list */}
             {signatories.length > 0 ? (
               <div className="space-y-2">
-                {signatories.map((address, index) => (
+                {signatories.map((signatory, index) => (
                   <div
-                    key={address}
+                    key={signatory.address}
                     className="flex items-center justify-between rounded-lg border p-3"
                   >
                     <div className="flex items-center gap-2">
                       <Badge variant="outline">{index + 1}</Badge>
                       <code className="text-xs">
-                        {address.slice(0, 8)}...{address.slice(-6)}
+                        {signatory.address.slice(0, 8)}...
+                        {signatory.address.slice(-6)}
                       </code>
                       {connectedAddress &&
-                        isSignatory(connectedAddress, [address]) && (
+                        isSignatory(connectedAddress, [signatory.address]) && (
                           <Badge variant="secondary" className="text-xs">
                             You
                           </Badge>
                         )}
+                      {signatory.userId && (
+                        <Badge variant="default" className="text-xs">
+                          Linked
+                        </Badge>
+                      )}
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleRemoveSignatory(index)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-600" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      {/* Link to user button - only show for current user's address */}
+                      {connectedAddress &&
+                        currentUserId &&
+                        isSignatory(connectedAddress, [signatory.address]) &&
+                        !signatory.userId && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              const updated = [...signatories]
+                              updated[index] = {
+                                ...signatory,
+                                userId: currentUserId,
+                              }
+                              setSignatories(updated)
+                              toast({
+                                title: 'Address Linked',
+                                description:
+                                  'This signatory is now linked to your account',
+                              })
+                            }}
+                          >
+                            Link to me
+                          </Button>
+                        )}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemoveSignatory(index)}
+                      >
+                        <Trash2 className="h-4 w-4 text-red-600" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -551,7 +614,9 @@ export function BountyLinkSetup({
                         : 'text-red-700 dark:text-red-300'
                     }`}
                   >
-                    {validation.valid ? 'Configuration Valid' : 'Validation Failed'}
+                    {validation.valid
+                      ? 'Configuration Valid'
+                      : 'Validation Failed'}
                   </span>
                 </div>
                 {!validation.valid && (
@@ -569,8 +634,8 @@ export function BountyLinkSetup({
                 )}
                 {validation.valid && (
                   <p className="text-muted-foreground mt-1 text-sm">
-                    Signatories ({threshold}/{signatories.length}) correctly
-                    produce the multisig address.
+                    Signatories ({threshold}/{signatoryAddresses.length})
+                    correctly produce the multisig address.
                   </p>
                 )}
               </div>
@@ -636,8 +701,8 @@ export function BountyLinkSetup({
                     {connectedAddress?.slice(-6)}
                   </p>
                   <p className="text-sm text-yellow-600 dark:text-yellow-400">
-                    This wallet is NOT one of the signatories. Connect a different
-                    wallet to save.
+                    This wallet is NOT one of the signatories. Connect a
+                    different wallet to save.
                   </p>
                 </div>
               </div>
@@ -658,11 +723,17 @@ export function BountyLinkSetup({
           <CardContent>
             <RadioGroup
               value={approvalWorkflow}
-              onValueChange={(v: 'merged' | 'separated') => setApprovalWorkflow(v)}
+              onValueChange={(v: 'merged' | 'separated') =>
+                setApprovalWorkflow(v)
+              }
             >
               <div className="space-y-4">
                 <div className="flex items-start space-x-3 rounded-lg border p-4">
-                  <RadioGroupItem value="merged" id="merged" className="mt-0.5" />
+                  <RadioGroupItem
+                    value="merged"
+                    id="merged"
+                    className="mt-0.5"
+                  />
                   <div className="flex-1 space-y-1">
                     <Label htmlFor="merged" className="cursor-pointer">
                       Merged (Recommended)
@@ -684,8 +755,8 @@ export function BountyLinkSetup({
                       Separated
                     </Label>
                     <p className="text-muted-foreground text-xs">
-                      Review approval first, then separate blockchain signing step.
-                      Two-phase process gives more control.
+                      Review approval first, then separate blockchain signing
+                      step. Two-phase process gives more control.
                     </p>
                   </div>
                 </div>

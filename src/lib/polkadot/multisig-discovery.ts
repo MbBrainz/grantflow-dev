@@ -63,7 +63,7 @@ export function toPolkadotAddress(
     return encodeAddress(decoded, POLKADOT_SS58_PREFIX)
   } catch (e) {
     console.error('[toPolkadotAddress] Failed to convert:', address, e)
-    return String(address)
+    return typeof address === 'string' ? address : JSON.stringify(address)
   }
 }
 
@@ -82,7 +82,9 @@ function hexToUint8Array(hex: string): Uint8Array {
 /**
  * Decode hex-encoded string (0x prefixed) to UTF-8 string
  */
-function decodeHexString(hex: string | Uint8Array | undefined): string | undefined {
+function decodeHexString(
+  hex: string | Uint8Array | undefined
+): string | undefined {
   if (!hex) return undefined
   try {
     const bytes = typeof hex === 'string' ? hexToUint8Array(hex) : hex
@@ -101,21 +103,15 @@ function getRawHex(accountId: { raw: Uint8Array | string } | string): string {
     if (typeof accountId.raw === 'string') {
       return accountId.raw
     }
-    return (
-      `0x${ 
-      Array.from(accountId.raw)
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('')}`
-    )
+    return `0x${Array.from(accountId.raw)
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('')}`
   }
   // Convert address to raw
   const decoded = decodeAddress(accountId)
-  return (
-    `0x${ 
-    Array.from(decoded)
-      .map(b => b.toString(16).padStart(2, '0'))
-      .join('')}`
-  )
+  return `0x${Array.from(decoded)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')}`
 }
 
 /**
@@ -143,12 +139,17 @@ export async function discoverMultisigStructure(
   }
 
   // Decode the hex-encoded description
-  const bountyDescription = decodeHexString(descriptionRaw as string | Uint8Array | undefined)
+  const bountyDescription = decodeHexString(
+    descriptionRaw as string | Uint8Array | undefined
+  )
   console.log('[discoverMultisigStructure] Description:', bountyDescription)
 
   // Extract curator from status
   // Status is a union type - curator exists on Active, CuratorProposed, PendingPayout, ApprovedWithCurator
-  const status = bounty.status as { type: string; value?: { curator?: unknown } }
+  const status = bounty.status as {
+    type: string
+    value?: { curator?: unknown }
+  }
   const curatorAccountId = status?.value?.curator
 
   if (!curatorAccountId) {
@@ -233,11 +234,11 @@ export async function getPendingMultisigCalls(
 
   try {
     // Use type assertion - entries() works at runtime but TypeScript doesn't recognize it
-    const multisigQuery = client.query.multisig.multisigs;
+    const multisigQuery = client.query.multisig.multisigs
     const entries = await multisigQuery.pagedEntries(multisigAddress)
 
     if (!entries || entries.length === 0) {
-      console.log("entries", entries)
+      console.log('entries', entries)
       return []
     }
 

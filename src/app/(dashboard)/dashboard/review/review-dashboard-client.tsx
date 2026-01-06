@@ -6,7 +6,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Clock,
   FileText,
-  Users,
   CheckCircle,
   XCircle,
   AlertCircle,
@@ -19,7 +18,7 @@ import { CommitteeBadge } from '@/components/submissions/committee-badge'
 import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge'
 import { ActionableCard } from '@/components/submissions/actionable-card'
 import { ArrowRight } from 'lucide-react'
-import type { Committee, Milestone, GrantProgram } from '@/lib/db/schema'
+import type { Committee, Milestone } from '@/lib/db/schema'
 
 interface Submitter {
   name: string | null
@@ -35,11 +34,17 @@ interface Submission {
   labels: string | null
   totalAmount?: number | null
   submitter?: Submitter
+  // Committee IS the grant program now
   committee?: Pick<
     Committee,
-    'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'
+    | 'id'
+    | 'name'
+    | 'description'
+    | 'logoUrl'
+    | 'focusAreas'
+    | 'isActive'
+    | 'fundingAmount'
   >
-  grantProgram?: Pick<GrantProgram, 'id' | 'name' | 'fundingAmount'>
   milestones?: Milestone[]
 }
 
@@ -114,13 +119,9 @@ function SubmissionCard({ submission }: { submission: Submission }) {
           icon: <Clock className="h-4 w-4" />,
           value: submission.totalAmount
             ? `$${submission.totalAmount.toLocaleString()}`
-            : submission.grantProgram?.fundingAmount
-              ? `$${submission.grantProgram.fundingAmount.toLocaleString()}`
+            : submission.committee?.fundingAmount
+              ? `$${submission.committee.fundingAmount.toLocaleString()}`
               : 'Amount TBD',
-        },
-        submission.grantProgram && {
-          icon: <Users className="h-4 w-4" />,
-          value: submission.grantProgram.name,
         },
       ].filter(Boolean)}
       actionButton={{

@@ -32,15 +32,17 @@ export interface PendingAction {
     name: string | null
     email: string | null
   }
+  // Committee IS the grant program now
   committee?: Pick<
     Committee,
-    'id' | 'name' | 'description' | 'logoUrl' | 'focusAreas' | 'isActive'
+    | 'id'
+    | 'name'
+    | 'description'
+    | 'logoUrl'
+    | 'focusAreas'
+    | 'isActive'
+    | 'fundingAmount'
   >
-  grantProgram?: {
-    id: number
-    name: string
-    fundingAmount: number | null
-  }
   // For milestone actions
   submission?: {
     id: number
@@ -119,12 +121,12 @@ function ActionCard({ action }: { action: PendingAction }) {
           ? ([
               {
                 icon: <Target className="h-4 w-4" />,
-                value: action.grantProgram?.name ?? 'General Program',
+                value: action.committee?.name ?? 'General Program',
               },
-              action.grantProgram?.fundingAmount
+              action.committee?.fundingAmount
                 ? {
                     icon: <span>$</span>,
-                    value: `$${action.grantProgram.fundingAmount.toLocaleString()}`,
+                    value: `$${action.committee.fundingAmount.toLocaleString()}`,
                   }
                 : undefined,
             ].filter(Boolean) as MetadataItem[])

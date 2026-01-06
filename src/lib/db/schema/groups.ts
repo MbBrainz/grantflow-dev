@@ -6,10 +6,10 @@ import {
   timestamp,
   boolean,
   jsonb,
+  bigint,
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
-import { grantPrograms } from './grant-programs'
 import { groupMemberships } from './group-memberships'
 import { submissions } from './submissions'
 import { discussions } from './discussions'
@@ -21,6 +21,8 @@ import { users } from './users'
 import type { FocusAreas, GroupSettings } from './jsonTypes/GroupSettings'
 
 // Unified groups table for both committees and teams
+// For committees: This table now includes grant program fields (budget, templates)
+// Each committee IS a grant program linked to an on-chain bounty
 export const groups = pgTable('groups', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 100 }).notNull(),
@@ -32,13 +34,25 @@ export const groups = pgTable('groups', {
   githubOrg: varchar('github_org', { length: 100 }),
   walletAddress: varchar('wallet_address', { length: 64 }),
   isActive: boolean('is_active').notNull().default(true),
-  settings: jsonb('settings').$type<GroupSettings>(), // JSON configuration (voting thresholds, approval workflows, etc.)
+  settings: jsonb('settings').$type<GroupSettings>(), // JSON configuration (voting thresholds, approval workflows, multisig, etc.)
+
+  // Budget configuration (for committees acting as grant programs)
+  fundingAmount: bigint('funding_amount', { mode: 'number' }), // Total program budget
+  minGrantSize: bigint('min_grant_size', { mode: 'number' }), // Minimum total grant per submission
+  maxGrantSize: bigint('max_grant_size', { mode: 'number' }), // Maximum total grant per submission
+  minMilestoneSize: bigint('min_milestone_size', { mode: 'number' }), // Minimum payout per milestone
+  maxMilestoneSize: bigint('max_milestone_size', { mode: 'number' }), // Maximum payout per milestone
+
+  // Template configuration (for committees)
+  requirements: text('requirements'), // JSON structured requirements
+  applicationTemplate: text('application_template'), // JSON form template
+  milestoneStructure: text('milestone_structure'), // JSON milestone template
+
   createdAt: timestamp('created_at').notNull().defaultNow(),
   updatedAt: timestamp('updated_at').notNull().defaultNow(),
 })
 
 export const groupsRelations = relations(groups, ({ many }) => ({
-  grantPrograms: many(grantPrograms),
   members: many(groupMemberships),
   submittedSubmissions: many(submissions, { relationName: 'submitterGroup' }),
   reviewingSubmissions: many(submissions, { relationName: 'reviewerGroup' }),

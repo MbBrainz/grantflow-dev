@@ -1,18 +1,22 @@
-import { eq, and } from 'drizzle-orm'
+import { eq, and, sum } from 'drizzle-orm'
 import { db } from '../drizzle'
-import { groups, groupMemberships, type Group } from '../schema'
+import {
+  groups,
+  groupMemberships,
+  submissions,
+  milestones,
+  type Group,
+} from '../schema'
 import { getUser } from './users'
 
 /**
  * Get committee by ID with related data
+ * Committee IS the grant program (budget fields are directly on the committee)
  */
 export async function getCommitteeById(id: number) {
   const committee = await db.query.groups.findFirst({
     where: and(eq(groups.id, id), eq(groups.type, 'committee')),
     with: {
-      grantPrograms: {
-        where: eq(groups.isActive, true),
-      },
       members: {
         with: {
           user: {
@@ -22,6 +26,7 @@ export async function getCommitteeById(id: number) {
               email: true,
               avatarUrl: true,
               primaryRole: true,
+              walletAddress: true,
             },
           },
         },
@@ -32,12 +37,6 @@ export async function getCommitteeById(id: number) {
         limit: 5,
         with: {
           submitter: {
-            columns: {
-              id: true,
-              name: true,
-            },
-          },
-          grantProgram: {
             columns: {
               id: true,
               name: true,
@@ -71,16 +70,70 @@ export async function isCommitteeAdmin(committeeId: number): Promise<boolean> {
 
 /**
  * Get all active committees
+ * Committee IS the grant program (budget fields are directly on the committee)
  */
 export async function getActiveCommittees(): Promise<Group[]> {
   return await db.query.groups.findMany({
     where: and(eq(groups.type, 'committee'), eq(groups.isActive, true)),
-    with: {
-      grantPrograms: {
-        where: eq(groups.isActive, true),
-      },
-    },
   })
 }
 
+/**
+ * Get committee financial metrics
+ * Calculates allocated, spent, and remaining budget
+ */
+export async function getCommitteeFinancials(committeeId: number) {
+  // Get total allocated (sum of approved submissions)
+  const allocatedResult = await db
+    .select({
+      total: sum(submissions.totalAmount),
+    })
+    .from(submissions)
+    .where(
+      and(
+        eq(submissions.reviewerGroupId, committeeId),
+        eq(submissions.status, 'approved')
+      )
+    )
+
+  // Get total spent (sum of completed milestones)
+  const spentResult = await db
+    .select({
+      total: sum(milestones.amount),
+    })
+    .from(milestones)
+    .where(
+      and(
+        eq(milestones.groupId, committeeId),
+        eq(milestones.status, 'completed')
+      )
+    )
+
+  const allocated = Number(allocatedResult[0]?.total ?? 0)
+  const spent = Number(spentResult[0]?.total ?? 0)
+
+  // Get the committee to access funding amount
+  const committee = await db.query.groups.findFirst({
+    where: eq(groups.id, committeeId),
+    columns: {
+      fundingAmount: true,
+    },
+  })
+
+  const totalBudget = committee?.fundingAmount ?? 0
+  const remaining = totalBudget - allocated
+  const available = allocated - spent
+
+  return {
+    totalBudget,
+    allocated,
+    spent,
+    remaining,
+    available,
+  }
+}
+
 export type CommitteeWithDetails = Awaited<ReturnType<typeof getCommitteeById>>
+export type CommitteeFinancials = Awaited<
+  ReturnType<typeof getCommitteeFinancials>
+>

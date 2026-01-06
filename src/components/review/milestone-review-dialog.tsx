@@ -379,7 +379,7 @@ export function MilestoneReviewDialog({
         callHash: existingApproval.callHash,
         timepoint: existingApproval.timepoint,
         threshold: multisigConfig.threshold,
-        allSignatories: multisigConfig.signatories,
+        allSignatories: multisigConfig.signatories.map(s => s.address),
         approverAddress: address,
         signer: selectedSigner,
         beneficiaryAddress,

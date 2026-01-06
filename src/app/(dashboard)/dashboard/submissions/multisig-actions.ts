@@ -136,7 +136,8 @@ export const initiateMultisigApproval = validatedActionWithUser(
       }
 
       // Verify initiator is a signatory
-      if (!multisigConfig.signatories.includes(data.initiatorWalletAddress)) {
+      const signatoryAddresses = multisigConfig.signatories.map(s => s.address)
+      if (!signatoryAddresses.includes(data.initiatorWalletAddress)) {
         return {
           error: 'Your wallet address is not a signatory for this committee',
         }
@@ -252,7 +253,8 @@ export const castMultisigVote = validatedActionWithUser(
       const multisigConfig = committee.settings.multisig
 
       // Verify voter is a signatory
-      if (!multisigConfig.signatories.includes(data.signatoryAddress)) {
+      const signatoryAddresses = multisigConfig.signatories.map(s => s.address)
+      if (!signatoryAddresses.includes(data.signatoryAddress)) {
         return {
           error: 'Your wallet address is not a signatory for this committee',
         }
@@ -427,9 +429,10 @@ export const finalizeMultisigApproval = validatedActionWithUser(
       }
 
       const multisigConfig = committee.settings.multisig
+      const signatoryAddresses = multisigConfig.signatories.map(s => s.address)
 
       // Verify finalizer is a signatory
-      if (!multisigConfig.signatories.includes(data.signatoryAddress)) {
+      if (!signatoryAddresses.includes(data.signatoryAddress)) {
         return {
           error: 'Your wallet address is not a signatory for this committee',
         }

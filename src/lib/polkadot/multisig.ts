@@ -312,9 +312,9 @@ export async function initiateMultisigApproval(params: {
     const callData = hexToU8a(payoutResult.callHex)
     const callHash = payoutResult.callHash
 
-    // Get sorted other signatories
+    // Get sorted other signatories (extract addresses from SignatoryMapping)
     const otherSignatories = getOtherSignatories(
-      multisigConfig.signatories,
+      multisigConfig.signatories.map(s => s.address),
       initiatorAddress
     )
 

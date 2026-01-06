@@ -19,8 +19,9 @@ interface AsyncButtonProps {
   children?: React.ReactNode
   /** Optional content while loading */
   loadingContent?: React.ReactNode
-  /** Variant and className passthrough */
+  /** Variant, size, and className passthrough */
   variant?: React.ComponentProps<typeof Button>['variant']
+  size?: React.ComponentProps<typeof Button>['size']
   className?: string
   disabled?: boolean
   type?: 'button' | 'submit' | 'reset'
@@ -36,6 +37,7 @@ export function AsyncButton({
   children,
   loadingContent,
   variant = 'default',
+  size,
   className,
   disabled,
   type = 'button',
@@ -89,6 +91,7 @@ export function AsyncButton({
       onClick={onClick ? handleClick : undefined}
       disabled={disabled ?? pending}
       variant={variant}
+      size={size}
       className={className}
     >
       {pending

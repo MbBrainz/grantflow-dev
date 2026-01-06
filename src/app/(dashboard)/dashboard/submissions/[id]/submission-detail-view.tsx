@@ -11,7 +11,6 @@ import {
   Eye,
   FilePenLine,
   Hash,
-  Layers,
   MessageSquare,
   DollarSign,
   Target,
@@ -243,27 +242,12 @@ export function SubmissionDetailView({
             </div>
           </div>
 
-          <div className="border-border grid gap-3 border-t border-dashed pt-4 text-sm sm:grid-cols-2">
-            {submission.grantProgram && (
-              <Link
-                href={`/dashboard/programs/${submission.grantProgram.id}`}
-                className="border-border/60 bg-muted/40 hover:border-primary/40 hover:bg-background dark:hover:border-primary/60 flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors"
-              >
-                <Layers className="text-muted-foreground h-5 w-5" />
-                <div className="flex flex-col">
-                  <span className="text-muted-foreground text-xs font-medium uppercase">
-                    Program
-                  </span>
-                  <span className="text-primary font-medium">
-                    {submission.grantProgram.name}
-                  </span>
-                </div>
-              </Link>
-            )}
-            {submission.reviewerGroup && (
+          {/* Committee (which IS the grant program now) */}
+          {submission.reviewerGroup && (
+            <div className="border-border border-t border-dashed pt-4 text-sm">
               <Link
                 href={`/dashboard/committees/${submission.reviewerGroup.id}`}
-                className="border-border/60 bg-muted/40 hover:border-primary/40 hover:bg-background dark:hover:border-primary/60 flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors"
+                className="border-border/60 bg-muted/40 hover:border-primary/40 hover:bg-background dark:hover:border-primary/60 inline-flex items-center gap-3 rounded-lg border px-4 py-3 transition-colors"
               >
                 <Users className="text-muted-foreground h-5 w-5" />
                 <div className="flex flex-col">
@@ -275,8 +259,8 @@ export function SubmissionDetailView({
                   </span>
                 </div>
               </Link>
-            )}
-          </div>
+            </div>
+          )}
 
           {hasSummaryContent && (
             <div className="border-border border-t border-dashed pt-4">

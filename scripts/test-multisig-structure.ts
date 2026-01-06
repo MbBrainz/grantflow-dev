@@ -7,7 +7,6 @@ import { DedotClient, WsProvider } from 'dedot'
 import {
   discoverMultisigStructure,
   getPendingMultisigCalls,
-  toPolkadotAddress,
 } from '../src/lib/polkadot/multisig-discovery'
 
 // Paseo Asset Hub RPC
@@ -34,6 +33,7 @@ async function main() {
     console.log(`Testing discoverMultisigStructure(bountyId: ${BOUNTY_ID})`)
     console.log('─'.repeat(60))
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     const structure = await discoverMultisigStructure(client as any, BOUNTY_ID)
 
     if (!structure) {
@@ -68,10 +68,12 @@ async function main() {
     console.log('Checking for pending multisig calls...')
     console.log('─'.repeat(60))
 
+    /* eslint-disable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any */
     const pendingCalls = await getPendingMultisigCalls(
       client as any,
       structure.effectiveMultisig
     )
+    /* eslint-enable @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any */
 
     if (pendingCalls.length > 0) {
       console.log('Found', pendingCalls.length, 'pending call(s):')
@@ -91,6 +93,7 @@ async function main() {
     console.log('Testing with Bounty #32')
     console.log('─'.repeat(60))
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
     const structure32 = await discoverMultisigStructure(client as any, 32)
     if (structure32) {
       console.log('Bounty 32 Curator:', structure32.curator.address)

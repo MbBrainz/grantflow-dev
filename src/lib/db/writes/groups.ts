@@ -1,11 +1,15 @@
 import { eq, and } from 'drizzle-orm'
 import { db } from '../drizzle'
-import { groups, groupMemberships, grantPrograms } from '../schema'
+import { groups, groupMemberships } from '../schema'
 import type {
   FocusAreas,
   GroupSettings,
 } from '../schema/jsonTypes/GroupSettings'
 
+/**
+ * Create a new group (committee or team)
+ * For committees: budget fields define the grant program constraints
+ */
 export async function createGroup(data: {
   name: string
   type: 'committee' | 'team'
@@ -16,6 +20,16 @@ export async function createGroup(data: {
   githubOrg?: string
   walletAddress?: string
   settings?: GroupSettings
+  // Budget fields (for committees acting as grant programs)
+  fundingAmount?: number
+  minGrantSize?: number
+  maxGrantSize?: number
+  minMilestoneSize?: number
+  maxMilestoneSize?: number
+  // Template fields
+  requirements?: string
+  applicationTemplate?: string
+  milestoneStructure?: string
 }) {
   const [group] = await db
     .insert(groups)
@@ -30,12 +44,26 @@ export async function createGroup(data: {
       walletAddress: data.walletAddress,
       settings: data.settings ?? null,
       isActive: true,
+      // Budget fields
+      fundingAmount: data.fundingAmount,
+      minGrantSize: data.minGrantSize,
+      maxGrantSize: data.maxGrantSize,
+      minMilestoneSize: data.minMilestoneSize,
+      maxMilestoneSize: data.maxMilestoneSize,
+      // Template fields
+      requirements: data.requirements,
+      applicationTemplate: data.applicationTemplate,
+      milestoneStructure: data.milestoneStructure,
     })
     .returning()
 
   return group
 }
 
+/**
+ * Update a group (committee or team)
+ * For committees: budget fields define the grant program constraints
+ */
 export async function updateGroup(
   groupId: number,
   data: Partial<{
@@ -47,6 +75,17 @@ export async function updateGroup(
     githubOrg: string
     walletAddress: string
     settings: GroupSettings
+    isActive: boolean
+    // Budget fields (for committees acting as grant programs)
+    fundingAmount: number
+    minGrantSize: number
+    maxGrantSize: number
+    minMilestoneSize: number
+    maxMilestoneSize: number
+    // Template fields
+    requirements: string
+    applicationTemplate: string
+    milestoneStructure: string
   }>
 ) {
   type UpdateData = Partial<{
@@ -58,6 +97,15 @@ export async function updateGroup(
     githubOrg: string
     walletAddress: string
     settings: GroupSettings
+    isActive: boolean
+    fundingAmount: number
+    minGrantSize: number
+    maxGrantSize: number
+    minMilestoneSize: number
+    maxMilestoneSize: number
+    requirements: string
+    applicationTemplate: string
+    milestoneStructure: string
     updatedAt: Date
   }>
 
@@ -72,6 +120,25 @@ export async function updateGroup(
   if (data.walletAddress !== undefined)
     updateData.walletAddress = data.walletAddress
   if (data.settings !== undefined) updateData.settings = data.settings
+  if (data.isActive !== undefined) updateData.isActive = data.isActive
+  // Budget fields
+  if (data.fundingAmount !== undefined)
+    updateData.fundingAmount = data.fundingAmount
+  if (data.minGrantSize !== undefined)
+    updateData.minGrantSize = data.minGrantSize
+  if (data.maxGrantSize !== undefined)
+    updateData.maxGrantSize = data.maxGrantSize
+  if (data.minMilestoneSize !== undefined)
+    updateData.minMilestoneSize = data.minMilestoneSize
+  if (data.maxMilestoneSize !== undefined)
+    updateData.maxMilestoneSize = data.maxMilestoneSize
+  // Template fields
+  if (data.requirements !== undefined)
+    updateData.requirements = data.requirements
+  if (data.applicationTemplate !== undefined)
+    updateData.applicationTemplate = data.applicationTemplate
+  if (data.milestoneStructure !== undefined)
+    updateData.milestoneStructure = data.milestoneStructure
 
   updateData.updatedAt = new Date()
 
@@ -117,108 +184,4 @@ export async function removeMemberFromGroup(groupId: number, userId: number) {
         eq(groupMemberships.userId, userId)
       )
     )
-}
-
-export async function createGrantProgram(data: {
-  groupId: number
-  name: string
-  description?: string
-  fundingAmount?: number
-  minGrantSize?: number
-  maxGrantSize?: number
-  minMilestoneSize?: number
-  maxMilestoneSize?: number
-  requirements?: Record<string, unknown>
-  applicationTemplate?: Record<string, unknown>
-  milestoneStructure?: Record<string, unknown>
-}) {
-  const [program] = await db
-    .insert(grantPrograms)
-    .values({
-      groupId: data.groupId,
-      name: data.name,
-      description: data.description,
-      fundingAmount: data.fundingAmount,
-      minGrantSize: data.minGrantSize,
-      maxGrantSize: data.maxGrantSize,
-      minMilestoneSize: data.minMilestoneSize,
-      maxMilestoneSize: data.maxMilestoneSize,
-      requirements: data.requirements
-        ? JSON.stringify(data.requirements)
-        : null,
-      applicationTemplate: data.applicationTemplate
-        ? JSON.stringify(data.applicationTemplate)
-        : null,
-      milestoneStructure: data.milestoneStructure
-        ? JSON.stringify(data.milestoneStructure)
-        : null,
-      isActive: true,
-    })
-    .returning()
-
-  return program
-}
-
-export async function updateGrantProgram(
-  programId: number,
-  data: Partial<{
-    name: string
-    description: string
-    fundingAmount: number
-    minGrantSize: number
-    maxGrantSize: number
-    minMilestoneSize: number
-    maxMilestoneSize: number
-    requirements: Record<string, unknown>
-    applicationTemplate: Record<string, unknown>
-    milestoneStructure: Record<string, unknown>
-    isActive: boolean
-  }>
-) {
-  type UpdateData = Partial<{
-    name: string
-    description: string
-    fundingAmount: number
-    minGrantSize: number
-    maxGrantSize: number
-    minMilestoneSize: number
-    maxMilestoneSize: number
-    requirements: string
-    applicationTemplate: string
-    milestoneStructure: string
-    isActive: boolean
-    updatedAt: Date
-  }>
-
-  const updateData: UpdateData = {}
-
-  if (data.name !== undefined) updateData.name = data.name
-  if (data.description !== undefined) updateData.description = data.description
-  if (data.fundingAmount !== undefined)
-    updateData.fundingAmount = data.fundingAmount
-  if (data.minGrantSize !== undefined)
-    updateData.minGrantSize = data.minGrantSize
-  if (data.maxGrantSize !== undefined)
-    updateData.maxGrantSize = data.maxGrantSize
-  if (data.minMilestoneSize !== undefined)
-    updateData.minMilestoneSize = data.minMilestoneSize
-  if (data.maxMilestoneSize !== undefined)
-    updateData.maxMilestoneSize = data.maxMilestoneSize
-  if (data.requirements !== undefined)
-    updateData.requirements = JSON.stringify(data.requirements)
-  if (data.applicationTemplate !== undefined)
-    updateData.applicationTemplate = JSON.stringify(data.applicationTemplate)
-  if (data.milestoneStructure !== undefined)
-    updateData.milestoneStructure = JSON.stringify(data.milestoneStructure)
-  if (data.isActive !== undefined) updateData.isActive = data.isActive
-
-  updateData.updatedAt = new Date()
-
-  const [updated] = await db
-    .update(grantPrograms)
-    .set(updateData)
-    .where(eq(grantPrograms.id, programId))
-    .returning()
-
-  return updated
 }

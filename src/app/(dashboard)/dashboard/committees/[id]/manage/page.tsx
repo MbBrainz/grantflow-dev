@@ -1,6 +1,9 @@
 import { notFound, redirect } from 'next/navigation'
-import { getCommitteeById, isCommitteeAdmin } from '@/lib/db/queries'
-import { getGrantProgramsFinancials } from '@/lib/db/queries/grant-programs'
+import {
+  getCommitteeById,
+  isCommitteeAdmin,
+  getCommitteeFinancials,
+} from '@/lib/db/queries'
 import { ManageCommitteeView } from './manage-committee-view'
 
 interface ManageCommitteePageProps {
@@ -33,19 +36,12 @@ export default async function ManageCommitteePage({
     redirect(`/dashboard/committees/${committeeId}`)
   }
 
-  // Get financial metrics for all grant programs
-  const programIds = committee.grantPrograms?.map(p => p.id) ?? []
-  const financials = await getGrantProgramsFinancials(programIds)
-
-  // Create a map for easy lookup
-  const financialsMap = new Map(financials.map(f => [f?.programId, f]))
+  // Get financial metrics for the committee (which IS the grant program now)
+  const financials = await getCommitteeFinancials(committeeId)
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <ManageCommitteeView
-        committee={committee}
-        financialsMap={financialsMap}
-      />
+      <ManageCommitteeView committee={committee} financials={financials} />
     </div>
   )
 }

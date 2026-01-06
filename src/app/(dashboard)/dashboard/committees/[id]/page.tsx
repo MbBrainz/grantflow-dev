@@ -1,6 +1,9 @@
 import { notFound } from 'next/navigation'
-import { getCommitteeById, isCommitteeAdmin } from '@/lib/db/queries'
-import { getGrantProgramsFinancials } from '@/lib/db/queries/grant-programs'
+import {
+  getCommitteeById,
+  isCommitteeAdmin,
+  getCommitteeFinancials,
+} from '@/lib/db/queries'
 import { CommitteeDetailView } from './committee-detail-view'
 
 interface CommitteeDetailPageProps {
@@ -28,19 +31,15 @@ export default async function CommitteeDetailPage({
     notFound()
   }
 
-  // Get financial metrics for all grant programs
-  const programIds = committee.grantPrograms?.map(p => p.id) ?? []
-  const financials = await getGrantProgramsFinancials(programIds)
-
-  // Create a map for easy lookup
-  const financialsMap = new Map(financials.map(f => [f?.programId, f]))
+  // Get financial metrics for the committee (which IS the grant program now)
+  const financials = await getCommitteeFinancials(committeeId)
 
   return (
     <div className="container mx-auto px-4 py-8">
       <CommitteeDetailView
         committee={committee}
         isAdmin={isAdmin}
-        financialsMap={financialsMap}
+        financials={financials}
       />
     </div>
   )

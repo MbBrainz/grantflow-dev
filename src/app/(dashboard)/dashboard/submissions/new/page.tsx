@@ -14,7 +14,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Save, Send, FlaskConical, CheckCircle2 } from 'lucide-react'
-import { createSubmission, getActiveGrantPrograms } from '../actions'
+import { createSubmission, getActiveCommittees } from '../actions'
 import { useToast } from '@/lib/hooks/use-toast'
 import {
   isValidGitHubUrl,
@@ -25,34 +25,31 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import type { GrantProgram, Group } from '@/lib/db/schema'
-import { GrantProgramCard } from '@/components/committee/grant-program-card'
+import type { Group as _Group } from '@/lib/db/schema'
+import { Badge } from '@/components/ui/badge'
+import { DollarSign, Users } from 'lucide-react'
 
-interface ProgramFinancials {
-  programId: number
-  totalBudget: number
-  allocated: number
-  spent: number
-  remaining: number
-  available: number
-}
-
-type GrantProgramWithCommittee = GrantProgram & {
-  group: Group
-  financials?: ProgramFinancials | null
+// Committee IS the grant program now
+interface CommitteeWithBudget {
+  id: number
+  name: string
+  description: string | null
+  logoUrl: string | null
+  focusAreas: unknown
+  fundingAmount: number | null
+  minGrantSize: number | null
+  maxGrantSize: number | null
 }
 
 export default function NewSubmissionPage() {
   const router = useRouter()
   const { toast } = useToast()
   const [error, setError] = useState<string | null>(null)
-  const [step, setStep] = useState<'program' | 'details'>('program')
-  const [selectedProgram, setSelectedProgram] =
-    useState<GrantProgramWithCommittee | null>(null)
-  const [grantPrograms, setGrantPrograms] = useState<
-    GrantProgramWithCommittee[]
-  >([])
-  const [loadingPrograms, setLoadingPrograms] = useState(true)
+  const [step, setStep] = useState<'committee' | 'details'>('committee')
+  const [selectedCommittee, setSelectedCommittee] =
+    useState<CommitteeWithBudget | null>(null)
+  const [committees, setCommittees] = useState<CommitteeWithBudget[]>([])
+  const [loadingCommittees, setLoadingCommittees] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Form state
@@ -210,7 +207,7 @@ export default function NewSubmissionPage() {
     try {
       const draftData = {
         ...formData,
-        grantProgramId: selectedProgram?.id,
+        committeeId: selectedCommittee?.id,
       }
       console.log('[new_submission]: Saving draft', draftData)
       localStorage.setItem('grant_draft', JSON.stringify(draftData))
@@ -237,9 +234,9 @@ export default function NewSubmissionPage() {
     setIsSubmitting(true)
 
     try {
-      // Validate grant program is selected
-      if (!selectedProgram) {
-        const errorMessage = 'Please select a grant program'
+      // Validate committee is selected
+      if (!selectedCommittee) {
+        const errorMessage = 'Please select a committee'
         setError(errorMessage)
         toast({
           title: 'Validation Error',
@@ -253,10 +250,8 @@ export default function NewSubmissionPage() {
       console.log(
         '[new_submission]: Submitting proposal with detailed logging:',
         {
-          grantProgramId: selectedProgram.id,
-          grantProgramName: selectedProgram.name,
-          committeeId: selectedProgram.groupId,
-          committeeName: selectedProgram.group.name,
+          committeeId: selectedCommittee.id,
+          committeeName: selectedCommittee.name,
           title: formData.title,
           description: `${formData.description?.substring(0, 50)}...`,
           labelsArray: formData.labels,
@@ -329,17 +324,9 @@ export default function NewSubmissionPage() {
       // Create FormData and add fields properly
       const submitFormData = new FormData()
 
-      // Add grant program ID and committee ID
-      submitFormData.append('grantProgramId', String(selectedProgram.id))
-      submitFormData.append('committeeId', String(selectedProgram.groupId))
-      console.log(
-        '[new_submission]: Adding grantProgramId:',
-        selectedProgram.id
-      )
-      console.log(
-        '[new_submission]: Adding committeeId:',
-        selectedProgram.groupId
-      )
+      // Add committee ID (committee IS the grant program now)
+      submitFormData.append('committeeId', String(selectedCommittee.id))
+      console.log('[new_submission]: Adding committeeId:', selectedCommittee.id)
 
       // Add all form fields
       Object.entries(formData).forEach(([key, value]) => {
@@ -424,40 +411,40 @@ export default function NewSubmissionPage() {
     }
   }
 
-  // Load grant programs on mount
+  // Load committees on mount
   useEffect(() => {
-    async function loadGrantPrograms() {
+    async function loadCommittees() {
       try {
-        const result = await getActiveGrantPrograms()
-        if (result.success && result.programs) {
-          setGrantPrograms(result.programs as GrantProgramWithCommittee[])
+        const result = await getActiveCommittees()
+        if (result.success && result.committees) {
+          setCommittees(result.committees as CommitteeWithBudget[])
         } else {
           toast({
             title: 'Error',
-            description: 'Failed to load grant programs',
+            description: 'Failed to load committees',
             variant: 'destructive',
           })
         }
       } catch (error) {
-        console.error('[new_submission]: Error loading grant programs', error)
+        console.error('[new_submission]: Error loading committees', error)
         toast({
           title: 'Error',
-          description: 'Failed to load grant programs',
+          description: 'Failed to load committees',
           variant: 'destructive',
         })
       } finally {
-        setLoadingPrograms(false)
+        setLoadingCommittees(false)
       }
     }
 
-    loadGrantPrograms().catch(error => {
-      console.error('[new_submission]: Error loading grant programs', error)
+    loadCommittees().catch(error => {
+      console.error('[new_submission]: Error loading committees', error)
       toast({
         title: 'Error',
-        description: 'Failed to load grant programs',
+        description: 'Failed to load committees',
         variant: 'destructive',
       })
-      setLoadingPrograms(false)
+      setLoadingCommittees(false)
     })
 
     // Load draft
@@ -465,7 +452,7 @@ export default function NewSubmissionPage() {
     if (draft) {
       try {
         const parsedDraft = JSON.parse(draft) as typeof formData & {
-          grantProgramId?: number
+          committeeId?: number
         }
         setFormData(parsedDraft)
       } catch (error) {
@@ -475,28 +462,28 @@ export default function NewSubmissionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Restore selected program when programs load and draft has grantProgramId
+  // Restore selected committee when committees load and draft has committeeId
   useEffect(() => {
-    if (grantPrograms.length > 0) {
+    if (committees.length > 0) {
       const draft = localStorage.getItem('grant_draft')
       if (draft) {
         try {
-          const parsedDraft = JSON.parse(draft) as { grantProgramId?: number }
-          if (parsedDraft.grantProgramId) {
-            const program = grantPrograms.find(
-              p => p.id === parsedDraft.grantProgramId
+          const parsedDraft = JSON.parse(draft) as { committeeId?: number }
+          if (parsedDraft.committeeId) {
+            const committee = committees.find(
+              c => c.id === parsedDraft.committeeId
             )
-            if (program) {
-              setSelectedProgram(program)
+            if (committee) {
+              setSelectedCommittee(committee)
               setStep('details')
             }
           }
         } catch (error) {
-          console.error('[new_submission]: Error restoring program', error)
+          console.error('[new_submission]: Error restoring committee', error)
         }
       }
     }
-  }, [grantPrograms])
+  }, [committees])
 
   // Calculate milestone totals for validation
   const milestoneAmounts = formData.milestones.map(m => m.amount)
@@ -605,55 +592,88 @@ export default function NewSubmissionPage() {
     ) &&
     isMilestoneAmountsValid
 
-  // Grant program selection step
-  if (step === 'program') {
+  // Committee selection step (committee IS the grant program now)
+  if (step === 'committee') {
     return (
       <div className="mx-auto max-w-4xl space-y-6">
         {/* Header */}
         <div className="space-y-1">
           <h1 className="text-3xl font-bold">New Grant Submission</h1>
           <p className="text-muted-foreground">
-            Step 1: Select a grant program
+            Step 1: Select a committee to apply to
           </p>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Select Grant Program</CardTitle>
+            <CardTitle>Select Committee</CardTitle>
             <CardDescription>
-              Choose the grant program you want to apply for
+              Choose the committee you want to submit your grant proposal to
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {loadingPrograms ? (
+            {loadingCommittees ? (
               <div className="text-muted-foreground py-12 text-center">
-                Loading grant programs...
+                Loading committees...
               </div>
-            ) : grantPrograms.length === 0 ? (
+            ) : committees.length === 0 ? (
               <div className="py-12 text-center">
                 <p className="text-muted-foreground">
-                  No active grant programs available
+                  No active committees available
                 </p>
               </div>
             ) : (
               <div className="grid gap-4">
-                {grantPrograms.map(program => (
-                  <GrantProgramCard
-                    key={program.id}
-                    program={program}
-                    financials={program.financials}
-                    variant="selection"
+                {committees.map(committee => (
+                  <button
+                    key={committee.id}
                     onClick={() => {
-                      setSelectedProgram(program)
+                      setSelectedCommittee(committee)
                       setStep('details')
                     }}
-                    committee={program.group}
-                    focusAreas={
-                      Array.isArray(program.group.focusAreas)
-                        ? program.group.focusAreas
-                        : []
-                    }
-                  />
+                    className="hover:border-primary hover:bg-muted/50 w-full rounded-lg border p-4 text-left transition-colors"
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <h3 className="text-lg font-semibold">
+                          {committee.name}
+                        </h3>
+                        {committee.description && (
+                          <p className="text-muted-foreground mt-1 line-clamp-2 text-sm">
+                            {committee.description}
+                          </p>
+                        )}
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          {committee.fundingAmount && (
+                            <Badge variant="secondary" className="text-xs">
+                              <DollarSign className="mr-1 h-3 w-3" />$
+                              {(committee.fundingAmount / 1000).toFixed(0)}k
+                              budget
+                            </Badge>
+                          )}
+                          {committee.minGrantSize && committee.maxGrantSize && (
+                            <Badge variant="outline" className="text-xs">
+                              ${committee.minGrantSize.toLocaleString()} - $
+                              {committee.maxGrantSize.toLocaleString()}
+                            </Badge>
+                          )}
+                          {Array.isArray(committee.focusAreas) &&
+                            committee.focusAreas
+                              .slice(0, 3)
+                              .map((area, idx) => (
+                                <Badge
+                                  key={idx}
+                                  variant="outline"
+                                  className="text-xs"
+                                >
+                                  {String(area)}
+                                </Badge>
+                              ))}
+                        </div>
+                      </div>
+                      <Users className="text-muted-foreground h-5 w-5" />
+                    </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -704,23 +724,30 @@ export default function NewSubmissionPage() {
         </Button>
       </div>
 
-      {/* Selected Program Banner */}
-      {selectedProgram && (
+      {/* Selected Committee Banner */}
+      {selectedCommittee && (
         <Card className="border-primary bg-primary/5">
           <CardContent className="flex items-center gap-3 py-4">
             <CheckCircle2 className="text-primary h-5 w-5" />
             <div className="flex-1">
               <p className="text-sm font-medium">
-                Applying to: {selectedProgram.name}
+                Applying to: {selectedCommittee.name}
               </p>
               <p className="text-muted-foreground text-xs">
-                Committee: {selectedProgram.group.name}
-                {selectedProgram.fundingAmount && (
-                  <span className="ml-2">
-                    • ${(selectedProgram.fundingAmount / 1000).toFixed(0)}k
-                    available
+                {selectedCommittee.fundingAmount && (
+                  <span>
+                    ${(selectedCommittee.fundingAmount / 1000).toFixed(0)}k
+                    budget available
                   </span>
                 )}
+                {selectedCommittee.minGrantSize &&
+                  selectedCommittee.maxGrantSize && (
+                    <span className="ml-2">
+                      • Grant range: $
+                      {selectedCommittee.minGrantSize.toLocaleString()} - $
+                      {selectedCommittee.maxGrantSize.toLocaleString()}
+                    </span>
+                  )}
               </p>
             </div>
           </CardContent>

@@ -10,7 +10,7 @@ const compat = new FlatCompat({
 
 const config = tseslint.config(
   {
-    ignores: ['.next', 'node_modules', 'out', '.vercel', 'docs', '.papi'],
+    ignores: ['.next', 'node_modules', 'out', '.vercel', 'docs', '.papi', 'next-env.d.ts'],
   },
   {
     files: ['eslint.config.mjs', 'postcss.config.mjs'],

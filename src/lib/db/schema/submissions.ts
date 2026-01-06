@@ -10,7 +10,6 @@ import {
 } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
-import { grantPrograms } from './grant-programs'
 import { groups } from './groups'
 import { users } from './users'
 import { discussions } from './discussions'
@@ -33,17 +32,16 @@ export const submissionStatusEnum = pgEnum(
 )
 export type SubmissionStatus = (typeof SUBMISSION_STATUS_OPTIONS)[number]
 
+// Submissions are submitted to committees (reviewerGroupId)
+// The committee IS the grant program (no separate grant_programs table)
 export const submissions = pgTable('submissions', {
   id: serial('id').primaryKey(),
-  grantProgramId: integer('grant_program_id')
-    .notNull()
-    .references(() => grantPrograms.id),
   submitterGroupId: integer('submitter_group_id')
     .notNull()
     .references(() => groups.id), // team that submitted
   reviewerGroupId: integer('reviewer_group_id')
     .notNull()
-    .references(() => groups.id), // committee reviewing
+    .references(() => groups.id), // committee (grant program) reviewing
   submitterId: integer('submitter_id')
     .notNull()
     .references(() => users.id), // individual who submitted
@@ -62,15 +60,12 @@ export const submissions = pgTable('submissions', {
 })
 
 export const submissionsRelations = relations(submissions, ({ one, many }) => ({
-  grantProgram: one(grantPrograms, {
-    fields: [submissions.grantProgramId],
-    references: [grantPrograms.id],
-  }),
   submitterGroup: one(groups, {
     fields: [submissions.submitterGroupId],
     references: [groups.id],
     relationName: 'submitterGroup',
   }),
+  // reviewerGroup is the committee (which IS the grant program)
   reviewerGroup: one(groups, {
     fields: [submissions.reviewerGroupId],
     references: [groups.id],

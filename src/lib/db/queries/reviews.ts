@@ -125,6 +125,7 @@ export async function getReviewerPendingActions() {
           email: true,
         },
       },
+      // reviewerGroup IS the grant program now (budget fields on group)
       reviewerGroup: {
         columns: {
           id: true,
@@ -132,13 +133,9 @@ export async function getReviewerPendingActions() {
           description: true,
           logoUrl: true,
           focusAreas: true,
-        },
-      },
-      grantProgram: {
-        columns: {
-          id: true,
-          name: true,
           fundingAmount: true,
+          minGrantSize: true,
+          maxGrantSize: true,
         },
       },
     },

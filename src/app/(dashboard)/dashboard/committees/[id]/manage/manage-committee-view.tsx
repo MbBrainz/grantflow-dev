@@ -25,19 +25,15 @@ import {
   removeCommitteeMember,
   updateMemberRole,
   searchUsersAction,
-  createGrantProgramAction,
-  updateGrantProgramAction,
-  toggleGrantProgramAction,
+  updateCommitteeBudget,
   updateMultisigConfig,
 } from '../actions'
 import { useToast } from '@/lib/hooks/use-toast'
 import { AsyncButton } from '@/components/ui/async-button'
-import { GrantProgramCard } from '@/components/committee/grant-program-card'
 import { BountyLinkSetup } from '@/components/committee/bounty-link-setup'
 import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
 
-interface ProgramFinancials {
-  programId: number
+interface CommitteeFinancials {
   totalBudget: number
   allocated: number
   spent: number
@@ -47,12 +43,12 @@ interface ProgramFinancials {
 
 interface ManageCommitteeViewProps {
   committee: NonNullable<CommitteeWithDetails>
-  financialsMap: Map<number | undefined, ProgramFinancials | null | undefined>
+  financials?: CommitteeFinancials | null
 }
 
 export function ManageCommitteeView({
   committee,
-  financialsMap,
+  financials,
 }: ManageCommitteeViewProps) {
   const router = useRouter()
   const { toast } = useToast()
@@ -85,17 +81,23 @@ export function ManageCommitteeView({
   )
   const [isSearching, setIsSearching] = useState(false)
 
-  // Grant Program State
-  const [isAddProgramOpen, setIsAddProgramOpen] = useState(false)
-  const [editingProgramId, setEditingProgramId] = useState<number | null>(null)
-  const [programName, setProgramName] = useState('')
-  const [programDescription, setProgramDescription] = useState('')
-  const [programFundingAmount, setProgramFundingAmount] = useState('')
-  const [programMinGrantSize, setProgramMinGrantSize] = useState('')
-  const [programMaxGrantSize, setProgramMaxGrantSize] = useState('')
-  const [programMinMilestoneSize, setProgramMinMilestoneSize] = useState('')
-  const [programMaxMilestoneSize, setProgramMaxMilestoneSize] = useState('')
-  const [showInactivePrograms, setShowInactivePrograms] = useState(true)
+  // Budget Configuration State (committee IS the grant program)
+  const [isEditingBudget, setIsEditingBudget] = useState(false)
+  const [fundingAmount, setFundingAmount] = useState(
+    committee.fundingAmount?.toString() ?? ''
+  )
+  const [minGrantSize, setMinGrantSize] = useState(
+    committee.minGrantSize?.toString() ?? ''
+  )
+  const [maxGrantSize, setMaxGrantSize] = useState(
+    committee.maxGrantSize?.toString() ?? ''
+  )
+  const [minMilestoneSize, setMinMilestoneSize] = useState(
+    committee.minMilestoneSize?.toString() ?? ''
+  )
+  const [maxMilestoneSize, setMaxMilestoneSize] = useState(
+    committee.maxMilestoneSize?.toString() ?? ''
+  )
 
   // Multisig Configuration State
   const [isEditingMultisig, setIsEditingMultisig] = useState(false)
@@ -248,34 +250,17 @@ export function ManageCommitteeView({
     }
   }
 
-  const handleCreateProgram = async () => {
-    if (!programName.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Program name is required',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    const result = await createGrantProgramAction({
+  const handleUpdateBudget = async () => {
+    const result = await updateCommitteeBudget({
       committeeId: committee.id,
-      name: programName,
-      description: programDescription,
-      fundingAmount: programFundingAmount
-        ? parseFloat(programFundingAmount)
+      fundingAmount: fundingAmount ? parseFloat(fundingAmount) : undefined,
+      minGrantSize: minGrantSize ? parseFloat(minGrantSize) : undefined,
+      maxGrantSize: maxGrantSize ? parseFloat(maxGrantSize) : undefined,
+      minMilestoneSize: minMilestoneSize
+        ? parseFloat(minMilestoneSize)
         : undefined,
-      minGrantSize: programMinGrantSize
-        ? parseFloat(programMinGrantSize)
-        : undefined,
-      maxGrantSize: programMaxGrantSize
-        ? parseFloat(programMaxGrantSize)
-        : undefined,
-      minMilestoneSize: programMinMilestoneSize
-        ? parseFloat(programMinMilestoneSize)
-        : undefined,
-      maxMilestoneSize: programMaxMilestoneSize
-        ? parseFloat(programMaxMilestoneSize)
+      maxMilestoneSize: maxMilestoneSize
+        ? parseFloat(maxMilestoneSize)
         : undefined,
     })
 
@@ -288,134 +273,20 @@ export function ManageCommitteeView({
     } else {
       toast({
         title: 'Success',
-        description: 'Grant program created successfully',
+        description: 'Budget configuration updated successfully',
       })
-      setIsAddProgramOpen(false)
-      setProgramName('')
-      setProgramDescription('')
-      setProgramFundingAmount('')
-      setProgramMinGrantSize('')
-      setProgramMaxGrantSize('')
-      setProgramMinMilestoneSize('')
-      setProgramMaxMilestoneSize('')
+      setIsEditingBudget(false)
       router.refresh()
     }
   }
 
-  const handleUpdateProgram = async (programId: number) => {
-    if (!programName.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Program name is required',
-        variant: 'destructive',
-      })
-      return
-    }
-
-    const result = await updateGrantProgramAction({
-      committeeId: committee.id,
-      programId,
-      name: programName,
-      description: programDescription,
-      fundingAmount: programFundingAmount
-        ? parseFloat(programFundingAmount)
-        : undefined,
-      minGrantSize: programMinGrantSize
-        ? parseFloat(programMinGrantSize)
-        : undefined,
-      maxGrantSize: programMaxGrantSize
-        ? parseFloat(programMaxGrantSize)
-        : undefined,
-      minMilestoneSize: programMinMilestoneSize
-        ? parseFloat(programMinMilestoneSize)
-        : undefined,
-      maxMilestoneSize: programMaxMilestoneSize
-        ? parseFloat(programMaxMilestoneSize)
-        : undefined,
-    })
-
-    if (result.error) {
-      toast({
-        title: 'Error',
-        description: result.error,
-        variant: 'destructive',
-      })
-    } else {
-      toast({
-        title: 'Success',
-        description: 'Grant program updated successfully',
-      })
-      setEditingProgramId(null)
-      setProgramName('')
-      setProgramDescription('')
-      setProgramFundingAmount('')
-      setProgramMinGrantSize('')
-      setProgramMaxGrantSize('')
-      setProgramMinMilestoneSize('')
-      setProgramMaxMilestoneSize('')
-      router.refresh()
-    }
-  }
-
-  const handleToggleProgramStatus = async (
-    programId: number,
-    currentStatus: boolean,
-    programName: string
-  ) => {
-    const newStatus = !currentStatus
-    const result = await toggleGrantProgramAction({
-      committeeId: committee.id,
-      programId,
-      isActive: newStatus,
-    })
-
-    if (result.error) {
-      toast({
-        title: 'Error',
-        description: result.error,
-        variant: 'destructive',
-      })
-    } else {
-      toast({
-        title: 'Success',
-        description: `${programName} ${newStatus ? 'activated' : 'deactivated'}`,
-      })
-      router.refresh()
-    }
-  }
-
-  const startEditingProgram = (
-    program: NonNullable<CommitteeWithDetails>['grantPrograms'][number]
-  ) => {
-    setEditingProgramId(program.id)
-    setProgramName(program.name)
-    setProgramDescription(program.description ?? '')
-    setProgramFundingAmount(
-      program.fundingAmount ? program.fundingAmount.toString() : ''
-    )
-    setProgramMinGrantSize(
-      program.minGrantSize ? program.minGrantSize.toString() : ''
-    )
-    setProgramMaxGrantSize(
-      program.maxGrantSize ? program.maxGrantSize.toString() : ''
-    )
-    setProgramMinMilestoneSize(
-      program.minMilestoneSize ? program.minMilestoneSize.toString() : ''
-    )
-    setProgramMaxMilestoneSize(
-      program.maxMilestoneSize ? program.maxMilestoneSize.toString() : ''
-    )
-  }
-
-  const cancelEditingProgram = () => {
-    setEditingProgramId(null)
-    setProgramName('')
-    setProgramDescription('')
-    setProgramFundingAmount('')
-    setProgramMinGrantSize('')
-    setProgramMaxGrantSize('')
-    setProgramMinMilestoneSize('')
-    setProgramMaxMilestoneSize('')
+  const cancelEditingBudget = () => {
+    setIsEditingBudget(false)
+    setFundingAmount(committee.fundingAmount?.toString() ?? '')
+    setMinGrantSize(committee.minGrantSize?.toString() ?? '')
+    setMaxGrantSize(committee.maxGrantSize?.toString() ?? '')
+    setMinMilestoneSize(committee.minMilestoneSize?.toString() ?? '')
+    setMaxMilestoneSize(committee.maxMilestoneSize?.toString() ?? '')
   }
 
   const handleSaveMultisigConfig = async (config: MultisigConfig) => {
@@ -627,94 +498,150 @@ export function ManageCommitteeView({
         </div>
       </Card>
 
-      {/* Grant Programs */}
+      {/* Budget Configuration (Committee IS the grant program) */}
       <Card className="p-6">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <DollarSign className="h-5 w-5 text-gray-600" />
-            <h2 className="text-xl font-semibold">Grant Programs</h2>
-            <Badge variant="secondary">
-              {committee.grantPrograms?.filter(p => p.isActive).length ?? 0}{' '}
-              active
-            </Badge>
-            {committee.grantPrograms?.some(p => !p.isActive) && (
-              <Badge variant="outline">
-                {committee.grantPrograms?.filter(p => !p.isActive).length ?? 0}{' '}
-                inactive
+            <h2 className="text-xl font-semibold">Budget Configuration</h2>
+            {committee.fundingAmount && (
+              <Badge variant="secondary">
+                ${committee.fundingAmount.toLocaleString()} total
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-2">
-            {committee.grantPrograms?.some(p => !p.isActive) && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowInactivePrograms(!showInactivePrograms)}
-              >
-                {showInactivePrograms ? 'Hide Inactive' : 'Show Inactive'}
-              </Button>
-            )}
-            <Button
-              onClick={() => setIsAddProgramOpen(true)}
-              size="sm"
-              className="flex items-center gap-2"
-            >
-              <Plus className="h-4 w-4" />
-              Create Program
+          {!isEditingBudget ? (
+            <Button onClick={() => setIsEditingBudget(true)} size="sm">
+              Edit Budget
             </Button>
-          </div>
+          ) : (
+            <div className="flex gap-2">
+              <Button onClick={cancelEditingBudget} variant="outline" size="sm">
+                Cancel
+              </Button>
+              <AsyncButton onClick={handleUpdateBudget} size="sm">
+                Save Changes
+              </AsyncButton>
+            </div>
+          )}
         </div>
 
-        <div className="space-y-3">
-          {committee.grantPrograms && committee.grantPrograms.length > 0 ? (
-            committee.grantPrograms
-              .filter(program => showInactivePrograms || program.isActive)
-              .map(program => (
-                <GrantProgramCard
-                  key={program.id}
-                  program={program}
-                  financials={financialsMap.get(program.id) ?? null}
-                  isEditing={editingProgramId === program.id}
-                  showAdminActions={true}
-                  editState={
-                    editingProgramId === program.id
-                      ? {
-                          name: programName,
-                          description: programDescription,
-                          fundingAmount: programFundingAmount,
-                          minGrantSize: programMinGrantSize,
-                          maxGrantSize: programMaxGrantSize,
-                          minMilestoneSize: programMinMilestoneSize,
-                          maxMilestoneSize: programMaxMilestoneSize,
-                          onNameChange: setProgramName,
-                          onDescriptionChange: setProgramDescription,
-                          onFundingAmountChange: setProgramFundingAmount,
-                          onMinGrantSizeChange: setProgramMinGrantSize,
-                          onMaxGrantSizeChange: setProgramMaxGrantSize,
-                          onMinMilestoneSizeChange: setProgramMinMilestoneSize,
-                          onMaxMilestoneSizeChange: setProgramMaxMilestoneSize,
-                        }
-                      : undefined
-                  }
-                  onEdit={() => startEditingProgram(program)}
-                  onSave={() => handleUpdateProgram(program.id)}
-                  onCancel={cancelEditingProgram}
-                  onToggleStatus={() =>
-                    handleToggleProgramStatus(
-                      program.id,
-                      program.isActive,
-                      program.name
-                    )
-                  }
-                />
-              ))
-          ) : (
-            <p className="text-center text-gray-500">
-              {committee.grantPrograms && committee.grantPrograms.length > 0
-                ? 'No active programs. Click "Show Inactive" to see deactivated programs.'
-                : 'No grant programs yet'}
+        {/* Financial Summary */}
+        {financials && (
+          <div className="mb-6 grid grid-cols-2 gap-4 rounded-lg border border-gray-200 p-4 md:grid-cols-5 dark:border-gray-700">
+            <div>
+              <p className="text-muted-foreground text-sm">Total Budget</p>
+              <p className="text-lg font-semibold">
+                ${financials.totalBudget.toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-sm">Allocated</p>
+              <p className="text-lg font-semibold">
+                ${financials.allocated.toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-sm">Spent</p>
+              <p className="text-lg font-semibold">
+                ${financials.spent.toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-sm">Remaining</p>
+              <p className="text-lg font-semibold text-green-600">
+                ${financials.remaining.toLocaleString()}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-sm">Available</p>
+              <p className="text-lg font-semibold text-blue-600">
+                ${financials.available.toLocaleString()}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Budget Configuration Form */}
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="fundingAmount">Total Program Budget (USD)</Label>
+            <Input
+              id="fundingAmount"
+              type="number"
+              min="0"
+              step="1000"
+              value={fundingAmount}
+              onChange={e => setFundingAmount(e.target.value)}
+              disabled={!isEditingBudget}
+              placeholder="100000"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Total budget available for this committee&apos;s grants
             </p>
-          )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="minGrantSize">
+                Min Grant per Submission (USD)
+              </Label>
+              <Input
+                id="minGrantSize"
+                type="number"
+                min="0"
+                step="100"
+                value={minGrantSize}
+                onChange={e => setMinGrantSize(e.target.value)}
+                disabled={!isEditingBudget}
+                placeholder="1000"
+              />
+            </div>
+            <div>
+              <Label htmlFor="maxGrantSize">
+                Max Grant per Submission (USD)
+              </Label>
+              <Input
+                id="maxGrantSize"
+                type="number"
+                min="0"
+                step="100"
+                value={maxGrantSize}
+                onChange={e => setMaxGrantSize(e.target.value)}
+                disabled={!isEditingBudget}
+                placeholder="50000"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="minMilestoneSize">Min per Milestone (USD)</Label>
+              <Input
+                id="minMilestoneSize"
+                type="number"
+                min="0"
+                step="100"
+                value={minMilestoneSize}
+                onChange={e => setMinMilestoneSize(e.target.value)}
+                disabled={!isEditingBudget}
+                placeholder="500"
+              />
+            </div>
+            <div>
+              <Label htmlFor="maxMilestoneSize">Max per Milestone (USD)</Label>
+              <Input
+                id="maxMilestoneSize"
+                type="number"
+                min="0"
+                step="100"
+                value={maxMilestoneSize}
+                onChange={e => setMaxMilestoneSize(e.target.value)}
+                disabled={!isEditingBudget}
+                placeholder="25000"
+              />
+            </div>
+          </div>
         </div>
       </Card>
 
@@ -770,12 +697,18 @@ export function ManageCommitteeView({
               <div>
                 <p className="text-muted-foreground text-sm">Curator (Proxy)</p>
                 <code className="font-mono text-xs">
-                  {committee.settings.multisig.curatorProxyAddress?.slice(0, 10)}...
+                  {committee.settings.multisig.curatorProxyAddress?.slice(
+                    0,
+                    10
+                  )}
+                  ...
                   {committee.settings.multisig.curatorProxyAddress?.slice(-6)}
                 </code>
               </div>
               <div>
-                <p className="text-muted-foreground text-sm">Multisig Address</p>
+                <p className="text-muted-foreground text-sm">
+                  Multisig Address
+                </p>
                 <code className="font-mono text-xs">
                   {committee.settings.multisig.multisigAddress.slice(0, 10)}...
                   {committee.settings.multisig.multisigAddress.slice(-6)}
@@ -803,17 +736,43 @@ export function ManageCommitteeView({
               </p>
               <div className="space-y-2">
                 {committee.settings.multisig.signatories.map(
-                  (address, index) => (
-                    <div
-                      key={address}
-                      className="bg-muted flex items-center gap-2 rounded-md p-2 text-sm"
-                    >
-                      <Badge variant="outline">{index + 1}</Badge>
-                      <code className="text-xs">
-                        {address.slice(0, 10)}...{address.slice(-8)}
-                      </code>
-                    </div>
-                  )
+                  (signatory, index) => {
+                    // Handle both old string format and new SignatoryMapping format
+                    const address =
+                      typeof signatory === 'string'
+                        ? signatory
+                        : signatory.address
+                    const linkedUserId =
+                      typeof signatory === 'object'
+                        ? signatory.userId
+                        : undefined
+                    const linkedMember = linkedUserId
+                      ? committee.members?.find(m => m.user.id === linkedUserId)
+                      : undefined
+
+                    return (
+                      <div
+                        key={address}
+                        className="bg-muted flex items-center justify-between gap-2 rounded-md p-2 text-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline">{index + 1}</Badge>
+                          <code className="text-xs">
+                            {address.slice(0, 10)}...{address.slice(-8)}
+                          </code>
+                        </div>
+                        {linkedMember ? (
+                          <Badge variant="secondary">
+                            {linkedMember.user.name}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">
+                            Not linked
+                          </span>
+                        )}
+                      </div>
+                    )
+                  }
                 )}
               </div>
             </div>
@@ -921,146 +880,6 @@ export function ManageCommitteeView({
               disabled={!selectedUserEmail}
             >
               Add Member
-            </AsyncButton>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Grant Program Dialog */}
-      <Dialog open={isAddProgramOpen} onOpenChange={setIsAddProgramOpen}>
-        <DialogContent>
-          <DialogHeader onClose={() => setIsAddProgramOpen(false)}>
-            <DialogTitle>Create Grant Program</DialogTitle>
-            <DialogDescription>
-              Create a new grant program for your committee. You can edit it
-              later.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="new-program-name">Program Name</Label>
-              <Input
-                id="new-program-name"
-                value={programName}
-                onChange={e => setProgramName(e.target.value)}
-                placeholder="Developer Grants 2025"
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="new-program-description">Description</Label>
-              <Textarea
-                id="new-program-description"
-                value={programDescription}
-                onChange={e => setProgramDescription(e.target.value)}
-                placeholder="Support innovative projects building on our platform..."
-                rows={3}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="new-program-funding">
-                Total Program Budget (USD)
-              </Label>
-              <Input
-                id="new-program-funding"
-                type="number"
-                min="0"
-                step="1000"
-                value={programFundingAmount}
-                onChange={e => setProgramFundingAmount(e.target.value)}
-                placeholder="100000"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Total budget available for this program
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="new-program-min-grant">
-                  Min Grant per Submission (USD)
-                </Label>
-                <Input
-                  id="new-program-min-grant"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={programMinGrantSize}
-                  onChange={e => setProgramMinGrantSize(e.target.value)}
-                  placeholder="1000"
-                />
-              </div>
-              <div>
-                <Label htmlFor="new-program-max-grant">
-                  Max Grant per Submission (USD)
-                </Label>
-                <Input
-                  id="new-program-max-grant"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={programMaxGrantSize}
-                  onChange={e => setProgramMaxGrantSize(e.target.value)}
-                  placeholder="10000"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="new-program-min-milestone">
-                  Min per Milestone (USD)
-                </Label>
-                <Input
-                  id="new-program-min-milestone"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={programMinMilestoneSize}
-                  onChange={e => setProgramMinMilestoneSize(e.target.value)}
-                  placeholder="500"
-                />
-              </div>
-              <div>
-                <Label htmlFor="new-program-max-milestone">
-                  Max per Milestone (USD)
-                </Label>
-                <Input
-                  id="new-program-max-milestone"
-                  type="number"
-                  min="0"
-                  step="100"
-                  value={programMaxMilestoneSize}
-                  onChange={e => setProgramMaxMilestoneSize(e.target.value)}
-                  placeholder="5000"
-                />
-              </div>
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsAddProgramOpen(false)
-                setProgramName('')
-                setProgramDescription('')
-                setProgramFundingAmount('')
-                setProgramMinGrantSize('')
-                setProgramMaxGrantSize('')
-                setProgramMinMilestoneSize('')
-                setProgramMaxMilestoneSize('')
-              }}
-            >
-              Cancel
-            </Button>
-            <AsyncButton
-              onClick={handleCreateProgram}
-              disabled={!programName.trim()}
-            >
-              Create Program
             </AsyncButton>
           </DialogFooter>
         </DialogContent>

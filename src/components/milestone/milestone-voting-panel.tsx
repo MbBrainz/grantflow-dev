@@ -95,7 +95,7 @@ export function MilestoneVotingPanel({
   const isSignatory =
     !!activeAddress &&
     multisigConfig.signatories.some(
-      signatory => signatory.trim() === activeAddress
+      signatory => signatory.address.trim() === activeAddress
     )
   const canExecute =
     !!activeAddress && isSignatory && !!voteCount && voteCount.thresholdMet
@@ -262,7 +262,7 @@ export function MilestoneVotingPanel({
         callHash: existingApproval.callHash,
         timepoint: existingApproval.timepoint ?? { height: 0, index: 0 },
         threshold: multisigConfig.threshold,
-        allSignatories: multisigConfig.signatories,
+        allSignatories: multisigConfig.signatories.map(s => s.address),
         approverAddress: activeAddress,
         signer,
         network: multisigConfig.network ?? 'paseo',
@@ -378,7 +378,7 @@ export function MilestoneVotingPanel({
         client,
         callData: callDataBytes,
         threshold: multisigConfig.threshold,
-        allSignatories: multisigConfig.signatories,
+        allSignatories: multisigConfig.signatories.map(s => s.address),
         executorAddress: activeAddress,
         signer,
         beneficiaryAddress,

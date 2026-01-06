@@ -5,7 +5,6 @@ import {
   users,
   groups,
   groupMemberships,
-  grantPrograms,
   submissions,
   discussions,
   messages,
@@ -167,6 +166,7 @@ async function seed() {
   console.log('Creating groups...')
 
   // COMMITTEE GROUPS (Reviewers)
+  // Committees now include grant program fields directly (budget, templates)
   const [infraCommittee] = await db
     .insert(groups)
     .values({
@@ -198,14 +198,71 @@ async function seed() {
           parentBountyId: PARENT_BOUNTY_ID,
           curatorProxyAddress: CURATOR_PROXY_ADDRESS,
           multisigAddress: MULTISIG_ADDRESS,
-          signatories: [SIGNATORY_1_ADDRESS, SIGNATORY_2_ADDRESS],
+          signatories: [
+            { address: SIGNATORY_1_ADDRESS },
+            { address: SIGNATORY_2_ADDRESS },
+          ],
           threshold: 1, // 1-of-2 multisig (matches Paseo bounty #31)
           approvalWorkflow: 'merged',
-          requireAllSignatories: false, // Only threshold required, not all signatories
           votingTimeoutBlocks: 50400, // ~7 days on Polkadot (6s blocks)
           automaticExecution: true,
         },
       },
+      // Budget configuration (committee = grant program)
+      fundingAmount: 100000,
+      minGrantSize: 10000,
+      maxGrantSize: 100000,
+      minMilestoneSize: 2500,
+      maxMilestoneSize: 30000,
+      requirements: JSON.stringify({
+        minExperience: '2 years',
+        requiredSkills: ['Rust', 'Go', 'TypeScript', 'System Design'],
+        teamSize: 'min 2 people',
+        deliverables: [
+          'Production-ready code',
+          'Comprehensive documentation',
+          'Test coverage >90%',
+          'Security audit',
+        ],
+      }),
+      applicationTemplate: JSON.stringify({
+        sections: [
+          { title: 'Executive Summary', required: true, maxLength: 500 },
+          { title: 'Technical Architecture', required: true, maxLength: 2000 },
+          { title: 'Security Considerations', required: true, maxLength: 1000 },
+          { title: 'Timeline & Milestones', required: true },
+          { title: 'Team Experience', required: true, maxLength: 1500 },
+        ],
+      }),
+      milestoneStructure: JSON.stringify({
+        defaultMilestones: [
+          {
+            title: 'Architecture Design & Setup',
+            percentage: 20,
+            timeframe: '3 weeks',
+          },
+          {
+            title: 'Core Development Phase 1',
+            percentage: 30,
+            timeframe: '6 weeks',
+          },
+          {
+            title: 'Core Development Phase 2',
+            percentage: 30,
+            timeframe: '6 weeks',
+          },
+          {
+            title: 'Testing & Security Audit',
+            percentage: 15,
+            timeframe: '3 weeks',
+          },
+          {
+            title: 'Documentation & Deployment',
+            percentage: 5,
+            timeframe: '2 weeks',
+          },
+        ],
+      }),
     })
     .returning()
 
@@ -226,6 +283,21 @@ async function seed() {
         requiredApprovalPercentage: 75,
         stages: ['academic_review', 'community_impact', 'final_approval'],
       },
+      // Budget configuration
+      fundingAmount: 75000,
+      minGrantSize: 5000,
+      maxGrantSize: 75000,
+      minMilestoneSize: 2500,
+      maxMilestoneSize: 25000,
+      requirements: JSON.stringify({
+        minExperience: '1 year',
+        requiredSkills: ['Research', 'Writing', 'Data Analysis'],
+        deliverables: [
+          'Research paper',
+          'Educational content',
+          'Documentation',
+        ],
+      }),
     })
     .returning()
 
@@ -252,6 +324,26 @@ async function seed() {
         requiredApprovalPercentage: 80,
         stages: ['financial_review', 'risk_assessment', 'final_approval'],
       },
+      // Budget configuration
+      fundingAmount: 150000,
+      minGrantSize: 25000,
+      maxGrantSize: 150000,
+      minMilestoneSize: 5000,
+      maxMilestoneSize: 50000,
+      requirements: JSON.stringify({
+        minExperience: '2 years',
+        requiredSkills: [
+          'Solidity',
+          'DeFi Protocols',
+          'Smart Contracts',
+          'Security',
+        ],
+        deliverables: [
+          'Audited smart contracts',
+          'Documentation',
+          'Risk assessment',
+        ],
+      }),
     })
     .returning()
 
@@ -278,6 +370,25 @@ async function seed() {
         requiredApprovalPercentage: 70,
         stages: ['concept_review', 'technical_review', 'market_assessment'],
       },
+      // Budget configuration
+      fundingAmount: 80000,
+      minGrantSize: 10000,
+      maxGrantSize: 80000,
+      minMilestoneSize: 5000,
+      maxMilestoneSize: 25000,
+      requirements: JSON.stringify({
+        minExperience: '1 year',
+        requiredSkills: [
+          'Game Development',
+          'NFT Integration',
+          'Smart Contracts',
+        ],
+        deliverables: [
+          'Playable demo',
+          'NFT marketplace integration',
+          'Documentation',
+        ],
+      }),
     })
     .returning()
 
@@ -615,388 +726,9 @@ async function seed() {
     },
   ])
 
-  // ============================================================================
-  // GRANT PROGRAMS - Create varied programs per committee
-  // ============================================================================
-
-  console.log('Creating grant programs...')
-
-  // Infrastructure Committee Programs
-  const [infraCoreProgram] = await db
-    .insert(grantPrograms)
-    .values({
-      groupId: infraCommittee.id,
-      name: 'Core Infrastructure Development',
-      description:
-        'Large grants for building essential infrastructure components and developer tools',
-      fundingAmount: 100000,
-      minGrantSize: 50000,
-      maxGrantSize: 100000,
-      minMilestoneSize: 10000,
-      maxMilestoneSize: 30000,
-      requirements: JSON.stringify({
-        minExperience: '2 years',
-        requiredSkills: ['Rust', 'Go', 'TypeScript', 'System Design'],
-        teamSize: 'min 2 people',
-        deliverables: [
-          'Production-ready code',
-          'Comprehensive documentation',
-          'Test coverage >90%',
-          'Security audit',
-        ],
-      }),
-      applicationTemplate: JSON.stringify({
-        sections: [
-          { title: 'Executive Summary', required: true, maxLength: 500 },
-          { title: 'Technical Architecture', required: true, maxLength: 2000 },
-          { title: 'Security Considerations', required: true, maxLength: 1000 },
-          { title: 'Timeline & Milestones', required: true },
-          { title: 'Team Experience', required: true, maxLength: 1500 },
-        ],
-      }),
-      milestoneStructure: JSON.stringify({
-        defaultMilestones: [
-          {
-            title: 'Architecture Design & Setup',
-            percentage: 20,
-            timeframe: '3 weeks',
-          },
-          {
-            title: 'Core Development Phase 1',
-            percentage: 30,
-            timeframe: '6 weeks',
-          },
-          {
-            title: 'Core Development Phase 2',
-            percentage: 30,
-            timeframe: '6 weeks',
-          },
-          {
-            title: 'Testing & Security Audit',
-            percentage: 15,
-            timeframe: '3 weeks',
-          },
-          {
-            title: 'Documentation & Deployment',
-            percentage: 5,
-            timeframe: '2 weeks',
-          },
-        ],
-      }),
-      isActive: true,
-    })
-    .returning()
-
-  const [_infraToolsProgram] = await db
-    .insert(grantPrograms)
-    .values({
-      groupId: infraCommittee.id,
-      name: 'Developer Tools & Utilities',
-      description:
-        'Medium grants for developer productivity tools, libraries, and utilities',
-      fundingAmount: 50000,
-      minGrantSize: 10000,
-      maxGrantSize: 50000,
-      minMilestoneSize: 2500,
-      maxMilestoneSize: 15000,
-      requirements: JSON.stringify({
-        minExperience: '1 year',
-        requiredSkills: ['JavaScript/TypeScript', 'React', 'Node.js'],
-        deliverables: [
-          'Working tool/library',
-          'Documentation',
-          'Examples',
-          'Community adoption plan',
-        ],
-      }),
-      applicationTemplate: JSON.stringify({
-        sections: [
-          { title: 'Tool Overview', required: true, maxLength: 400 },
-          { title: 'Developer Need Analysis', required: true, maxLength: 800 },
-          { title: 'Implementation Plan', required: true, maxLength: 1000 },
-          { title: 'Adoption Strategy', required: true, maxLength: 600 },
-        ],
-      }),
-      milestoneStructure: JSON.stringify({
-        defaultMilestones: [
-          {
-            title: 'Project Setup & Core Features',
-            percentage: 40,
-            timeframe: '4 weeks',
-          },
-          {
-            title: 'Advanced Features & Polish',
-            percentage: 35,
-            timeframe: '3 weeks',
-          },
-          {
-            title: 'Documentation & Examples',
-            percentage: 15,
-            timeframe: '2 weeks',
-          },
-          {
-            title: 'Community Release & Support',
-            percentage: 10,
-            timeframe: '1 week',
-          },
-        ],
-      }),
-      isActive: true,
-    })
-    .returning()
-
-  // Research Committee Programs
-  const [researchAcademicProgram] = await db
-    .insert(grantPrograms)
-    .values({
-      groupId: researchCommittee.id,
-      name: 'Academic Research Grants',
-      description:
-        'Funding for academic research, white papers, and theoretical work',
-      fundingAmount: 75000,
-      minGrantSize: 25000,
-      maxGrantSize: 75000,
-      minMilestoneSize: 5000,
-      maxMilestoneSize: 20000,
-      requirements: JSON.stringify({
-        minExperience: 'PhD or equivalent research experience',
-        requiredSkills: [
-          'Research Methodology',
-          'Academic Writing',
-          'Peer Review',
-        ],
-        deliverables: [
-          'Research paper',
-          'Peer review process',
-          'Conference presentation',
-          'Open source implementation',
-        ],
-      }),
-      applicationTemplate: JSON.stringify({
-        sections: [
-          {
-            title: 'Research Question & Hypothesis',
-            required: true,
-            maxLength: 600,
-          },
-          { title: 'Literature Review', required: true, maxLength: 1200 },
-          { title: 'Methodology', required: true, maxLength: 1000 },
-          { title: 'Expected Impact', required: true, maxLength: 500 },
-          { title: 'Timeline & Deliverables', required: true },
-        ],
-      }),
-      milestoneStructure: JSON.stringify({
-        defaultMilestones: [
-          {
-            title: 'Research Design & Literature Review',
-            percentage: 25,
-            timeframe: '4 weeks',
-          },
-          {
-            title: 'Data Collection & Analysis',
-            percentage: 40,
-            timeframe: '8 weeks',
-          },
-          {
-            title: 'Paper Writing & Peer Review',
-            percentage: 25,
-            timeframe: '4 weeks',
-          },
-          {
-            title: 'Publication & Presentation',
-            percentage: 10,
-            timeframe: '2 weeks',
-          },
-        ],
-      }),
-      isActive: true,
-    })
-    .returning()
-
-  const [educationProgram] = await db
-    .insert(grantPrograms)
-    .values({
-      groupId: researchCommittee.id,
-      name: 'Educational Content Creation',
-      description:
-        'Creating tutorials, courses, and educational materials for the community',
-      fundingAmount: 25000,
-      minGrantSize: 5000,
-      maxGrantSize: 25000,
-      minMilestoneSize: 1000,
-      maxMilestoneSize: 8000,
-      requirements: JSON.stringify({
-        minExperience: '6 months teaching/content creation',
-        requiredSkills: [
-          'Content Creation',
-          'Teaching',
-          'Video Production',
-          'Technical Writing',
-        ],
-        deliverables: [
-          'Video content',
-          'Written tutorials',
-          'Interactive examples',
-          'Community feedback integration',
-        ],
-      }),
-      applicationTemplate: JSON.stringify({
-        sections: [
-          { title: 'Educational Goals', required: true, maxLength: 400 },
-          { title: 'Content Outline', required: true, maxLength: 800 },
-          { title: 'Teaching Methodology', required: true, maxLength: 600 },
-          { title: 'Distribution Strategy', required: true, maxLength: 400 },
-        ],
-      }),
-      milestoneStructure: JSON.stringify({
-        defaultMilestones: [
-          {
-            title: 'Content Planning & Script Writing',
-            percentage: 30,
-            timeframe: '2 weeks',
-          },
-          { title: 'Content Production', percentage: 50, timeframe: '4 weeks' },
-          { title: 'Review & Refinement', percentage: 15, timeframe: '1 week' },
-          {
-            title: 'Publication & Community Engagement',
-            percentage: 5,
-            timeframe: '1 week',
-          },
-        ],
-      }),
-      isActive: true,
-    })
-    .returning()
-
-  // DeFi Committee Program
-  const [defiProtocolProgram] = await db
-    .insert(grantPrograms)
-    .values({
-      groupId: defiCommittee.id,
-      name: 'DeFi Protocol Development',
-      description:
-        'Building new DeFi protocols, AMMs, and financial primitives',
-      fundingAmount: 150000,
-      minGrantSize: 75000,
-      maxGrantSize: 150000,
-      minMilestoneSize: 15000,
-      maxMilestoneSize: 50000,
-      requirements: JSON.stringify({
-        minExperience: '2 years DeFi development',
-        requiredSkills: [
-          'Solidity',
-          'Smart Contract Security',
-          'DeFi Protocols',
-          'Economic Modeling',
-        ],
-        deliverables: [
-          'Audited smart contracts',
-          'Frontend interface',
-          'Economic analysis',
-          'Deployment on mainnet',
-        ],
-      }),
-      applicationTemplate: JSON.stringify({
-        sections: [
-          { title: 'Protocol Overview', required: true, maxLength: 600 },
-          { title: 'Economic Model', required: true, maxLength: 1200 },
-          { title: 'Technical Architecture', required: true, maxLength: 1500 },
-          { title: 'Security Considerations', required: true, maxLength: 1000 },
-          { title: 'Go-to-Market Strategy', required: true, maxLength: 800 },
-        ],
-      }),
-      milestoneStructure: JSON.stringify({
-        defaultMilestones: [
-          {
-            title: 'Smart Contract Development',
-            percentage: 35,
-            timeframe: '8 weeks',
-          },
-          {
-            title: 'Security Audit & Testing',
-            percentage: 25,
-            timeframe: '4 weeks',
-          },
-          {
-            title: 'Frontend Development',
-            percentage: 25,
-            timeframe: '6 weeks',
-          },
-          {
-            title: 'Mainnet Deployment & Launch',
-            percentage: 15,
-            timeframe: '3 weeks',
-          },
-        ],
-      }),
-      isActive: true,
-    })
-    .returning()
-
-  // Gaming Committee Program
-  const [gamingPlatformProgram] = await db
-    .insert(grantPrograms)
-    .values({
-      groupId: gamingCommittee.id,
-      name: 'Gaming Platform Development',
-      description:
-        'Building gaming platforms, NFT marketplaces, and virtual world infrastructure',
-      fundingAmount: 80000,
-      minGrantSize: 20000,
-      maxGrantSize: 80000,
-      minMilestoneSize: 5000,
-      maxMilestoneSize: 25000,
-      requirements: JSON.stringify({
-        minExperience: '1.5 years game development',
-        requiredSkills: [
-          'Game Development',
-          'NFT Standards',
-          'Frontend Development',
-          'User Experience',
-        ],
-        deliverables: [
-          'Playable game/platform',
-          'NFT integration',
-          'User documentation',
-          'Community features',
-        ],
-      }),
-      applicationTemplate: JSON.stringify({
-        sections: [
-          { title: 'Game/Platform Concept', required: true, maxLength: 500 },
-          {
-            title: 'Technical Implementation',
-            required: true,
-            maxLength: 1000,
-          },
-          { title: 'NFT Integration Strategy', required: true, maxLength: 800 },
-          { title: 'User Experience Design', required: true, maxLength: 600 },
-          { title: 'Community Building Plan', required: true, maxLength: 500 },
-        ],
-      }),
-      milestoneStructure: JSON.stringify({
-        defaultMilestones: [
-          {
-            title: 'Core Game Mechanics',
-            percentage: 40,
-            timeframe: '6 weeks',
-          },
-          {
-            title: 'NFT Integration & Smart Contracts',
-            percentage: 30,
-            timeframe: '4 weeks',
-          },
-          { title: 'UI/UX Development', percentage: 20, timeframe: '3 weeks' },
-          {
-            title: 'Testing & Community Launch',
-            percentage: 10,
-            timeframe: '2 weeks',
-          },
-        ],
-      }),
-      isActive: true,
-    })
-    .returning()
+  // NOTE: Grant programs have been merged into committees.
+  // Budget fields (fundingAmount, minGrantSize, etc.) are now part of the groups table.
+  // Each committee IS a grant program linked to an on-chain bounty.
 
   // ============================================================================
   // SUBMISSIONS - Create submissions in various states
@@ -1008,7 +740,6 @@ async function seed() {
   const [approvedSubmission] = await db
     .insert(submissions)
     .values({
-      grantProgramId: infraCoreProgram.id,
       submitterGroupId: sdkTeam.id,
       reviewerGroupId: infraCommittee.id,
       submitterId: teamMember1.id,
@@ -1039,7 +770,6 @@ async function seed() {
   const [underReviewSubmission] = await db
     .insert(submissions)
     .values({
-      grantProgramId: researchAcademicProgram.id,
       submitterGroupId: researchTeam.id,
       reviewerGroupId: researchCommittee.id,
       submitterId: teamMember3.id,
@@ -1070,7 +800,6 @@ async function seed() {
   const [pendingSubmission] = await db
     .insert(submissions)
     .values({
-      grantProgramId: defiProtocolProgram.id,
       submitterGroupId: defiTeam.id,
       reviewerGroupId: defiCommittee.id,
       submitterId: teamMember4.id,
@@ -1101,7 +830,6 @@ async function seed() {
   const [rejectedSubmission] = await db
     .insert(submissions)
     .values({
-      grantProgramId: gamingPlatformProgram.id,
       submitterGroupId: gamingTeam.id,
       reviewerGroupId: gamingCommittee.id,
       submitterId: teamMember5.id,
@@ -1126,7 +854,6 @@ async function seed() {
   const [pendingEducationSubmission] = await db
     .insert(submissions)
     .values({
-      grantProgramId: educationProgram.id,
       submitterGroupId: educationTeam.id,
       reviewerGroupId: researchCommittee.id,
       submitterId: teamMember2.id,
@@ -1162,7 +889,6 @@ async function seed() {
   const [infraPendingSubmission1] = await db
     .insert(submissions)
     .values({
-      grantProgramId: infraCoreProgram.id,
       submitterGroupId: sdkTeam.id,
       reviewerGroupId: infraCommittee.id,
       submitterId: teamMember1.id,
@@ -1193,7 +919,6 @@ async function seed() {
   const [infraPendingSubmission2] = await db
     .insert(submissions)
     .values({
-      grantProgramId: _infraToolsProgram.id,
       submitterGroupId: researchTeam.id,
       reviewerGroupId: infraCommittee.id,
       submitterId: teamMember3.id,
@@ -1224,7 +949,6 @@ async function seed() {
   const [infraInReviewSubmission] = await db
     .insert(submissions)
     .values({
-      grantProgramId: _infraToolsProgram.id,
       submitterGroupId: defiTeam.id,
       reviewerGroupId: infraCommittee.id,
       submitterId: teamMember4.id,
@@ -1249,7 +973,6 @@ async function seed() {
   const [infraInReviewSubmission2] = await db
     .insert(submissions)
     .values({
-      grantProgramId: infraCoreProgram.id,
       submitterGroupId: educationTeam.id,
       reviewerGroupId: infraCommittee.id,
       submitterId: teamMember2.id,
@@ -1280,7 +1003,6 @@ async function seed() {
   const [infraApprovedWithMilestones] = await db
     .insert(submissions)
     .values({
-      grantProgramId: _infraToolsProgram.id,
       submitterGroupId: gamingTeam.id,
       reviewerGroupId: infraCommittee.id,
       submitterId: teamMember5.id,

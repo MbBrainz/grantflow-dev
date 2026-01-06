@@ -2,7 +2,6 @@
 export * from './schema/users'
 export * from './schema/groups'
 export * from './schema/group-memberships'
-export * from './schema/grant-programs'
 export * from './schema/submissions'
 export * from './schema/discussions'
 export * from './schema/messages'
@@ -36,21 +35,29 @@ export enum ActivityType {
 // Submission with related data
 import type { User } from './schema/users'
 import type { Group } from './schema/groups'
-import type { GrantProgram } from './schema/grant-programs'
 import type { Submission } from './schema/submissions'
 import type { Milestone } from './schema/milestones'
 import type { DiscussionWithMessages } from './schema/discussions'
 import type { Review } from './schema/reviews'
 import type { GroupMembership } from './schema/group-memberships'
 
+// Committee with budget fields (committee IS the grant program)
+export type CommitteeWithBudget = Group & {
+  fundingAmount: number | null
+  minGrantSize: number | null
+  maxGrantSize: number | null
+  minMilestoneSize: number | null
+  maxMilestoneSize: number | null
+}
+
 export type SubmissionWithMilestones = Submission & {
   milestones: Milestone[]
   submitter: User
   submitterGroup: Group
+  // reviewerGroup is the committee (which IS the grant program)
   reviewerGroup: Group & {
     members?: GroupMembership[]
   }
-  grantProgram: GrantProgram
   discussions?: DiscussionWithMessages[]
   reviews?: (Review & {
     reviewer: {

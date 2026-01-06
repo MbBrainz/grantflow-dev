@@ -3,15 +3,13 @@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { Settings, ExternalLink, Github } from 'lucide-react'
+import { Settings, ExternalLink, Github, DollarSign } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { CommitteeWithDetails } from '@/lib/db/queries/committees'
 import Image from 'next/image'
-import { GrantProgramCard } from '@/components/committee/grant-program-card'
 
-interface ProgramFinancials {
-  programId: number
+interface CommitteeFinancials {
   totalBudget: number
   allocated: number
   spent: number
@@ -22,13 +20,13 @@ interface ProgramFinancials {
 interface CommitteeDetailViewProps {
   committee: NonNullable<CommitteeWithDetails>
   isAdmin: boolean
-  financialsMap: Map<number | undefined, ProgramFinancials | null | undefined>
+  financials?: CommitteeFinancials | null
 }
 
 export function CommitteeDetailView({
   committee,
   isAdmin,
-  financialsMap,
+  financials,
 }: CommitteeDetailViewProps) {
   const router = useRouter()
 
@@ -143,28 +141,87 @@ export function CommitteeDetailView({
         </Card>
       )}
 
-      {/* Grant Programs */}
-      {committee.grantPrograms && committee.grantPrograms.length > 0 && (
+      {/* Budget Information (Committee IS the grant program) */}
+      {(financials ?? committee.fundingAmount) && (
         <Card className="p-6">
-          <h2 className="mb-4 text-lg font-semibold">Grant Programs</h2>
-          <div className="space-y-3">
-            {committee.grantPrograms
-              .filter(program => program.isActive)
-              .map(program => (
-                <Link
-                  key={program.id}
-                  href={`/dashboard/programs/${program.id}`}
-                  className="block transition-transform hover:scale-[1.01]"
-                >
-                  <GrantProgramCard
-                    program={program}
-                    variant="compact"
-                    financials={financialsMap.get(program.id) ?? null}
-                    showAdminActions={false}
-                  />
-                </Link>
-              ))}
+          <div className="mb-4 flex items-center gap-2">
+            <DollarSign className="h-5 w-5 text-gray-600" />
+            <h2 className="text-lg font-semibold">Budget Information</h2>
           </div>
+
+          {/* Financial Summary */}
+          {financials && (
+            <div className="mb-4 grid grid-cols-2 gap-4 rounded-lg border border-gray-200 p-4 md:grid-cols-5 dark:border-gray-700">
+              <div>
+                <p className="text-muted-foreground text-sm">Total Budget</p>
+                <p className="text-lg font-semibold">
+                  ${financials.totalBudget.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">Allocated</p>
+                <p className="text-lg font-semibold">
+                  ${financials.allocated.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">Spent</p>
+                <p className="text-lg font-semibold">
+                  ${financials.spent.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">Remaining</p>
+                <p className="text-lg font-semibold text-green-600">
+                  ${financials.remaining.toLocaleString()}
+                </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">Available</p>
+                <p className="text-lg font-semibold text-blue-600">
+                  ${financials.available.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Grant Size Limits */}
+          {(committee.minGrantSize ?? committee.maxGrantSize) && (
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              {committee.minGrantSize && (
+                <div>
+                  <p className="text-muted-foreground text-sm">Min Grant</p>
+                  <p className="font-medium">
+                    ${committee.minGrantSize.toLocaleString()}
+                  </p>
+                </div>
+              )}
+              {committee.maxGrantSize && (
+                <div>
+                  <p className="text-muted-foreground text-sm">Max Grant</p>
+                  <p className="font-medium">
+                    ${committee.maxGrantSize.toLocaleString()}
+                  </p>
+                </div>
+              )}
+              {committee.minMilestoneSize && (
+                <div>
+                  <p className="text-muted-foreground text-sm">Min Milestone</p>
+                  <p className="font-medium">
+                    ${committee.minMilestoneSize.toLocaleString()}
+                  </p>
+                </div>
+              )}
+              {committee.maxMilestoneSize && (
+                <div>
+                  <p className="text-muted-foreground text-sm">Max Milestone</p>
+                  <p className="font-medium">
+                    ${committee.maxMilestoneSize.toLocaleString()}
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
         </Card>
       )}
 
@@ -225,12 +282,6 @@ export function CommitteeDetailView({
                       </h3>
                       <div className="mt-1 flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                         <span>By {submission.submitter?.name}</span>
-                        {submission.grantProgram && (
-                          <>
-                            <span>•</span>
-                            <span>{submission.grantProgram.name}</span>
-                          </>
-                        )}
                       </div>
                     </div>
                     <Badge

@@ -27,11 +27,8 @@ export * from './notifications'
 // Dashboard queries
 export * from './dashboard'
 
-// Committee queries
+// Committee queries (committee IS the grant program)
 export * from './committees'
-
-// Grant program queries
-export * from './grant-programs'
 
 // Re-export write functions for convenience
 export {
@@ -39,8 +36,6 @@ export {
   updateGroup,
   addMemberToGroup,
   removeMemberFromGroup,
-  createGrantProgram,
-  updateGrantProgram,
 } from '../writes/groups'
 
 export {

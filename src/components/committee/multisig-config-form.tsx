@@ -35,7 +35,10 @@ import {
   RefreshCw,
   CheckCircle,
 } from 'lucide-react'
-import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
+import type {
+  MultisigConfig,
+  SignatoryMapping,
+} from '@/lib/db/schema/jsonTypes/GroupSettings'
 import { getParentBounty } from '@/lib/polkadot/child-bounty'
 import { useToast } from '@/lib/hooks/use-toast'
 import { chains } from '@/lib/polkadot/chains'
@@ -59,7 +62,6 @@ export function MultisigConfigForm({
       signatories: [],
       threshold: 2,
       approvalWorkflow: 'merged',
-      requireAllSignatories: false,
       votingTimeoutBlocks: 50400, // ~7 days on Polkadot (6s blocks)
       automaticExecution: true,
       network: 'paseo',
@@ -67,6 +69,9 @@ export function MultisigConfigForm({
       curatorProxyAddress: '', // Required: Proxy account controlled by multisig
     }
   )
+
+  // Helper to get signatory addresses for validation
+  const signatoryAddresses = config.signatories.map(s => s.address)
 
   const [newSignatory, setNewSignatory] = useState('')
   const [isSaving, setIsSaving] = useState(false)
@@ -194,14 +199,20 @@ export function MultisigConfigForm({
       return
     }
 
-    if (config.signatories.includes(newSignatory)) {
+    if (signatoryAddresses.includes(newSignatory)) {
       alert('This address is already in the signatories list')
       return
     }
 
+    // Create SignatoryMapping object
+    const newMapping: SignatoryMapping = {
+      address: newSignatory,
+      // userId is not set - users can self-link via bounty-link-setup
+    }
+
     setConfig({
       ...config,
-      signatories: [...config.signatories, newSignatory],
+      signatories: [...config.signatories, newMapping],
     })
     setNewSignatory('')
   }
@@ -209,7 +220,7 @@ export function MultisigConfigForm({
   const handleRemoveSignatory = (address: string) => {
     setConfig({
       ...config,
-      signatories: config.signatories.filter(s => s !== address),
+      signatories: config.signatories.filter(s => s.address !== address),
       // Adjust threshold if it's now higher than signatory count
       threshold: Math.min(config.threshold, config.signatories.length - 1),
     })
@@ -289,7 +300,7 @@ export function MultisigConfigForm({
         <Label>Network (Asset Hub)</Label>
         <RadioGroup
           value={config.network}
-          onValueChange={(value: 'polkadot' | 'kusama' | 'paseo') =>
+          onValueChange={(value: 'polkadot' | 'paseo') =>
             setConfig({ ...config, network: value })
           }
         >
@@ -342,22 +353,28 @@ export function MultisigConfigForm({
           {/* Signatory list */}
           {config.signatories.length > 0 ? (
             <div className="space-y-2">
-              {config.signatories.map((address, index) => (
+              {config.signatories.map((signatory, index) => (
                 <div
-                  key={address}
+                  key={signatory.address}
                   className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <div className="flex items-center gap-2">
                     <Badge variant="outline">{index + 1}</Badge>
                     <code className="text-xs">
-                      {address.slice(0, 8)}...{address.slice(-6)}
+                      {signatory.address.slice(0, 8)}...
+                      {signatory.address.slice(-6)}
                     </code>
+                    {signatory.userId && (
+                      <Badge variant="secondary" className="text-xs">
+                        Linked
+                      </Badge>
+                    )}
                   </div>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleRemoveSignatory(address)}
+                    onClick={() => handleRemoveSignatory(signatory.address)}
                   >
                     <Trash2 className="h-4 w-4 text-red-600" />
                   </Button>
@@ -410,13 +427,16 @@ export function MultisigConfigForm({
                 Child Bounty Configuration
               </CardTitle>
               <CardDescription>
-                Settings for Polkadot child bounty payouts. Payouts are processed
-                through the childBounties pallet for proper on-chain indexing.
+                Settings for Polkadot child bounty payouts. Payouts are
+                processed through the childBounties pallet for proper on-chain
+                indexing.
               </CardDescription>
             </div>
             <MultisigDiscoveryModal
-              network={config.network === 'kusama' ? 'polkadot' : config.network}
-              initialBountyId={config.parentBountyId > 0 ? config.parentBountyId : undefined}
+              network={config.network}
+              initialBountyId={
+                config.parentBountyId > 0 ? config.parentBountyId : undefined
+              }
             />
           </div>
         </CardHeader>

@@ -18,6 +18,14 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Fix for WalletConnect/pino bundling issues with Next.js 15
+  // See: https://github.com/vercel/next.js/issues/56481
+  serverExternalPackages: ['pino', 'pino-pretty', 'thread-stream'],
+  webpack: (config: { externals: string[] }) => {
+    // Externalize problematic packages that cause SSR issues
+    config.externals.push('pino-pretty', 'lokijs', 'encoding')
+    return config
+  },
 }
 
 export default nextConfig

@@ -7,7 +7,6 @@ import type { NewReview } from '@/lib/db/schema'
 import {
   submissions,
   milestones,
-  grantPrograms,
   type NewSubmission,
   type NewMilestone,
   reviews,
@@ -21,8 +20,6 @@ import {
   getSubmissionById,
 } from '@/lib/db/queries'
 import { getGroups } from '@/lib/db/queries/groups'
-import type { GrantProgramFinancial } from '@/lib/db/queries/grant-programs'
-import { getGrantProgramsFinancials } from '@/lib/db/queries/grant-programs'
 import { revalidatePath } from 'next/cache'
 import {
   GITHUB_URL_REGEX,
@@ -59,55 +56,34 @@ export async function getSubmissionDetails(submissionId: number) {
   }
 }
 
-// Fetch active grant programs with their committees for submission
-export async function getActiveGrantPrograms() {
+// Fetch active committees (which ARE the grant programs now) for submission
+export async function getActiveCommittees() {
   try {
     const committees = await getGroups('committee')
 
-    // Get all grant programs for all committees
-    const programsWithCommittees = await Promise.all(
-      committees.map(async committee => {
-        const programs = await db.query.grantPrograms.findMany({
-          where: eq(grantPrograms.isActive, true),
-          with: {
-            group: true,
-          },
-        })
-        return programs.filter(p => p.groupId === committee.id)
-      })
-    )
-
-    // Flatten the array and return programs with committee info
-    const allPrograms = programsWithCommittees.flat()
-
-    // Get financial data for all programs
-    const programIds = allPrograms.map(p => p.id)
-    let financials: GrantProgramFinancial[] = []
-    try {
-      financials = await getGrantProgramsFinancials(programIds ?? [])
-    } catch (error) {
-      console.error(
-        error,
-        `[getActiveGrantPrograms]: Failed to fetch grant program financials for programIds: ${JSON.stringify(programIds, null, 2)}`
-      )
-      financials = []
-    }
-
-    // Create a map of program ID to financials for easy lookup
-    const financialsMap = new Map(
-      Array.isArray(financials) ? financials.map(f => [f?.programId, f]) : []
-    )
-
-    // Combine programs with their financial data
-    const programsWithFinancials = allPrograms.map(program => ({
-      ...program,
-      financials: financialsMap.get(program.id) ?? null,
+    // Return committees with their budget information
+    const committeesWithBudget = committees.map(committee => ({
+      id: committee.id,
+      name: committee.name,
+      description: committee.description,
+      logoUrl: committee.logoUrl,
+      focusAreas: committee.focusAreas,
+      isActive: committee.isActive,
+      // Budget fields (committee IS the grant program)
+      fundingAmount: committee.fundingAmount,
+      minGrantSize: committee.minGrantSize,
+      maxGrantSize: committee.maxGrantSize,
+      minMilestoneSize: committee.minMilestoneSize,
+      maxMilestoneSize: committee.maxMilestoneSize,
+      // Template fields
+      requirements: committee.requirements,
+      applicationTemplate: committee.applicationTemplate,
     }))
 
-    return { success: true, programs: programsWithFinancials }
+    return { success: true, committees: committeesWithBudget }
   } catch (error) {
-    console.error('[actions]: Error fetching grant programs', error)
-    return { success: false, error: 'Failed to fetch grant programs' }
+    console.error('[actions]: Error fetching committees', error)
+    return { success: false, error: 'Failed to fetch committees' }
   }
 }
 
@@ -163,10 +139,8 @@ const createSubmissionSchema = z
       .refine(val => !isNaN(parseFloat(val)) && parseFloat(val) > 0, {
         message: 'Total amount must be a positive number',
       }),
+    // Committee IS the grant program now - no separate grantProgramId
     committeeId: z.coerce.number().min(1, 'Committee selection is required'),
-    grantProgramId: z.coerce
-      .number()
-      .min(1, 'Grant program selection is required'),
     labels: z
       .array(z.string().trim().min(1))
       .min(1, 'At least one project category must be selected')
@@ -329,12 +303,11 @@ export const createSubmission = async (
       return { error: 'Milestones total cannot exceed total funding amount' }
     }
 
-    // Create submission record with proper committee/grant program selection
+    // Create submission record - committee IS the grant program now
     const newSubmission: NewSubmission = {
-      grantProgramId: data.grantProgramId,
       submitterGroupId: user.primaryGroupId ?? 1, // Use user's primary group
-      reviewerGroupId: data.committeeId ?? 1, // Committee becomes reviewerGroupId
-      submitterId: user.id, // Updated field name from userId
+      reviewerGroupId: data.committeeId, // Committee is the grant program
+      submitterId: user.id,
       title: data.title,
       description: data.description,
       executiveSummary: data.executiveSummary,

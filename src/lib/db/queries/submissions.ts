@@ -56,8 +56,8 @@ export async function getSubmissionById(
     with: {
       submitter: true,
       submitterGroup: true,
+      // reviewerGroup is the committee (which IS the grant program)
       reviewerGroup: true,
-      grantProgram: true,
       milestones: true,
       discussions: {
         with: {
@@ -163,6 +163,7 @@ export async function getAllSubmissionsForReview(statusFilter?: string) {
           email: true,
         },
       },
+      // reviewerGroup is the committee (which IS the grant program)
       reviewerGroup: {
         columns: {
           id: true,
@@ -171,13 +172,9 @@ export async function getAllSubmissionsForReview(statusFilter?: string) {
           logoUrl: true,
           focusAreas: true,
           isActive: true,
-        },
-      },
-      grantProgram: {
-        columns: {
-          id: true,
-          name: true,
           fundingAmount: true,
+          minGrantSize: true,
+          maxGrantSize: true,
         },
       },
     },
@@ -281,12 +278,19 @@ export async function getSubmissionForReviewerReview(submissionId: number) {
           githubId: true,
         },
       },
+      // reviewerGroup is the committee (which IS the grant program)
       reviewerGroup: {
         columns: {
           id: true,
           name: true,
           description: true,
           focusAreas: true,
+          fundingAmount: true,
+          minGrantSize: true,
+          maxGrantSize: true,
+          minMilestoneSize: true,
+          maxMilestoneSize: true,
+          requirements: true,
         },
         with: {
           members: {
@@ -297,15 +301,6 @@ export async function getSubmissionForReviewerReview(submissionId: number) {
               isActive: true,
             },
           },
-        },
-      },
-      grantProgram: {
-        columns: {
-          id: true,
-          name: true,
-          description: true,
-          fundingAmount: true,
-          requirements: true,
         },
       },
       milestones: {
@@ -500,8 +495,8 @@ export async function getSubmissionWithMilestones(
         },
         submitter: true,
         submitterGroup: true,
+        // reviewerGroup is the committee (which IS the grant program)
         reviewerGroup: true,
-        grantProgram: true,
         discussions: {
           with: {
             messages: {

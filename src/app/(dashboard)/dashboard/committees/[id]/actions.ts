@@ -6,8 +6,6 @@ import {
   updateGroup,
   addMemberToGroup,
   removeMemberFromGroup,
-  createGrantProgram,
-  updateGrantProgram,
 } from '@/lib/db/writes/groups'
 import { isCommitteeAdmin, getCommitteeById } from '@/lib/db/queries/committees'
 import { searchUsers, getUserByEmail } from '@/lib/db/queries/users'
@@ -262,13 +260,11 @@ export const updateMemberRole = validatedActionWithUser(
 )
 
 // ============================================================================
-// Create Grant Program
+// Update Committee Budget Configuration
 // ============================================================================
 
-const CreateGrantProgramSchema = z.object({
+const UpdateCommitteeBudgetSchema = z.object({
   committeeId: z.coerce.number(),
-  name: z.string().min(1, 'Program name is required').max(100),
-  description: z.string().optional().or(z.literal('')),
   fundingAmount: z.coerce.number().min(0).optional(),
   minGrantSize: z.coerce.number().min(0).optional(),
   maxGrantSize: z.coerce.number().min(0).optional(),
@@ -276,138 +272,47 @@ const CreateGrantProgramSchema = z.object({
   maxMilestoneSize: z.coerce.number().min(0).optional(),
 })
 
-export const createGrantProgramAction = validatedActionWithUser(
-  CreateGrantProgramSchema,
+export const updateCommitteeBudget = validatedActionWithUser(
+  UpdateCommitteeBudgetSchema,
   async (data, user) => {
-    const {
-      committeeId,
-      name,
-      description,
-      fundingAmount,
-      minGrantSize,
-      maxGrantSize,
-      minMilestoneSize,
-      maxMilestoneSize,
-    } = data
+    const { committeeId, ...budgetData } = data
 
     console.log(
-      `[createGrantProgramAction]: User ${user.id} creating grant program "${name}" for committee ${committeeId}`
+      `[updateCommitteeBudget]: User ${user.id} updating budget for committee ${committeeId}`
     )
 
     // Check if user is admin
     const isAdmin = await isCommitteeAdmin(committeeId)
     if (!isAdmin) {
-      return { error: 'You do not have permission to create grant programs' }
+      return { error: 'You do not have permission to update committee budget' }
     }
 
-    try {
-      const program = await createGrantProgram({
-        groupId: committeeId,
-        name,
-        description: description ?? undefined,
-        fundingAmount,
-        minGrantSize,
-        maxGrantSize,
-        minMilestoneSize,
-        maxMilestoneSize,
-      })
-
-      revalidatePath(`/dashboard/committees/${committeeId}`)
-      revalidatePath(`/dashboard/committees/${committeeId}/manage`)
-
-      return { success: true, data: { programId: program.id } }
-    } catch (error) {
-      console.error('[createGrantProgramAction]: Error', error)
-      return { error: 'Failed to create grant program' }
-    }
-  }
-)
-
-// ============================================================================
-// Update Grant Program
-// ============================================================================
-
-const UpdateGrantProgramSchema = z.object({
-  committeeId: z.coerce.number(),
-  programId: z.coerce.number(),
-  name: z.string().min(1, 'Program name is required').max(100),
-  description: z.string().optional().or(z.literal('')),
-  fundingAmount: z.coerce.number().min(0).optional(),
-  minGrantSize: z.coerce.number().min(0).optional(),
-  maxGrantSize: z.coerce.number().min(0).optional(),
-  minMilestoneSize: z.coerce.number().min(0).optional(),
-  maxMilestoneSize: z.coerce.number().min(0).optional(),
-  isActive: z.boolean().optional(),
-})
-
-export const updateGrantProgramAction = validatedActionWithUser(
-  UpdateGrantProgramSchema,
-  async (data, user) => {
-    const { committeeId, programId, ...updateData } = data
-
-    console.log(
-      `[updateGrantProgramAction]: User ${user.id} updating grant program ${programId}`
-    )
-
-    // Check if user is admin
-    const isAdmin = await isCommitteeAdmin(committeeId)
-    if (!isAdmin) {
-      return { error: 'You do not have permission to update grant programs' }
+    // Validate min/max constraints
+    if (
+      budgetData.minGrantSize !== undefined &&
+      budgetData.maxGrantSize !== undefined &&
+      budgetData.minGrantSize > budgetData.maxGrantSize
+    ) {
+      return { error: 'Minimum grant size cannot exceed maximum grant size' }
     }
 
-    try {
-      await updateGrantProgram(programId, {
-        name: updateData.name,
-        description: updateData.description ?? undefined,
-        fundingAmount: updateData.fundingAmount,
-        minGrantSize: updateData.minGrantSize,
-        maxGrantSize: updateData.maxGrantSize,
-        minMilestoneSize: updateData.minMilestoneSize,
-        maxMilestoneSize: updateData.maxMilestoneSize,
-        isActive: updateData.isActive,
-      })
-
-      revalidatePath(`/dashboard/committees/${committeeId}`)
-      revalidatePath(`/dashboard/committees/${committeeId}/manage`)
-
-      return { success: true }
-    } catch (error) {
-      console.error('[updateGrantProgramAction]: Error', error)
-      return { error: 'Failed to update grant program' }
-    }
-  }
-)
-
-// ============================================================================
-// Toggle Grant Program Active Status
-// ============================================================================
-
-const ToggleGrantProgramSchema = z.object({
-  committeeId: z.coerce.number(),
-  programId: z.coerce.number(),
-  isActive: z.boolean(),
-})
-
-export const toggleGrantProgramAction = validatedActionWithUser(
-  ToggleGrantProgramSchema,
-  async (data, user) => {
-    const { committeeId, programId, isActive } = data
-
-    console.log(
-      `[toggleGrantProgramAction]: User ${user.id} ${isActive ? 'activating' : 'deactivating'} grant program ${programId}`
-    )
-
-    // Check if user is admin
-    const isAdmin = await isCommitteeAdmin(committeeId)
-    if (!isAdmin) {
+    if (
+      budgetData.minMilestoneSize !== undefined &&
+      budgetData.maxMilestoneSize !== undefined &&
+      budgetData.minMilestoneSize > budgetData.maxMilestoneSize
+    ) {
       return {
-        error: 'You do not have permission to modify grant program status',
+        error: 'Minimum milestone size cannot exceed maximum milestone size',
       }
     }
 
     try {
-      await updateGrantProgram(programId, {
-        isActive,
+      await updateGroup(committeeId, {
+        fundingAmount: budgetData.fundingAmount,
+        minGrantSize: budgetData.minGrantSize,
+        maxGrantSize: budgetData.maxGrantSize,
+        minMilestoneSize: budgetData.minMilestoneSize,
+        maxMilestoneSize: budgetData.maxMilestoneSize,
       })
 
       revalidatePath(`/dashboard/committees/${committeeId}`)
@@ -415,8 +320,8 @@ export const toggleGrantProgramAction = validatedActionWithUser(
 
       return { success: true }
     } catch (error) {
-      console.error('[toggleGrantProgramAction]: Error', error)
-      return { error: 'Failed to update grant program status' }
+      console.error('[updateCommitteeBudget]: Error', error)
+      return { error: 'Failed to update committee budget' }
     }
   }
 )
@@ -434,18 +339,25 @@ export async function getCommitteeForManagement(committeeId: number) {
 // Update Multisig Configuration
 // ============================================================================
 
+const SignatoryMappingSchema = z.object({
+  address: z.string().min(1, 'Address is required'),
+  userId: z.number().int().optional(),
+})
+
 const UpdateMultisigConfigSchema = z.object({
   committeeId: z.coerce.number(),
   multisigAddress: z.string().min(1, 'Multisig address is required'),
-  signatories: z.array(z.string()).min(2, 'At least 2 signatories required'),
+  signatories: z
+    .array(SignatoryMappingSchema)
+    .min(2, 'At least 2 signatories required'),
   threshold: z.number().int().min(1, 'Threshold must be at least 1'),
   approvalWorkflow: z.enum(['merged', 'separated']),
-  requireAllSignatories: z.boolean(),
   votingTimeoutBlocks: z.number().int().positive(),
   automaticExecution: z.boolean(),
-  network: z.enum(['polkadot', 'kusama', 'paseo']),
+  network: z.enum(['polkadot', 'paseo']),
   parentBountyId: z.number().int().nonnegative('Parent bounty ID is required'),
   curatorProxyAddress: z.string().min(1, 'Curator proxy address is required'),
+  bountyDescription: z.string().optional(),
 })
 
 export const updateMultisigConfig = validatedActionWithUser(
@@ -495,6 +407,77 @@ export const updateMultisigConfig = validatedActionWithUser(
     } catch (error) {
       console.error('[updateMultisigConfig]: Error', error)
       return { error: 'Failed to update multisig configuration' }
+    }
+  }
+)
+
+// ============================================================================
+// Link Signatory to User Account
+// ============================================================================
+
+const LinkSignatorySchema = z.object({
+  committeeId: z.coerce.number(),
+  address: z.string().min(1, 'Wallet address is required'),
+})
+
+export const linkSignatoryToUser = validatedActionWithUser(
+  LinkSignatorySchema,
+  async (data, user) => {
+    const { committeeId, address } = data
+
+    console.log(
+      `[linkSignatoryToUser]: User ${user.id} linking signatory ${address} to their account`
+    )
+
+    try {
+      const committee = await getCommitteeById(committeeId)
+      if (!committee) {
+        return { error: 'Committee not found' }
+      }
+
+      const multisig = committee.settings?.multisig
+      if (!multisig) {
+        return { error: 'Committee has no multisig configuration' }
+      }
+
+      // Check if this address exists in the signatories
+      const signatoryIndex = multisig.signatories.findIndex(
+        s => s.address === address
+      )
+      if (signatoryIndex === -1) {
+        return { error: 'Address is not a signatory of this committee' }
+      }
+
+      // Update the signatory mapping - user can always claim their own address
+      const updatedSignatories = [...multisig.signatories]
+      updatedSignatories[signatoryIndex] = {
+        address,
+        userId: user.id,
+      }
+
+      const currentSettings = committee.settings ?? {
+        votingThreshold: 0.5,
+        requiredApprovalPercentage: 50,
+        stages: [],
+      }
+
+      await updateGroup(committeeId, {
+        settings: {
+          ...currentSettings,
+          multisig: {
+            ...multisig,
+            signatories: updatedSignatories,
+          },
+        },
+      })
+
+      revalidatePath(`/dashboard/committees/${committeeId}/manage`)
+      revalidatePath(`/dashboard/committees/${committeeId}`)
+
+      return { success: true }
+    } catch (error) {
+      console.error('[linkSignatoryToUser]: Error', error)
+      return { error: 'Failed to link signatory to user' }
     }
   }
 )

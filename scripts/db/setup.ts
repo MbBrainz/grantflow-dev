@@ -6,12 +6,10 @@ import {
   users,
   groups,
   groupMemberships,
-  grantPrograms,
   submissions,
   discussions,
   type User,
   type Group,
-  type GrantProgram,
 } from '../../src/lib/db/schema'
 
 config()
@@ -93,34 +91,9 @@ export async function addUserToGroup(
   console.log(`✅ Added ${user[0]?.name} to ${group[0]?.name} as ${role}`)
 }
 
-export async function createGrantProgram(programData: {
-  groupId: number
-  name: string
-  description: string
-  fundingAmount: number
-  requirements: Record<string, unknown>
-  applicationTemplate: Record<string, unknown>
-  milestoneStructure: Record<string, unknown>
-}): Promise<GrantProgram> {
-  const [program] = await db
-    .insert(grantPrograms)
-    .values({
-      groupId: programData.groupId,
-      name: programData.name,
-      description: programData.description,
-      fundingAmount: programData.fundingAmount,
-      requirements: JSON.stringify(programData.requirements),
-      applicationTemplate: JSON.stringify(programData.applicationTemplate),
-      milestoneStructure: JSON.stringify(programData.milestoneStructure),
-      isActive: true,
-    })
-    .returning()
-
-  console.log(
-    `✅ Created grant program: ${programData.name} ($${programData.fundingAmount.toLocaleString()})`
-  )
-  return program
-}
+// NOTE: Grant programs have been merged into committees.
+// Budget fields are now part of the groups table.
+// Each committee IS a grant program linked to an on-chain bounty.
 
 // ============================================================================
 // VERIFICATION FUNCTIONS
@@ -134,7 +107,6 @@ export async function verifyDatabaseStructure(): Promise<boolean> {
     const _testUsers = await db.select().from(users).limit(1)
     const testGroups = await db.select().from(groups).limit(1)
     const _testMemberships = await db.select().from(groupMemberships).limit(1)
-    const testPrograms = await db.select().from(grantPrograms).limit(1)
     const _testSubmissions = await db.select().from(submissions).limit(1)
 
     console.log('✅ All core tables accessible')
@@ -150,17 +122,16 @@ export async function verifyDatabaseStructure(): Promise<boolean> {
       if (groupMembers.length > 0) {
         console.log('✅ Group membership relationships working')
       }
-    }
 
-    if (testPrograms.length > 0) {
-      const programSubmissions = await db
+      // Test committee-submission relationship
+      const committeeSubmissions = await db
         .select()
         .from(submissions)
-        .where(eq(submissions.grantProgramId, testPrograms[0].id))
+        .where(eq(submissions.reviewerGroupId, testGroups[0].id))
         .limit(1)
 
-      if (programSubmissions.length > 0) {
-        console.log('✅ Grant program relationships working')
+      if (committeeSubmissions.length > 0) {
+        console.log('✅ Committee-submission relationships working')
       }
     }
 
@@ -179,16 +150,14 @@ export async function getSystemStats(): Promise<{
   users: number
   reviewers: number
   teamMembers: number
-  grantPrograms: number
   submissions: number
   activeDiscussions: number
 }> {
   try {
-    const [allGroups, allUsers, allPrograms, allSubmissions, allDiscussions] =
+    const [allGroups, allUsers, allSubmissions, allDiscussions] =
       await Promise.all([
         db.select().from(groups),
         db.select().from(users),
-        db.select().from(grantPrograms),
         db.select().from(submissions),
         db.select().from(discussions),
       ])
@@ -205,7 +174,6 @@ export async function getSystemStats(): Promise<{
       users: allUsers.length,
       reviewers,
       teamMembers,
-      grantPrograms: allPrograms.length,
       submissions: allSubmissions.length,
       activeDiscussions,
     }
@@ -232,7 +200,6 @@ export async function printSystemOverview(): Promise<void> {
     console.log(`   • ${stats.teamMembers} Team Members (grantees)`)
 
     console.log(`\n💼 GRANT ECOSYSTEM:`)
-    console.log(`   • ${stats.grantPrograms} Grant Programs`)
     console.log(`   • ${stats.submissions} Submissions`)
     console.log(`   • ${stats.activeDiscussions} Active Discussions`)
 
@@ -251,13 +218,17 @@ export async function printSystemOverview(): Promise<void> {
           .from(groupMemberships)
           .where(eq(groupMemberships.groupId, committee.id))
 
-        const programCount = await db
+        const submissionCount = await db
           .select()
-          .from(grantPrograms)
-          .where(eq(grantPrograms.groupId, committee.id))
+          .from(submissions)
+          .where(eq(submissions.reviewerGroupId, committee.id))
+
+        const budget = committee.fundingAmount
+          ? `$${committee.fundingAmount.toLocaleString()}`
+          : 'No budget'
 
         console.log(
-          `   • ${committee.name}: ${memberCount.length} members, ${programCount.length} programs`
+          `   • ${committee.name}: ${memberCount.length} members, ${submissionCount.length} submissions, ${budget}`
         )
       }
     }
@@ -518,34 +489,8 @@ export async function quickSetup(): Promise<void> {
       .set({ primaryGroupId: testTeam.id })
       .where(eq(users.id, teamMember.id))
 
-    // Create a test grant program
-    await createGrantProgram({
-      groupId: testCommittee.id,
-      name: 'Test Grant Program',
-      description: 'A test grant program for development',
-      fundingAmount: 10000,
-      requirements: {
-        minExperience: '6 months',
-        requiredSkills: ['JavaScript', 'Testing'],
-      },
-      applicationTemplate: {
-        sections: [
-          { title: 'Project Overview', required: true, maxLength: 500 },
-          { title: 'Technical Plan', required: true, maxLength: 1000 },
-        ],
-      },
-      milestoneStructure: {
-        defaultMilestones: [
-          { title: 'Setup & Planning', percentage: 30, timeframe: '2 weeks' },
-          { title: 'Development', percentage: 50, timeframe: '4 weeks' },
-          {
-            title: 'Testing & Deployment',
-            percentage: 20,
-            timeframe: '2 weeks',
-          },
-        ],
-      },
-    })
+    // NOTE: Budget configuration is now part of the committee itself
+    // The testCommittee already has budget fields set in createGroup
 
     console.log('✅ Quick setup completed successfully!')
     console.log('\nTest accounts created:')

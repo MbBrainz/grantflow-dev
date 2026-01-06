@@ -24,7 +24,7 @@ const TEST_SIGNATORIES = [
   '16UkJk6ZuA6CdmT9YiyjnpNpgRUVh9fMGtkfmi8HCFSe6aqM', // Multisig controlling the curator
 ]
 
-async function main() {
+function main() {
   console.log('='.repeat(60))
   console.log('Multisig Address Computation Test')
   console.log('='.repeat(60))
@@ -61,7 +61,7 @@ async function main() {
   const testWallet = TEST_SIGNATORIES[0]
   const isSig = isSignatory(testWallet, TEST_SIGNATORIES)
   const sigIndex = getSignatoryIndex(testWallet, TEST_SIGNATORIES)
-  console.log('Test wallet:', testWallet.slice(0, 12) + '...')
+  console.log('Test wallet:', `${testWallet.slice(0, 12)}...`)
   console.log('Is signatory:', isSig)
   console.log('Signatory index:', sigIndex)
   console.log()
@@ -98,4 +98,4 @@ async function main() {
   console.log('for the known multisig address:', KNOWN_MULTISIG)
 }
 
-main().catch(console.error)
+main()
