@@ -3,6 +3,7 @@ import {
   polkadot,
   polkadotAssetHub,
   paseoAssetHub,
+  paseo,
 } from '@luno-kit/react/chains'
 import {
   polkadotjsConnector,
@@ -15,7 +16,7 @@ import type { Connector } from '@luno-kit/react/types'
 
 export const config = createConfig({
   appName: 'GrantFlow.Dev',
-  chains: [polkadot, polkadotAssetHub, paseoAssetHub],
+  chains: [polkadot, polkadotAssetHub, paseo, paseoAssetHub],
   connectors: [
     polkadotjsConnector(),
     talismanConnector(),

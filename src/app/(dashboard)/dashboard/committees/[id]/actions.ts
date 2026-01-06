@@ -438,7 +438,7 @@ const UpdateMultisigConfigSchema = z.object({
   committeeId: z.coerce.number(),
   multisigAddress: z.string().min(1, 'Multisig address is required'),
   signatories: z.array(z.string()).min(2, 'At least 2 signatories required'),
-  threshold: z.number().int().min(2, 'Threshold must be at least 2'),
+  threshold: z.number().int().min(1, 'Threshold must be at least 1'),
   approvalWorkflow: z.enum(['merged', 'separated']),
   requireAllSignatories: z.boolean(),
   votingTimeoutBlocks: z.number().int().positive(),

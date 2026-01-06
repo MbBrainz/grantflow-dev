@@ -39,6 +39,7 @@ import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
 import { getParentBounty } from '@/lib/polkadot/child-bounty'
 import { useToast } from '@/lib/hooks/use-toast'
 import { chains } from '@/lib/polkadot/chains'
+import { MultisigDiscoveryModal } from './multisig-discovery-modal'
 
 interface MultisigConfigFormProps {
   initialConfig?: MultisigConfig
@@ -76,7 +77,8 @@ export function MultisigConfigForm({
   const { api: client } = useApi()
   const { switchChainAsync, currentChainId } = useSwitchChain()
 
-  // Get the target chain for the selected network
+  // Get the target chain (Asset Hub) for the selected network
+  // All treasury/bounty operations happen on Asset Hub
   const targetChain = chains[config.network]
   const isCorrectChain = currentChainId === targetChain?.genesisHash
 
@@ -91,11 +93,16 @@ export function MultisigConfigForm({
       return
     }
 
+    console.debug('[handleFetchCurator]: Fetching curator', {
+      config,
+      targetChain: targetChain?.name,
+    })
+
     setIsFetchingCurator(true)
     setBountyStatus(null)
 
     try {
-      // Switch to the correct chain if needed
+      // Switch to the correct Asset Hub chain if needed
       if (!isCorrectChain && targetChain) {
         toast({
           title: 'Switching Network',
@@ -116,12 +123,18 @@ export function MultisigConfigForm({
         return
       }
 
+      const proxies = await client.query.proxy.proxies(
+        config.curatorProxyAddress
+      )
+
+      console.debug('[handleFetchCurator]: Proxies', { proxies })
+
       const bounty = await getParentBounty(client, config.parentBountyId)
 
       if (!bounty) {
         toast({
           title: 'Bounty Not Found',
-          description: `No bounty found with ID ${config.parentBountyId} on ${config.network}.`,
+          description: `No bounty found with ID ${config.parentBountyId} on ${targetChain?.name ?? config.network}. Make sure the bounty exists and is funded.`,
           variant: 'destructive',
         })
         setBountyStatus('not_found')
@@ -273,7 +286,7 @@ export function MultisigConfigForm({
 
       {/* Network Selection */}
       <div className="space-y-2">
-        <Label>Network</Label>
+        <Label>Network (Asset Hub)</Label>
         <RadioGroup
           value={config.network}
           onValueChange={(value: 'polkadot' | 'kusama' | 'paseo') =>
@@ -282,17 +295,22 @@ export function MultisigConfigForm({
         >
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="paseo" id="paseo" />
-            <Label htmlFor="paseo">Paseo Testnet (Development)</Label>
+            <Label htmlFor="paseo">Paseo Asset Hub (Testnet)</Label>
           </div>
           <div className="flex items-center space-x-2">
             <RadioGroupItem value="polkadot" id="polkadot" />
-            <Label htmlFor="polkadot">Polkadot (Mainnet)</Label>
+            <Label htmlFor="polkadot">Polkadot Asset Hub (Mainnet)</Label>
           </div>
           <div className="flex items-center space-x-2">
-            <RadioGroupItem value="kusama" id="kusama" />
-            <Label htmlFor="kusama">Kusama (Canary Network)</Label>
+            <RadioGroupItem value="kusama" id="kusama" disabled />
+            <Label htmlFor="kusama" className="text-muted-foreground">
+              Kusama Asset Hub (Coming Soon)
+            </Label>
           </div>
         </RadioGroup>
+        <p className="text-muted-foreground text-xs">
+          All bounty and treasury operations use Asset Hub parachains
+        </p>
       </div>
 
       {/* Signatories */}
@@ -386,13 +404,21 @@ export function MultisigConfigForm({
       {/* Child Bounty Configuration */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">
-            Child Bounty Configuration
-          </CardTitle>
-          <CardDescription>
-            Settings for Polkadot child bounty payouts. Payouts are processed
-            through the childBounties pallet for proper on-chain indexing.
-          </CardDescription>
+          <div className="flex items-start justify-between">
+            <div>
+              <CardTitle className="text-base">
+                Child Bounty Configuration
+              </CardTitle>
+              <CardDescription>
+                Settings for Polkadot child bounty payouts. Payouts are processed
+                through the childBounties pallet for proper on-chain indexing.
+              </CardDescription>
+            </div>
+            <MultisigDiscoveryModal
+              network={config.network === 'kusama' ? 'polkadot' : config.network}
+              initialBountyId={config.parentBountyId > 0 ? config.parentBountyId : undefined}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Parent Bounty ID */}
@@ -457,30 +483,67 @@ export function MultisigConfigForm({
 
           {/* Curator Proxy Address */}
           <div className="space-y-2">
-            <Label htmlFor="curatorProxyAddress">Curator Proxy Address</Label>
-            <Input
-              id="curatorProxyAddress"
-              placeholder="Enter curator proxy address or fetch from chain"
-              value={config.curatorProxyAddress}
-              onChange={e =>
-                setConfig({ ...config, curatorProxyAddress: e.target.value })
-              }
-            />
+            <Label htmlFor="curatorProxyAddress">Curator Address</Label>
+            <div className="flex gap-2">
+              <Input
+                id="curatorProxyAddress"
+                placeholder="Enter curator address, fetch from chain, or use multisig"
+                value={config.curatorProxyAddress}
+                onChange={e =>
+                  setConfig({ ...config, curatorProxyAddress: e.target.value })
+                }
+              />
+              {config.multisigAddress && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setConfig({
+                      ...config,
+                      curatorProxyAddress: config.multisigAddress,
+                    })
+                    toast({
+                      title: 'Curator set to multisig',
+                      description:
+                        'The multisig address will be used as the curator. This is valid and will work with the current implementation.',
+                    })
+                  }}
+                  disabled={
+                    config.curatorProxyAddress === config.multisigAddress
+                  }
+                  className="shrink-0"
+                >
+                  Use Multisig
+                </Button>
+              )}
+            </div>
             <p className="text-muted-foreground text-xs">
-              The curator account for the parent bounty. This is automatically
-              populated when you fetch from the chain, but can be updated
-              manually if needed.
+              The curator account for the parent bounty. You can use the
+              multisig address directly as the curator, or use a separate proxy
+              account controlled by the multisig. Click &quot;Use Multisig&quot;
+              to set it to your multisig address, or &quot;Fetch Curator&quot;
+              above to load from the chain.
             </p>
+            {config.curatorProxyAddress === config.multisigAddress &&
+              config.multisigAddress && (
+                <div className="flex items-center gap-2 rounded-md bg-blue-50 px-3 py-2 text-xs text-blue-700 dark:bg-blue-950 dark:text-blue-300">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>
+                    Using multisig as curator. The multisig will approve and
+                    execute curator actions as part of the child bounty bundle.
+                  </span>
+                </div>
+              )}
           </div>
 
           {/* Info box about bounty setup */}
           <div className="bg-muted/50 rounded-lg border p-3">
             <p className="text-muted-foreground text-xs">
               <strong>Note:</strong> Before using child bounty payouts, ensure
-              your parent bounty is set up on-chain with an active curator. The
-              curator address is fetched from the chain and stored locally.
-              Click &quot;Fetch Curator&quot; to update it if the on-chain
-              curator changes.
+              your parent bounty is set up on-chain with an active curator. You
+              can use the multisig address directly as the curator (click
+              &quot;Use Multisig&quot;), or use a separate proxy account. The
+              curator address can be fetched from the chain or set manually.
             </p>
           </div>
         </CardContent>

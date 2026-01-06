@@ -24,15 +24,22 @@ const client = postgres(process.env.DATABASE_URL!)
 const db = drizzle(client)
 
 // Multisig configuration from environment or defaults
+// NOTE: These are test values for development. In production, the bounty-first
+// setup flow will discover the actual curator and multisig from the chain.
+// Paseo Bounty #31 was used as reference for realistic structure.
+const PARENT_BOUNTY_ID = Number(process.env.PARENT_BOUNTY_ID ?? '31') // Paseo bounty #31
+const CURATOR_PROXY_ADDRESS =
+  process.env.CURATOR_PROXY_ADDRESS ??
+  '15jgfpfSvcEF7FXd77LZ8eBh4MVeSfK5DbWJ6mQsonwvi7ZY' // Curator (Pure Proxy) for bounty #31
 const MULTISIG_ADDRESS =
   process.env.MULTISIG_ADDRESS ??
-  '5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty' // Default Polkadot address
+  '16UkJk6ZuA6CdmT9YiyjnpNpgRUVh9fMGtkfmi8HCFSe6aqM' // Multisig controlling the curator
 const SIGNATORY_1_ADDRESS =
   process.env.SIGNATORY_1_ADDRESS ??
-  '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY' // Default signatory 1
+  '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY' // Test signatory 1 (dev purposes)
 const SIGNATORY_2_ADDRESS =
   process.env.SIGNATORY_2_ADDRESS ??
-  '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y' // Default signatory 2
+  '5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y' // Test signatory 2 (dev purposes)
 
 async function seed() {
   console.log('🌱 Starting comprehensive database seeding...')
@@ -187,16 +194,16 @@ async function seed() {
           'final_approval',
         ],
         multisig: {
+          network: 'paseo',
+          parentBountyId: PARENT_BOUNTY_ID,
+          curatorProxyAddress: CURATOR_PROXY_ADDRESS,
           multisigAddress: MULTISIG_ADDRESS,
           signatories: [SIGNATORY_1_ADDRESS, SIGNATORY_2_ADDRESS],
-          threshold: 2,
+          threshold: 1, // 1-of-2 multisig (matches Paseo bounty #31)
           approvalWorkflow: 'merged',
-          requireAllSignatories: true,
+          requireAllSignatories: false, // Only threshold required, not all signatories
           votingTimeoutBlocks: 50400, // ~7 days on Polkadot (6s blocks)
           automaticExecution: true,
-          network: 'paseo',
-          parentBountyId: 0, // Default parent bounty ID
-          curatorProxyAddress: MULTISIG_ADDRESS, // Use multisig as curator for seed data
         },
       },
     })

@@ -95,6 +95,7 @@ export interface ParentBountyInfo {
     type: string
     curator?: AccountId32
   }
+  description?: string
 }
 
 /**
@@ -113,9 +114,14 @@ export async function getParentBounty(
 ): Promise<ParentBountyInfo | null> {
   console.log('[getParentBounty]: Querying parent bounty', { bountyId })
 
+
+
   try {
     // Query the bounties storage
     const bounty = await client.query.bounties.bounties(bountyId)
+    const bountyDescriptions = await client.query.bounties.bountyDescriptions(bountyId)
+    // description is hex encoded starting with 0x
+    const description = Buffer.from(bountyDescriptions?.slice(2) ?? '', 'hex').toString('utf-8')
 
     if (!bounty) {
       console.log('[getParentBounty]: Bounty not found', { bountyId })
@@ -134,6 +140,8 @@ export async function getParentBounty(
       curator = status.value.curator
     } else if (status?.type === 'PendingPayout' && status?.value?.curator) {
       curator = status.value.curator
+    } else if (status?.type === 'ApprovedWithCurator' && status?.value?.curator) {
+      curator = status.value.curator
     }
 
     console.log('[getParentBounty]: Found bounty', {
@@ -141,6 +149,7 @@ export async function getParentBounty(
       statusType: status?.type,
       curator,
       value: bounty.value?.toString(),
+      description,
     })
 
     return {
@@ -152,6 +161,7 @@ export async function getParentBounty(
         type: status?.type ?? 'Unknown',
         curator,
       },
+      description,
     }
   } catch (error) {
     console.error('[getParentBounty]: Failed to query bounty', error)

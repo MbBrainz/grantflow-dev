@@ -349,9 +349,11 @@ Location: `src/lib/db/writes/milestone-approvals.ts`
    - Select network (Polkadot/Kusama/Paseo)
    - **Child Bounty Configuration:**
      - Enter the Parent Bounty ID
-     - Click "Fetch Curator" to auto-load curator address from chain
-     - Or manually enter the curator proxy address
-   - Save configuration
+     - Set the curator address:
+       - Click "Use Multisig" to use the multisig address directly as curator (recommended for simplicity)
+       - Or click "Fetch Curator" to auto-load curator address from chain
+       - Or manually enter a separate proxy account address controlled by the multisig
+     - Save configuration
 
 4. **Fund Multisig Wallet**
    - Transfer funds to the multisig address to cover grant payments

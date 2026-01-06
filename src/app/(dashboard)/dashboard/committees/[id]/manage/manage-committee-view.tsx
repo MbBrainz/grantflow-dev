@@ -33,7 +33,7 @@ import {
 import { useToast } from '@/lib/hooks/use-toast'
 import { AsyncButton } from '@/components/ui/async-button'
 import { GrantProgramCard } from '@/components/committee/grant-program-card'
-import { MultisigConfigForm } from '@/components/committee/multisig-config-form'
+import { BountyLinkSetup } from '@/components/committee/bounty-link-setup'
 import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
 
 interface ProgramFinancials {
@@ -718,12 +718,12 @@ export function ManageCommitteeView({
         </div>
       </Card>
 
-      {/* Multisig Configuration */}
+      {/* Bounty Link & Multisig Configuration */}
       <Card className="p-6">
         <div className="mb-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-gray-600" />
-            <h2 className="text-xl font-semibold">Multisig Account</h2>
+            <h2 className="text-xl font-semibold">Bounty Link & Multisig</h2>
             {committee.settings?.multisig && (
               <Badge variant="default">Configured</Badge>
             )}
@@ -737,7 +737,7 @@ export function ManageCommitteeView({
 
         {isEditingMultisig || !committee.settings?.multisig ? (
           <div>
-            <MultisigConfigForm
+            <BountyLinkSetup
               initialConfig={committee.settings?.multisig}
               onSave={handleSaveMultisigConfig}
               isLoading={isSavingMultisig}
@@ -756,19 +756,30 @@ export function ManageCommitteeView({
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <p className="text-muted-foreground text-sm">
-                  Multisig Address
+                <p className="text-muted-foreground text-sm">Bounty ID</p>
+                <p className="text-sm font-medium">
+                  #{committee.settings.multisig.parentBountyId}
                 </p>
-                <code className="font-mono text-sm">
-                  {committee.settings.multisig.multisigAddress.slice(0, 12)}...
-                  {committee.settings.multisig.multisigAddress.slice(-8)}
-                </code>
               </div>
               <div>
                 <p className="text-muted-foreground text-sm">Network</p>
                 <p className="text-sm font-medium capitalize">
                   {committee.settings.multisig.network}
                 </p>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">Curator (Proxy)</p>
+                <code className="font-mono text-xs">
+                  {committee.settings.multisig.curatorProxyAddress?.slice(0, 10)}...
+                  {committee.settings.multisig.curatorProxyAddress?.slice(-6)}
+                </code>
+              </div>
+              <div>
+                <p className="text-muted-foreground text-sm">Multisig Address</p>
+                <code className="font-mono text-xs">
+                  {committee.settings.multisig.multisigAddress.slice(0, 10)}...
+                  {committee.settings.multisig.multisigAddress.slice(-6)}
+                </code>
               </div>
               <div>
                 <p className="text-muted-foreground text-sm">Threshold</p>
