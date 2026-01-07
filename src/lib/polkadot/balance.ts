@@ -151,29 +151,52 @@ export async function checkTransactionFeeBalance(
 /**
  * Check if a multisig account has sufficient balance for a payout
  *
+ * @deprecated Use checkMultisigTransactionFeeBalance instead. Payout funds come from
+ * the parent bounty, not from the multisig account.
+ *
  * @param client - The LegacyClient instance from useApi()
  * @param multisigAddress - The multisig account address
- * @param payoutAmount - The amount to be paid out
+ * @param payoutAmount - The amount to be paid out (ignored - kept for backward compatibility)
  * @param network - The network to check on (for logging only)
  * @returns Balance check result
  */
 export async function checkMultisigPayoutBalance(
   client: LegacyClient,
   multisigAddress: string,
-  payoutAmount: bigint,
+  _payoutAmount: bigint, // Ignored - funds come from parent bounty, not multisig
+  network: NetworkType = 'paseo'
+): Promise<BalanceCheckResult> {
+  // Multisig only needs transaction fees - payout funds come from parent bounty
+  return checkMultisigTransactionFeeBalance(client, multisigAddress, network)
+}
+
+/**
+ * Check if a multisig account has sufficient balance for transaction fees
+ *
+ * IMPORTANT: For child bounty payouts, the payout funds come from the parent bounty,
+ * NOT from the multisig account. The multisig only needs enough balance to pay
+ * transaction fees for signing the multisig calls.
+ *
+ * @param client - The LegacyClient instance from useApi()
+ * @param multisigAddress - The multisig account address
+ * @param network - The network to check on (for logging only)
+ * @returns Balance check result
+ */
+export async function checkMultisigTransactionFeeBalance(
+  client: LegacyClient,
+  multisigAddress: string,
   network: NetworkType = 'paseo'
 ): Promise<BalanceCheckResult> {
   try {
     const balance = await getAccountBalance(client, multisigAddress, network)
 
-    // Need enough for payout + transaction fees
-    const required = payoutAmount + MIN_TRANSACTION_FEE
+    // Multisig only needs transaction fees - payout funds come from parent bounty
+    const required = MIN_TRANSACTION_FEE
     const hasBalance = balance.transferable >= required
     const shortfall = hasBalance ? BigInt(0) : required - balance.transferable
 
-    console.log('[checkMultisigPayoutBalance]: Balance check', {
+    console.log('[checkMultisigTransactionFeeBalance]: Balance check', {
       multisigAddress,
-      payoutAmount: payoutAmount.toString(),
       required: required.toString(),
       transferable: balance.transferable.toString(),
       hasBalance,
@@ -196,7 +219,115 @@ export async function checkMultisigPayoutBalance(
         total: BigInt(0),
         transferable: BigInt(0),
       },
-      required: payoutAmount + MIN_TRANSACTION_FEE,
+      required: MIN_TRANSACTION_FEE,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }
+  }
+}
+
+/**
+ * Check if a parent bounty has sufficient remaining funds for a child bounty payout
+ *
+ * The parent bounty is funded from the treasury and holds the total allocation.
+ * Child bounties are created by taking funds from the parent bounty.
+ *
+ * @param client - The LegacyClient instance from useApi()
+ * @param parentBountyId - The parent bounty ID
+ * @param payoutAmount - The amount needed for the child bounty
+ * @param network - The network to check on (for logging only)
+ * @returns Balance check result with parent bounty info
+ */
+export async function checkParentBountyBalance(
+  client: LegacyClient,
+  parentBountyId: number,
+  payoutAmount: bigint,
+  network: NetworkType = 'paseo'
+): Promise<BalanceCheckResult & { parentBountyValue?: bigint }> {
+  try {
+    console.log('[checkParentBountyBalance]: Checking parent bounty', {
+      parentBountyId,
+      payoutAmount: payoutAmount.toString(),
+      network,
+    })
+
+    // Query the parent bounty
+    const bounty = await client.query.bounties.bounties(parentBountyId)
+
+    if (!bounty) {
+      return {
+        hasBalance: false,
+        balance: {
+          free: BigInt(0),
+          reserved: BigInt(0),
+          frozen: BigInt(0),
+          total: BigInt(0),
+          transferable: BigInt(0),
+        },
+        required: payoutAmount,
+        error: `Parent bounty ${parentBountyId} not found`,
+      }
+    }
+
+    const bountyValue = BigInt(bounty.value ?? 0)
+
+    // Check if bounty is in Active status (has curator assigned)
+    const isActive = bounty.status?.type === 'Active'
+
+    if (!isActive) {
+      return {
+        hasBalance: false,
+        balance: {
+          free: bountyValue,
+          reserved: BigInt(0),
+          frozen: BigInt(0),
+          total: bountyValue,
+          transferable: BigInt(0),
+        },
+        required: payoutAmount,
+        parentBountyValue: bountyValue,
+        error: `Parent bounty ${parentBountyId} is not active (status: ${bounty.status?.type ?? 'Unknown'})`,
+      }
+    }
+
+    // Note: The actual remaining balance would require summing all child bounties
+    // For now, we check if the bounty value is >= payout amount
+    // A more accurate check would query all child bounties and sum their values
+    const hasBalance = bountyValue >= payoutAmount
+    const shortfall = hasBalance ? BigInt(0) : payoutAmount - bountyValue
+
+    console.log('[checkParentBountyBalance]: Balance check result', {
+      parentBountyId,
+      bountyValue: bountyValue.toString(),
+      payoutAmount: payoutAmount.toString(),
+      hasBalance,
+      shortfall: shortfall.toString(),
+    })
+
+    return {
+      hasBalance,
+      balance: {
+        free: bountyValue,
+        reserved: BigInt(0),
+        frozen: BigInt(0),
+        total: bountyValue,
+        transferable: bountyValue,
+      },
+      required: payoutAmount,
+      shortfall,
+      parentBountyValue: bountyValue,
+    }
+  } catch (error) {
+    console.error('[checkParentBountyBalance]: Failed to check balance', error)
+    return {
+      hasBalance: false,
+      balance: {
+        free: BigInt(0),
+        reserved: BigInt(0),
+        frozen: BigInt(0),
+        total: BigInt(0),
+        transferable: BigInt(0),
+      },
+      required: payoutAmount,
       error: error instanceof Error ? error.message : 'Unknown error',
     }
   }
@@ -279,8 +410,12 @@ export function createInsufficientBalanceError(
   if (accountType === 'initiator' && faucetUrl) {
     message += `Get testnet tokens from: ${faucetUrl}\n\n`
   } else if (accountType === 'multisig') {
-    message += `The multisig account needs to be funded before payouts can be made.\n`
-    message += `Please transfer funds to the multisig address.\n\n`
+    // For child bounty payouts, multisig only needs transaction fees
+    message += `The multisig account needs testnet tokens for transaction fees.\n`
+    message += `Note: Payout funds come from the parent bounty, not the multisig.\n`
+    if (faucetUrl) {
+      message += `Get testnet tokens from: ${faucetUrl}\n\n`
+    }
   }
 
   message += `Network: ${network.toUpperCase()}`

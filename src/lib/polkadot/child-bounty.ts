@@ -18,6 +18,20 @@ import type { LegacyClient } from 'dedot'
 import type { AccountId32 } from 'dedot/codecs'
 
 /**
+ * Price info for on-chain transparency
+ */
+export interface PriceInfo {
+  /** Price in USD (e.g., "1.0000") */
+  priceUsd: string
+  /** ISO date string when price was fetched */
+  priceDate: string
+  /** Source of the price data (e.g., "mock", "coingecko") */
+  priceSource: string
+  /** Full remark string for on-chain inclusion */
+  remarkString: string
+}
+
+/**
  * Parameters for creating a child bounty bundle
  */
 export interface ChildBountyParams {
@@ -27,6 +41,8 @@ export interface ChildBountyParams {
   curatorAddress: string // The curator (usually a proxy controlled by the multisig)
   curatorFee: bigint // Fee for the curator (usually 0 for self-managed)
   description: string // On-chain description (e.g., "Milestone 1: Project XYZ")
+  /** Optional price info for on-chain transparency remark */
+  priceInfo?: PriceInfo
 }
 
 /**
@@ -114,14 +130,16 @@ export async function getParentBounty(
 ): Promise<ParentBountyInfo | null> {
   console.log('[getParentBounty]: Querying parent bounty', { bountyId })
 
-
-
   try {
     // Query the bounties storage
     const bounty = await client.query.bounties.bounties(bountyId)
-    const bountyDescriptions = await client.query.bounties.bountyDescriptions(bountyId)
+    const bountyDescriptions =
+      await client.query.bounties.bountyDescriptions(bountyId)
     // description is hex encoded starting with 0x
-    const description = Buffer.from(bountyDescriptions?.slice(2) ?? '', 'hex').toString('utf-8')
+    const description = Buffer.from(
+      bountyDescriptions?.slice(2) ?? '',
+      'hex'
+    ).toString('utf-8')
 
     if (!bounty) {
       console.log('[getParentBounty]: Bounty not found', { bountyId })
@@ -140,7 +158,10 @@ export async function getParentBounty(
       curator = status.value.curator
     } else if (status?.type === 'PendingPayout' && status?.value?.curator) {
       curator = status.value.curator
-    } else if (status?.type === 'ApprovedWithCurator' && status?.value?.curator) {
+    } else if (
+      status?.type === 'ApprovedWithCurator' &&
+      status?.value?.curator
+    ) {
       curator = status.value.curator
     }
 
@@ -299,14 +320,33 @@ export async function createChildBountyBundle(
     predictedChildBountyId
   )
 
-  // Bundle all calls atomically
-  const batchCall = client.tx.utility.batchAll([
+  // 6. (Optional) Price info remark for on-chain transparency
+  // This adds a remark with the price conversion details used for this payout
+  // Using eslint-disable for the any type as dedot's generic types require this for mixed call types
+  /* eslint-disable @typescript-eslint/no-explicit-any */
+  const calls: any[] = [
     addChildBountyCall.call,
     proposeCuratorCall.call,
     acceptCuratorCall.call,
     awardChildBountyCall.call,
     claimChildBountyCall.call,
-  ])
+  ]
+
+  // Add price info remark if provided
+  if (params.priceInfo?.remarkString) {
+    const remarkBytes = new TextEncoder().encode(params.priceInfo.remarkString)
+    const priceRemarkCall = client.tx.system.remark(remarkBytes)
+    calls.push(priceRemarkCall.call)
+
+    console.log('[createChildBountyBundle]: Adding price info remark', {
+      remarkString: params.priceInfo.remarkString,
+    })
+  }
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
+  // Bundle all calls atomically
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+  const batchCall = client.tx.utility.batchAll(calls)
 
   console.log('[createChildBountyBundle]: Bundle created', {
     predictedChildBountyId,
@@ -347,6 +387,8 @@ export async function createPayoutCall(
     parentBountyId: number
     curatorAddress: string
     curatorFee?: bigint
+    /** Optional price info for on-chain transparency remark */
+    priceInfo?: PriceInfo
   }
 ): Promise<{
   callHex: string
@@ -358,6 +400,7 @@ export async function createPayoutCall(
     milestoneId: params.milestoneId,
     amount: params.amount.toString(),
     parentBountyId: params.parentBountyId,
+    hasPriceInfo: !!params.priceInfo,
   })
 
   // Create child bounty bundle
@@ -368,6 +411,7 @@ export async function createPayoutCall(
     curatorAddress: params.curatorAddress,
     curatorFee: params.curatorFee ?? BigInt(0),
     description: `Milestone ${params.milestoneId}: ${params.milestoneTitle}`,
+    priceInfo: params.priceInfo,
   })
 
   // Create the batch call for the full bundle

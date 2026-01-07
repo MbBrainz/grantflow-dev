@@ -63,6 +63,12 @@ export const milestoneApprovals = pgTable('milestone_approvals', {
   // Child Bounty tracking fields (used for on-chain indexing by Subscan/Subsquare)
   childBountyId: integer('child_bounty_id'), // On-chain child bounty ID (set after execution)
   parentBountyId: integer('parent_bounty_id').notNull(), // Parent bounty ID from committee config
+  // Price conversion info (for transparency - recorded at initial approval time)
+  priceUsd: varchar('price_usd', { length: 32 }), // Price per token in USD (e.g., "7.5432")
+  priceDate: timestamp('price_date'), // When the price was fetched
+  priceSource: varchar('price_source', { length: 32 }), // Source: 'mock', 'coingecko', 'chainlink', etc.
+  tokenSymbol: varchar('token_symbol', { length: 10 }), // Token symbol (e.g., 'PAS', 'DOT')
+  tokenAmount: varchar('token_amount', { length: 64 }), // Amount in tokens (BigInt as string)
 })
 
 export const milestoneApprovalsRelations = relations(

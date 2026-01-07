@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
@@ -15,7 +15,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Settings, Users, Plus, Trash2, Shield, DollarSign } from 'lucide-react'
+import {
+  Settings,
+  Users,
+  Plus,
+  Trash2,
+  Shield,
+  DollarSign,
+  Loader2,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import type { CommitteeWithDetails } from '@/lib/db/queries/committees'
 import Image from 'next/image'
@@ -27,11 +35,13 @@ import {
   searchUsersAction,
   updateCommitteeBudget,
   updateMultisigConfig,
+  linkSignatoryToUser,
 } from '../actions'
 import { useToast } from '@/lib/hooks/use-toast'
 import { AsyncButton } from '@/components/ui/async-button'
 import { BountyLinkSetup } from '@/components/committee/bounty-link-setup'
 import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
+import { useAccount } from '@luno-kit/react'
 
 interface CommitteeFinancials {
   totalBudget: number
@@ -52,6 +62,8 @@ export function ManageCommitteeView({
 }: ManageCommitteeViewProps) {
   const router = useRouter()
   const { toast } = useToast()
+  const { address: connectedWalletAddress } = useAccount()
+  const [isClaimingSignatory, startClaimTransition] = useTransition()
 
   // Committee Info State
   const [isEditingInfo, setIsEditingInfo] = useState(false)
@@ -750,6 +762,36 @@ export function ManageCommitteeView({
                       ? committee.members?.find(m => m.user.id === linkedUserId)
                       : undefined
 
+                    // Check if current user can claim this signatory
+                    const canClaim =
+                      !linkedUserId &&
+                      connectedWalletAddress &&
+                      connectedWalletAddress === address
+
+                    const handleClaimSignatory = () => {
+                      startClaimTransition(async () => {
+                        const result = await linkSignatoryToUser({
+                          committeeId: committee.id,
+                          address,
+                        })
+
+                        if ('error' in result && result.error) {
+                          toast({
+                            title: 'Error',
+                            description: result.error,
+                            variant: 'destructive',
+                          })
+                        } else {
+                          toast({
+                            title: 'Signatory claimed',
+                            description:
+                              'This signatory is now linked to your account.',
+                          })
+                          router.refresh()
+                        }
+                      })
+                    }
+
                     return (
                       <div
                         key={address}
@@ -765,6 +807,21 @@ export function ManageCommitteeView({
                           <Badge variant="secondary">
                             {linkedMember.user.name}
                           </Badge>
+                        ) : canClaim ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleClaimSignatory}
+                            disabled={isClaimingSignatory}
+                            className="h-7 gap-1 text-xs"
+                          >
+                            {isClaimingSignatory ? (
+                              <Loader2 className="h-3 w-3 animate-spin" />
+                            ) : (
+                              <Shield className="h-3 w-3" />
+                            )}
+                            Claim
+                          </Button>
                         ) : (
                           <span className="text-muted-foreground text-xs">
                             Not linked

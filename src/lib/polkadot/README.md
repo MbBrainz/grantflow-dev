@@ -210,7 +210,7 @@ interface MultisigConfig {
   
   // Child Bounty Configuration (required)
   parentBountyId: number       // On-chain parent bounty ID for child bounty payouts
-  curatorProxyAddress: string  // Curator account (can be the multisig address itself or a proxy)
+  curatorProxyAddress: string  // Curator account that manages child bounties
 }
 ```
 
@@ -228,10 +228,7 @@ All 5 calls are bundled atomically using `utility.batchAll`, ensuring all-or-not
 
 **Configuration:**
 - `parentBountyId`: Set this to the on-chain bounty ID your committee manages
-- `curatorProxyAddress`: The curator account for the parent bounty. This can be:
-  - The multisig address itself (simplest option - the multisig acts as its own curator)
-  - A separate proxy account controlled by the multisig (more complex but allows separation of concerns)
-  - Can be fetched automatically from the chain in the UI using "Fetch Curator" button
+- `curatorProxyAddress`: The curator account for the parent bounty (can be fetched automatically from the chain in the UI)
 
 ## UI Components
 

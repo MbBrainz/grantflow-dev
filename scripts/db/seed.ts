@@ -209,11 +209,13 @@ async function seed() {
         },
       },
       // Budget configuration (committee = grant program)
-      fundingAmount: 100000,
-      minGrantSize: 10000,
-      maxGrantSize: 100000,
-      minMilestoneSize: 2500,
-      maxMilestoneSize: 30000,
+      // NOTE: Amounts are in USD but scaled down for testnet (1 USD = 1 PAS token)
+      // Real production values would be 1000x larger
+      fundingAmount: 100,
+      minGrantSize: 10,
+      maxGrantSize: 100,
+      minMilestoneSize: 3,
+      maxMilestoneSize: 30,
       requirements: JSON.stringify({
         minExperience: '2 years',
         requiredSkills: ['Rust', 'Go', 'TypeScript', 'System Design'],
@@ -283,12 +285,12 @@ async function seed() {
         requiredApprovalPercentage: 75,
         stages: ['academic_review', 'community_impact', 'final_approval'],
       },
-      // Budget configuration
-      fundingAmount: 75000,
-      minGrantSize: 5000,
-      maxGrantSize: 75000,
-      minMilestoneSize: 2500,
-      maxMilestoneSize: 25000,
+      // Budget configuration (scaled for testnet: 1 USD = 1 PAS)
+      fundingAmount: 75,
+      minGrantSize: 5,
+      maxGrantSize: 75,
+      minMilestoneSize: 3,
+      maxMilestoneSize: 25,
       requirements: JSON.stringify({
         minExperience: '1 year',
         requiredSkills: ['Research', 'Writing', 'Data Analysis'],
@@ -325,11 +327,12 @@ async function seed() {
         stages: ['financial_review', 'risk_assessment', 'final_approval'],
       },
       // Budget configuration
-      fundingAmount: 150000,
-      minGrantSize: 25000,
-      maxGrantSize: 150000,
-      minMilestoneSize: 5000,
-      maxMilestoneSize: 50000,
+      // Scaled for testnet: 1 USD = 1 PAS
+      fundingAmount: 150,
+      minGrantSize: 25,
+      maxGrantSize: 150,
+      minMilestoneSize: 5,
+      maxMilestoneSize: 50,
       requirements: JSON.stringify({
         minExperience: '2 years',
         requiredSkills: [
@@ -371,11 +374,12 @@ async function seed() {
         stages: ['concept_review', 'technical_review', 'market_assessment'],
       },
       // Budget configuration
-      fundingAmount: 80000,
-      minGrantSize: 10000,
-      maxGrantSize: 80000,
-      minMilestoneSize: 5000,
-      maxMilestoneSize: 25000,
+      // Scaled for testnet: 1 USD = 1 PAS
+      fundingAmount: 80,
+      minGrantSize: 10,
+      maxGrantSize: 80,
+      minMilestoneSize: 5,
+      maxMilestoneSize: 25,
       requirements: JSON.stringify({
         minExperience: '1 year',
         requiredSkills: [
@@ -759,7 +763,7 @@ async function seed() {
       githubRepoUrl: 'https://github.com/MbBrainz/grantflow-dev',
       walletAddress: teamMember1.walletAddress,
       status: 'approved',
-      totalAmount: 100000,
+      totalAmount: 100, // Scaled for testnet: 1 USD = 1 PAS
       appliedAt: new Date('2024-01-15'),
       createdAt: new Date('2024-01-15'),
       updatedAt: new Date('2024-01-20'),
@@ -789,7 +793,7 @@ async function seed() {
       githubRepoUrl: 'https://github.com/l2-research-group/analysis',
       walletAddress: teamMember3.walletAddress,
       status: 'in-review',
-      totalAmount: 75000,
+      totalAmount: 75, // Scaled for testnet
       appliedAt: new Date('2024-01-25'),
       createdAt: new Date('2024-01-25'),
       updatedAt: new Date('2024-01-30'),
@@ -819,7 +823,7 @@ async function seed() {
       githubRepoUrl: 'https://github.com/yieldopt-protocol/core',
       walletAddress: teamMember4.walletAddress,
       status: 'pending',
-      totalAmount: 150000,
+      totalAmount: 150, // Scaled for testnet
       appliedAt: new Date('2024-02-05'),
       createdAt: new Date('2024-02-05'),
       updatedAt: new Date('2024-02-05'),
@@ -843,7 +847,7 @@ async function seed() {
       githubRepoUrl: 'https://github.com/nft-gaming-studio/trading-cards',
       walletAddress: teamMember5.walletAddress,
       status: 'rejected',
-      totalAmount: 80000,
+      totalAmount: 80, // Scaled for testnet
       appliedAt: new Date('2024-01-10'),
       createdAt: new Date('2024-01-10'),
       updatedAt: new Date('2024-01-22'),
@@ -872,7 +876,7 @@ async function seed() {
       githubRepoUrl: 'https://github.com/blockchain-education/course',
       walletAddress: teamMember2.walletAddress,
       status: 'pending',
-      totalAmount: 25000,
+      totalAmount: 25, // Scaled for testnet
       appliedAt: new Date('2024-02-01'),
       createdAt: new Date('2024-02-01'),
       updatedAt: new Date('2024-02-01'),
@@ -908,7 +912,7 @@ async function seed() {
       githubRepoUrl: 'https://github.com/nextgen-sdk/testing-framework',
       walletAddress: teamMember1.walletAddress,
       status: 'pending',
-      totalAmount: 100000,
+      totalAmount: 100, // Scaled for testnet
       appliedAt: new Date('2024-02-10'),
       createdAt: new Date('2024-02-10'),
       updatedAt: new Date('2024-02-10'),
@@ -938,7 +942,7 @@ async function seed() {
       githubRepoUrl: 'https://github.com/l2-research-group/analytics-dash',
       walletAddress: teamMember3.walletAddress,
       status: 'pending',
-      totalAmount: 50000,
+      totalAmount: 50, // Scaled for testnet
       appliedAt: new Date('2024-02-12'),
       createdAt: new Date('2024-02-12'),
       updatedAt: new Date('2024-02-12'),
@@ -962,7 +966,7 @@ async function seed() {
       githubRepoUrl: 'https://github.com/yieldopt-protocol/graphql-gen',
       walletAddress: teamMember4.walletAddress,
       status: 'approved',
-      totalAmount: 50000,
+      totalAmount: 50, // Scaled for testnet
       appliedAt: new Date('2024-01-28'),
       createdAt: new Date('2024-01-28'),
       updatedAt: new Date('2024-02-06'),
@@ -992,7 +996,7 @@ async function seed() {
       githubRepoUrl: 'https://github.com/blockchain-education/zk-toolkit',
       walletAddress: teamMember2.walletAddress,
       status: 'approved',
-      totalAmount: 100000,
+      totalAmount: 100, // Scaled for testnet
       appliedAt: new Date('2024-01-20'),
       createdAt: new Date('2024-01-20'),
       updatedAt: new Date('2024-02-10'),
@@ -1016,7 +1020,7 @@ async function seed() {
       githubRepoUrl: 'https://github.com/nft-gaming-studio/web3-state',
       walletAddress: teamMember5.walletAddress,
       status: 'approved',
-      totalAmount: 3500,
+      totalAmount: 35, // Scaled for testnet (was 3500)
       appliedAt: new Date('2024-01-05'),
       createdAt: new Date('2024-01-05'),
       updatedAt: new Date('2024-01-15'),
@@ -1540,7 +1544,7 @@ async function seed() {
         'Project scaffolding',
         'CI/CD pipeline',
       ],
-      amount: 20000,
+      amount: 20, // Scaled for testnet: 1 USD = 1 PAS
       dueDate: new Date('2024-02-15'),
       status: 'completed' as const,
       deliverables: [
@@ -1574,7 +1578,7 @@ async function seed() {
         'Developer tools',
         'Initial testing',
       ],
-      amount: 30000,
+      amount: 30, // Scaled for testnet
       dueDate: new Date('2024-03-15'),
       status: 'completed' as const,
       deliverables: [
@@ -1613,7 +1617,7 @@ async function seed() {
         'Usage examples',
         'Tutorial guides',
       ],
-      amount: 25000,
+      amount: 25, // Scaled for testnet
       dueDate: new Date('2024-04-30'),
       status: 'in-review' as const,
       deliverables: [
@@ -1646,7 +1650,7 @@ async function seed() {
         'Release announcement',
         'Community support',
       ],
-      amount: 25000,
+      amount: 25, // Scaled for testnet
       dueDate: new Date('2024-05-15'),
       status: 'pending' as const,
       deliverables: [
@@ -1683,7 +1687,7 @@ async function seed() {
         'Blockchain data caching',
         'React 18+ compatibility',
       ],
-      amount: 1000,
+      amount: 10, // Scaled for testnet (was 1000)
       dueDate: new Date('2024-02-20'),
       status: 'in-review' as const,
       deliverables: [
@@ -1716,7 +1720,7 @@ async function seed() {
         'API documentation',
         'Usage examples',
       ],
-      amount: 1000,
+      amount: 10, // Scaled for testnet
       dueDate: new Date('2024-03-30'),
       status: 'pending' as const,
       deliverables: [
@@ -1740,7 +1744,7 @@ async function seed() {
         'Release documentation',
         'Community announcement',
       ],
-      amount: 500,
+      amount: 5, // Scaled for testnet (was 500)
       dueDate: new Date('2024-04-15'),
       status: 'pending' as const,
       deliverables: [
@@ -1778,7 +1782,7 @@ async function seed() {
         'Export to multiple ZK frameworks',
         'Comprehensive testing suite',
       ],
-      amount: 35000,
+      amount: 35, // Scaled for testnet
       dueDate: new Date('2024-02-28'), // Overdue!
       status: 'pending' as const,
       deliverables: [
@@ -1822,7 +1826,7 @@ async function seed() {
         'Noir integration',
         'API documentation',
       ],
-      amount: 25000,
+      amount: 25, // Scaled for testnet
       dueDate: new Date('2024-05-30'),
       status: 'pending' as const,
       deliverables: [
@@ -1847,7 +1851,7 @@ async function seed() {
         'Performance comparison dashboard',
         'Optimization recommendations engine',
       ],
-      amount: 25000,
+      amount: 25, // Scaled for testnet
       dueDate: new Date('2024-07-15'),
       status: 'pending' as const,
       deliverables: [
@@ -1873,7 +1877,7 @@ async function seed() {
         'Audit logging system',
         'Enterprise support portal',
       ],
-      amount: 20000,
+      amount: 20, // Scaled for testnet
       dueDate: new Date('2024-08-30'),
       status: 'pending' as const,
       deliverables: [
@@ -1924,7 +1928,7 @@ async function seed() {
         'Test coverage reporting system',
         'Integration with major development frameworks',
       ],
-      amount: 40000,
+      amount: 40, // Scaled for testnet
       dueDate: new Date('2024-03-15'),
       status: 'pending',
       deliverables: [
@@ -1957,7 +1961,7 @@ async function seed() {
         'Multi-chain data aggregation',
         'Historical data storage and querying',
       ],
-      amount: 25000,
+      amount: 25, // Scaled for testnet
       dueDate: new Date('2024-03-20'),
       status: 'pending',
       deliverables: [
@@ -1990,7 +1994,7 @@ async function seed() {
         'Query optimization engine',
         'Integration with popular GraphQL clients',
       ],
-      amount: 20000,
+      amount: 20, // Scaled for testnet
       dueDate: new Date('2024-03-10'),
       status: 'in-review',
       deliverables: [
@@ -2042,7 +2046,7 @@ async function seed() {
         'Performance monitoring',
         'Cross-chain transaction support',
       ],
-      amount: 1000,
+      amount: 10, // Scaled for testnet (was 1000)
       dueDate: new Date('2024-03-25'),
       status: 'pending',
       deliverables: [
@@ -2075,7 +2079,7 @@ async function seed() {
         'Security report generation',
         'Automated fix suggestions',
       ],
-      amount: 35000,
+      amount: 35, // Scaled for testnet
       dueDate: new Date('2024-04-15'),
       status: 'pending',
       deliverables: [
@@ -2469,11 +2473,12 @@ async function seed() {
   console.log('Creating payouts...')
 
   // Completed payout for milestone 1
+  // Scaled for testnet: 1 USD = 1 PAS
   await db.insert(payouts).values({
     submissionId: approvedSubmission.id,
     milestoneId: milestone1.id,
     groupId: infraCommittee.id,
-    amount: 20000,
+    amount: 20,
     transactionHash:
       '0x1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef',
     blockExplorerUrl:
@@ -2488,11 +2493,12 @@ async function seed() {
   })
 
   // Completed payout for milestone 2
+  // Scaled for testnet: 1 USD = 1 PAS
   await db.insert(payouts).values({
     submissionId: approvedSubmission.id,
     milestoneId: milestone2.id,
     groupId: infraCommittee.id,
-    amount: 30000,
+    amount: 30,
     transactionHash:
       '0x2345678901bcdef2345678901bcdef2345678901bcdef2345678901bcdef',
     blockExplorerUrl:

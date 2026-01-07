@@ -20,17 +20,22 @@ import type { MultisigConfig } from '../db/schema/jsonTypes/GroupSettings'
 import { getNetworkSS58Format, type NetworkType } from './address'
 import {
   checkTransactionFeeBalance,
-  checkMultisigPayoutBalance,
+  checkParentBountyBalance,
   createInsufficientBalanceError,
+  formatBalance,
 } from './balance'
-import { createPayoutCall, type ChildBountyParams } from './child-bounty'
+import {
+  createPayoutCall,
+  type ChildBountyParams,
+  type PriceInfo,
+} from './child-bounty'
 import type { Signer, HexString } from '@luno-kit/react/types'
 
 // Re-export Signer as PolkadotSigner for backward compatibility
 export type PolkadotSigner = Signer
 
 // Re-export child bounty types for convenience
-export type { ChildBountyParams }
+export type { ChildBountyParams, PriceInfo }
 
 /**
  * Multisig event interface
@@ -147,6 +152,8 @@ export interface InitiateApprovalResult {
   timepoint: Timepoint
   blockNumber: number
   predictedChildBountyId: number
+  /** Price info used for the conversion (for transparency) */
+  priceInfo?: PriceInfo
 }
 
 /**
@@ -213,6 +220,8 @@ export async function initiateMultisigApproval(params: {
   initiatorAddress: string
   signer: PolkadotSigner
   network?: NetworkType
+  /** Price info for on-chain transparency remark */
+  priceInfo?: PriceInfo
 }): Promise<InitiateApprovalResult> {
   const {
     client,
@@ -224,6 +233,7 @@ export async function initiateMultisigApproval(params: {
     initiatorAddress: rawInitiatorAddress,
     signer,
     network = 'paseo',
+    priceInfo,
   } = params
 
   // const initiatorAddress = encodeAddress(rawInitiatorAddress, getNetworkSS58Format(network))
@@ -266,30 +276,43 @@ export async function initiateMultisigApproval(params: {
     throw new Error(errorMessage)
   }
 
-  // Check multisig balance for payout (only if payout amount > 0)
+  // Check parent bounty balance for payout (only if payout amount > 0)
+  // IMPORTANT: Payout funds come from the parent bounty, NOT from the multisig account.
+  // The multisig only needs transaction fees for signing.
   if (payoutAmount > BigInt(0)) {
-    console.log('[initiateMultisigApproval]: Checking multisig balance')
-    const multisigBalanceCheck = await checkMultisigPayoutBalance(
+    console.log('[initiateMultisigApproval]: Checking parent bounty balance')
+    const parentBountyCheck = await checkParentBountyBalance(
       client,
-      multisigConfig.multisigAddress,
+      multisigConfig.parentBountyId,
       payoutAmount,
       network
     )
 
-    if (!multisigBalanceCheck.hasBalance) {
-      const errorMessage = createInsufficientBalanceError(
-        multisigConfig.multisigAddress,
-        multisigBalanceCheck,
-        network,
-        'multisig'
-      )
+    if (!parentBountyCheck.hasBalance) {
+      const bountyValueFormatted = parentBountyCheck.parentBountyValue
+        ? formatBalance(parentBountyCheck.parentBountyValue)
+        : '0'
+      const payoutFormatted = formatBalance(payoutAmount)
+
+      let errorMessage = `Insufficient funds in parent bounty for payout.\n\n`
+      errorMessage += `Parent Bounty ID: ${multisigConfig.parentBountyId}\n`
+      errorMessage += `Bounty Value: ${bountyValueFormatted} tokens\n`
+      errorMessage += `Payout Required: ${payoutFormatted} tokens\n\n`
+
+      if (parentBountyCheck.error) {
+        errorMessage += `Error: ${parentBountyCheck.error}\n\n`
+      }
+
+      errorMessage += `The parent bounty must have sufficient funds allocated from the treasury.\n`
+      errorMessage += `Network: ${network.toUpperCase()}`
+
       console.error(
-        '[initiateMultisigApproval]: Multisig has insufficient balance',
+        '[initiateMultisigApproval]: Parent bounty has insufficient balance',
         {
-          multisigAddress: multisigConfig.multisigAddress,
-          balance: multisigBalanceCheck.balance.transferable.toString(),
-          required: multisigBalanceCheck.required?.toString(),
+          parentBountyId: multisigConfig.parentBountyId,
+          bountyValue: parentBountyCheck.parentBountyValue?.toString(),
           payoutAmount: payoutAmount.toString(),
+          error: parentBountyCheck.error,
         }
       )
       throw new Error(errorMessage)
@@ -306,6 +329,7 @@ export async function initiateMultisigApproval(params: {
       parentBountyId: multisigConfig.parentBountyId,
       curatorAddress: multisigConfig.curatorProxyAddress,
       curatorFee: BigInt(0),
+      priceInfo, // Include price info for on-chain transparency remark
     })
 
     // Get call data and hash
@@ -492,6 +516,7 @@ export async function initiateMultisigApproval(params: {
       txHash,
       blockNumber,
       predictedChildBountyId: payoutResult.predictedChildBountyId,
+      hasPriceInfo: !!priceInfo,
     })
 
     return {
@@ -501,6 +526,7 @@ export async function initiateMultisigApproval(params: {
       timepoint,
       blockNumber,
       predictedChildBountyId: payoutResult.predictedChildBountyId,
+      priceInfo,
     }
   } catch (error) {
     console.error(
@@ -692,6 +718,8 @@ export async function approveOrExecuteMultisigCall(params: {
   milestoneTitle?: string
   multisigConfig: MultisigConfig
   network?: NetworkType
+  /** Price info for on-chain transparency (from initial approval) */
+  priceInfo?: PriceInfo
 }): Promise<ApproveOrExecuteResult> {
   const {
     client,
@@ -708,6 +736,7 @@ export async function approveOrExecuteMultisigCall(params: {
     milestoneTitle = `Milestone ${milestoneId}`,
     multisigConfig,
     network = 'paseo',
+    priceInfo,
   } = params
 
   // Convert approver address to the target network format
@@ -778,7 +807,7 @@ export async function approveOrExecuteMultisigCall(params: {
         '[approveOrExecuteMultisigCall]: Will hit quorum, executing with asMulti'
       )
 
-      // Reconstruct the payout call
+      // Reconstruct the payout call (with same price info from initial approval)
       const payoutResult = await createPayoutCall(client, {
         beneficiaryAddress,
         amount: payoutAmount,
@@ -787,6 +816,7 @@ export async function approveOrExecuteMultisigCall(params: {
         parentBountyId: multisigConfig.parentBountyId,
         curatorAddress: multisigConfig.curatorProxyAddress,
         curatorFee: BigInt(0),
+        priceInfo, // Same price info from initial approval
       })
 
       // Create asMulti call with full call data and timepoint

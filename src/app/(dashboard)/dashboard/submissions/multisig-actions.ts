@@ -45,6 +45,12 @@ const initiateApprovalSchema = z.object({
   // Child bounty tracking (required for on-chain indexing)
   parentBountyId: z.number().int().positive(),
   predictedChildBountyId: z.number().int().positive(),
+  // Price conversion info (for transparency)
+  priceUsd: z.string().optional(), // Price per token in USD
+  priceDate: z.string().optional(), // ISO date string when price was fetched
+  priceSource: z.string().optional(), // Source: 'mock', 'coingecko', etc.
+  tokenSymbol: z.string().optional(), // Token symbol (e.g., 'PAS', 'DOT')
+  tokenAmount: z.string().optional(), // Amount in tokens
 })
 
 const castVoteSchema = z.object({
@@ -156,7 +162,7 @@ export const initiateMultisigApproval = validatedActionWithUser(
         }
       }
 
-      // Create approval record with child bounty tracking
+      // Create approval record with child bounty tracking and price info
       const approval = await createMilestoneApproval({
         milestoneId: data.milestoneId,
         groupId: milestone.groupId,
@@ -171,6 +177,12 @@ export const initiateMultisigApproval = validatedActionWithUser(
         // Child bounty tracking
         parentBountyId: data.parentBountyId,
         childBountyId: data.predictedChildBountyId,
+        // Price conversion info (for transparency to other signatories)
+        priceUsd: data.priceUsd,
+        priceDate: data.priceDate ? new Date(data.priceDate) : undefined,
+        priceSource: data.priceSource,
+        tokenSymbol: data.tokenSymbol,
+        tokenAmount: data.tokenAmount,
       })
 
       // Record initiator's signature (first signatory is automatic)
@@ -551,10 +563,17 @@ export async function getMilestoneApprovalStatus(milestoneId: number) {
       approval: {
         id: approval.id,
         callHash: approval.multisigCallHash,
+        callData: approval.multisigCallData,
         timepoint: approval.timepoint,
         initiatorAddress: approval.initiatorAddress,
         approvalWorkflow: approval.approvalWorkflow,
         createdAt: approval.createdAt,
+        // Price conversion info (for transparency to subsequent signatories)
+        priceUsd: approval.priceUsd,
+        priceDate: approval.priceDate,
+        priceSource: approval.priceSource,
+        tokenSymbol: approval.tokenSymbol,
+        tokenAmount: approval.tokenAmount,
       },
       votes: {
         total: voteCount.total,

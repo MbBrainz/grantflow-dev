@@ -450,3 +450,74 @@ export const updateAccountState = validatedActionWithUserState<
 
   return { success: true, message: 'Account updated successfully.' }
 })
+
+// ============================================================================
+// Wallet Linking Actions
+// ============================================================================
+
+import { z } from 'zod'
+
+const linkWalletSchema = z.object({
+  walletAddress: z
+    .string()
+    .min(40, 'Invalid wallet address')
+    .max(64, 'Invalid wallet address'),
+})
+
+export interface WalletLinkState extends ActionState {
+  walletAddress?: string
+}
+
+/**
+ * Link a wallet address to the current user's account
+ */
+export const linkWalletToAccount = validatedActionWithUser(
+  linkWalletSchema,
+  async (data, user) => {
+    const { walletAddress } = data
+
+    // Check if this wallet is already linked to another account
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.walletAddress, walletAddress),
+    })
+
+    if (existingUser && existingUser.id !== user.id) {
+      return {
+        error: 'This wallet address is already linked to another account.',
+      }
+    }
+
+    // Link the wallet to the user's account
+    await db
+      .update(users)
+      .set({
+        walletAddress,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id))
+
+    await logActivity(user.id, ActivityType.UPDATE_ACCOUNT)
+
+    return { success: true, message: 'Wallet linked successfully.' }
+  }
+)
+
+/**
+ * Unlink the wallet address from the current user's account
+ */
+export const unlinkWallet = validatedActionWithUser(
+  z.object({}),
+  async (_data, user) => {
+    await db
+      .update(users)
+      .set({
+        walletAddress: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id))
+
+    await logActivity(user.id, ActivityType.UPDATE_ACCOUNT)
+
+    return { success: true, message: 'Wallet unlinked successfully.' }
+  }
+)

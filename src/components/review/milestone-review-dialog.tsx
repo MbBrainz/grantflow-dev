@@ -8,7 +8,6 @@ import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { MetadataGrid } from '@/components/ui/metadata-grid'
 import { InfoBox } from '@/components/ui/info-box'
-import { MultisigFlowExplanation } from '@/components/milestone/multisig-flow-explanation'
 import {
   Tooltip,
   TooltipContent,
@@ -27,6 +26,7 @@ import {
   X,
   Wallet,
   Info,
+  Users,
 } from 'lucide-react'
 import { submitReview } from '@/app/(dashboard)/dashboard/submissions/actions'
 import { useToast } from '@/lib/hooks/use-toast'
@@ -53,6 +53,11 @@ import {
 } from '@/lib/polkadot/multisig'
 import { chains } from '@/lib/polkadot/chains'
 import { u8aToHex } from 'dedot/utils'
+import {
+  convertUsdToTokensWithRemark,
+  getTokenSymbol,
+  type ConversionResultWithRemark,
+} from '@/lib/polkadot/price-feed'
 
 interface MilestoneReviewDialogProps {
   milestone: Pick<
@@ -104,8 +109,17 @@ export function MilestoneReviewDialog({
     initiatorAddress: string
     approvalWorkflow: string
     createdAt: Date
+    // Price conversion info (for transparency to subsequent signatories)
+    priceUsd?: string | null
+    priceDate?: Date | null
+    priceSource?: string | null
+    tokenSymbol?: string | null
+    tokenAmount?: string | null
   } | null>(null)
   const [isLoadingApproval, setIsLoadingApproval] = useState(false)
+  const [priceConversion, setPriceConversion] =
+    useState<ConversionResultWithRemark | null>(null)
+  const [isLoadingPrice, setIsLoadingPrice] = useState(false)
   const multisigConfig = committeeSettings?.multisig
   const { toast } = useToast()
 
@@ -150,10 +164,22 @@ export function MilestoneReviewDialog({
     try {
       const approvalStatus = await getMilestoneApprovalStatus(milestone.id)
       if (approvalStatus.status === 'active' && approvalStatus.approval) {
+        const approval = approvalStatus.approval as {
+          callData?: string
+          priceUsd?: string | null
+          priceDate?: Date | null
+          priceSource?: string | null
+          tokenSymbol?: string | null
+          tokenAmount?: string | null
+        }
         setExistingApproval({
           ...approvalStatus.approval,
-          callData:
-            (approvalStatus.approval as { callData?: string }).callData ?? '',
+          callData: approval.callData ?? '',
+          priceUsd: approval.priceUsd,
+          priceDate: approval.priceDate,
+          priceSource: approval.priceSource,
+          tokenSymbol: approval.tokenSymbol,
+          tokenAmount: approval.tokenAmount,
         })
         console.log(
           '[MilestoneReviewDialog]: Found existing approval',
@@ -182,6 +208,96 @@ export function MilestoneReviewDialog({
       }
     }
   }, [open, isMergedWorkflow, checkExistingApproval])
+
+  // Fetch price conversion when dialog opens (for merged workflow)
+  // If an existing approval exists, use the stored price info for consistency
+  useEffect(() => {
+    async function fetchPriceConversion() {
+      if (!open || !isMergedWorkflow || !multisigConfig) return
+
+      setIsLoadingPrice(true)
+      try {
+        const network = multisigConfig.network ?? 'paseo'
+
+        // If existing approval has price info, use that for consistency
+        if (
+          existingApproval?.priceUsd &&
+          existingApproval?.priceDate &&
+          existingApproval?.priceSource
+        ) {
+          // Reconstruct price conversion from stored approval data
+          const storedPriceDate = new Date(existingApproval.priceDate)
+          const storedConversion: ConversionResultWithRemark = {
+            amountUsd: milestone.amount ?? 0,
+            amountTokens: parseFloat(existingApproval.tokenAmount ?? '0'),
+            amountPlanck: BigInt(0), // Not needed for display
+            price: {
+              symbol: existingApproval.tokenSymbol ?? 'PAS',
+              priceUsd: parseFloat(existingApproval.priceUsd),
+              timestamp: storedPriceDate,
+              source: existingApproval.priceSource as
+                | 'mock'
+                | 'coingecko'
+                | 'chainlink'
+                | 'subscan',
+            },
+            decimals: 10,
+            remarkInfo: {
+              priceUsd: existingApproval.priceUsd,
+              priceDate: storedPriceDate.toISOString(),
+              priceDateFormatted: `${storedPriceDate.toISOString().replace('T', ' ').slice(0, 19)} UTC`,
+              priceSource: existingApproval.priceSource,
+              remarkString: '', // Not needed for display
+            },
+          }
+          setPriceConversion(storedConversion)
+          console.log(
+            '[MilestoneReviewDialog]: Using stored price conversion from approval',
+            {
+              priceUsd: existingApproval.priceUsd,
+              priceDate: existingApproval.priceDate,
+              priceSource: existingApproval.priceSource,
+              tokenAmount: existingApproval.tokenAmount,
+            }
+          )
+          return
+        }
+
+        // No existing approval or no stored price info - fetch fresh price
+        const conversion = await convertUsdToTokensWithRemark(
+          milestone.amount ?? 0,
+          network,
+          milestone.id,
+          milestone.title
+        )
+        setPriceConversion(conversion)
+        console.log('[MilestoneReviewDialog]: Price conversion fetched', {
+          amountUsd: conversion.amountUsd,
+          amountTokens: conversion.amountTokens,
+          priceUsd: conversion.price.priceUsd,
+          priceDate: conversion.remarkInfo.priceDateFormatted,
+          priceSource: conversion.remarkInfo.priceSource,
+        })
+      } catch (error) {
+        console.error(
+          '[MilestoneReviewDialog]: Failed to fetch price conversion',
+          error
+        )
+      } finally {
+        setIsLoadingPrice(false)
+      }
+    }
+
+    void fetchPriceConversion()
+  }, [
+    open,
+    isMergedWorkflow,
+    multisigConfig,
+    milestone.amount,
+    milestone.id,
+    milestone.title,
+    existingApproval,
+  ])
 
   const handleMultisigApproval = async () => {
     if (!account || !address || !multisigConfig) {
@@ -251,20 +367,43 @@ export function MilestoneReviewDialog({
       }
       const beneficiaryAddress = submissionResult.submission.walletAddress
 
-      // Create Polkadot multisig transaction
+      // Use the pre-fetched price conversion (with remark info)
+      // This ensures the price displayed to the user matches the on-chain remark
+      const network = multisigConfig.network ?? 'paseo'
+      const conversion =
+        priceConversion ??
+        (await convertUsdToTokensWithRemark(
+          milestone.amount ?? 0,
+          network,
+          milestone.id,
+          milestone.title
+        ))
+
+      console.log('[MilestoneReviewDialog]: USD to token conversion', {
+        amountUsd: milestone.amount,
+        amountTokens: conversion.amountTokens,
+        amountPlanck: conversion.amountPlanck.toString(),
+        priceUsd: conversion.price.priceUsd,
+        priceDate: conversion.remarkInfo.priceDateFormatted,
+        priceSource: conversion.remarkInfo.priceSource,
+        network,
+      })
+
+      // Create Polkadot multisig transaction with price info remark
       const polkadotResult = await initiatePolkadotApproval({
         client,
         multisigConfig,
         milestoneId: milestone.id,
         milestoneTitle: milestone.title,
-        payoutAmount: BigInt(milestone.amount ?? 0),
+        payoutAmount: conversion.amountPlanck,
         beneficiaryAddress,
         initiatorAddress: address,
         signer: selectedSigner,
-        network: multisigConfig.network ?? 'paseo', // Use network from config
+        network,
+        priceInfo: conversion.remarkInfo, // Include price info for on-chain remark
       })
 
-      // Record the approval in database (with bounty tracking)
+      // Record the approval in database (with bounty tracking and price info)
       console.log('[MilestoneReviewDialog]: Recording approval in database', {
         milestoneId: milestone.id,
         timepoint: polkadotResult.timepoint,
@@ -275,6 +414,7 @@ export function MilestoneReviewDialog({
         callDataHex: u8aToHex(polkadotResult.callData),
         predictedChildBountyId: polkadotResult.predictedChildBountyId,
         parentBountyId: multisigConfig.parentBountyId,
+        priceInfo: conversion.remarkInfo,
       })
       await initiateMultisigApproval({
         milestoneId: milestone.id,
@@ -287,6 +427,12 @@ export function MilestoneReviewDialog({
         // Child bounty tracking
         predictedChildBountyId: polkadotResult.predictedChildBountyId,
         parentBountyId: multisigConfig.parentBountyId,
+        // Price conversion info (for transparency to other signatories)
+        priceUsd: conversion.remarkInfo.priceUsd,
+        priceDate: conversion.remarkInfo.priceDate,
+        priceSource: conversion.remarkInfo.priceSource,
+        tokenSymbol: getTokenSymbol(network),
+        tokenAmount: conversion.amountTokens.toString(),
       })
 
       toast({
@@ -348,6 +494,32 @@ export function MilestoneReviewDialog({
       }
       const beneficiaryAddress = submissionResult.submission.walletAddress
 
+      // Use the pre-fetched price conversion (should match the initial approval's price)
+      // Note: For subsequent approvals, ideally we'd retrieve the original price from DB
+      // For now, we use the current price conversion (will be stored in DB later)
+      const network = multisigConfig.network ?? 'paseo'
+      const conversion =
+        priceConversion ??
+        (await convertUsdToTokensWithRemark(
+          milestone.amount ?? 0,
+          network,
+          milestone.id,
+          milestone.title
+        ))
+
+      console.log(
+        '[MilestoneReviewDialog]: USD to token conversion (subsequent)',
+        {
+          amountUsd: milestone.amount,
+          amountTokens: conversion.amountTokens,
+          amountPlanck: conversion.amountPlanck.toString(),
+          priceUsd: conversion.price.priceUsd,
+          priceDate: conversion.remarkInfo.priceDateFormatted,
+          priceSource: conversion.remarkInfo.priceSource,
+          network,
+        }
+      )
+
       // Get current approval count to check if this vote will hit quorum
       const approvalStatus = await getMilestoneApprovalStatus(milestone.id)
       const currentApprovals =
@@ -383,11 +555,12 @@ export function MilestoneReviewDialog({
         approverAddress: address,
         signer: selectedSigner,
         beneficiaryAddress,
-        payoutAmount: BigInt(milestone.amount ?? 0),
+        payoutAmount: conversion.amountPlanck,
         milestoneId: milestone.id,
         milestoneTitle: milestone.title,
         multisigConfig,
-        network: multisigConfig.network ?? 'paseo',
+        network,
+        priceInfo: conversion.remarkInfo, // Pass price info for call reconstruction
       })
 
       // Record the vote in database (with execution info if it was executed)
@@ -642,6 +815,81 @@ export function MilestoneReviewDialog({
               columns={milestone.submittedAt ? 3 : 2}
             />
 
+            {/* Price Conversion Info for Merged Workflow */}
+            {isMergedWorkflow && multisigConfig && (
+              <InfoBox
+                icon={<DollarSign className="h-4 w-4" />}
+                title="Payout Conversion Details"
+                variant="info"
+              >
+                {isLoadingPrice ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <Clock className="h-4 w-4 animate-spin" />
+                    Loading price conversion...
+                  </div>
+                ) : priceConversion ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-xs font-medium text-gray-500">
+                          USD Amount
+                        </p>
+                        <p className="font-medium text-gray-900">
+                          ${priceConversion.amountUsd.toLocaleString()}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-medium text-gray-500">
+                          Token Amount
+                        </p>
+                        <p className="font-medium text-gray-900">
+                          {priceConversion.amountTokens.toLocaleString(
+                            undefined,
+                            { maximumFractionDigits: 4 }
+                          )}{' '}
+                          {getTokenSymbol(multisigConfig.network ?? 'paseo')}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="rounded-md border border-blue-200 bg-blue-50 p-3">
+                      <p className="mb-2 text-xs font-medium text-blue-800">
+                        Conversion Rate Used
+                      </p>
+                      <div className="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <p className="text-blue-600">Price</p>
+                          <p className="font-mono font-medium text-blue-900">
+                            ${priceConversion.remarkInfo.priceUsd} USD
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-blue-600">Date</p>
+                          <p className="font-mono font-medium text-blue-900">
+                            {priceConversion.remarkInfo.priceDateFormatted}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-blue-600">Source</p>
+                          <p className="font-mono font-medium text-blue-900">
+                            {priceConversion.remarkInfo.priceSource}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      {existingApproval
+                        ? 'This conversion rate was recorded when the initial transaction was created.'
+                        : 'This conversion rate will be recorded on-chain when the transaction is created, ensuring transparency for all signatories.'}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    Unable to load price conversion. Please try again.
+                  </p>
+                )}
+              </InfoBox>
+            )}
+
             <InfoBox
               icon={<FileCode className="h-4 w-4" />}
               title="Description"
@@ -770,76 +1018,65 @@ export function MilestoneReviewDialog({
             )}
 
             <div className="border-t pt-6">
-              {/* Multisig Flow Explanation for Merged Workflow */}
-              {isMergedWorkflow &&
-                multisigConfig &&
-                isConnected &&
-                !isLoadingApproval && (
-                  <div className="mb-6">
-                    <MultisigFlowExplanation
-                      currentStep={
-                        existingApproval
-                          ? selectedVote === 'approve'
-                            ? 'approve'
-                            : null
-                          : selectedVote === 'approve'
-                            ? 'initiate'
-                            : null
-                      }
-                      threshold={multisigConfig.threshold}
-                      currentApprovals={0} // Would need to fetch this if available
-                      totalSignatories={multisigConfig.signatories.length}
-                    />
-                  </div>
-                )}
-
-              {/* Existing Approval Status */}
-              {isMergedWorkflow && (
-                <div className="mb-6">
+              {/* Compact Multisig Status for Merged Workflow */}
+              {isMergedWorkflow && multisigConfig && (
+                <div className="mb-4 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
                   {isLoadingApproval ? (
-                    <Card className="border-gray-200 bg-gray-50 p-4">
-                      <div className="flex items-center gap-3">
-                        <Clock className="h-5 w-5 text-gray-500" />
-                        <p className="text-sm text-gray-600">
-                          Checking for existing multisig approvals...
-                        </p>
-                      </div>
-                    </Card>
+                    <>
+                      <Clock className="h-4 w-4 animate-spin text-gray-500" />
+                      <span className="text-sm text-gray-600">
+                        Checking multisig status...
+                      </span>
+                    </>
                   ) : existingApproval ? (
-                    <Card className="border-blue-200 bg-blue-50 p-4">
-                      <div className="flex items-start gap-3">
-                        <AlertCircle className="h-5 w-5 text-blue-600" />
-                        <div className="flex-1">
-                          <p className="font-medium text-blue-900">
-                            Existing Multisig Transaction Found
-                          </p>
-                          <p className="mt-1 text-sm text-blue-700">
-                            There&apos;s already an active multisig transaction
-                            for this milestone. If you approve, your signature
-                            will be added to the existing transaction.
-                          </p>
-                          <div className="mt-2 text-xs text-blue-600">
-                            Call Hash: {existingApproval?.callHash ?? 'Unknown'}
-                          </div>
-                        </div>
+                    <>
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-blue-100">
+                        <Users className="h-3.5 w-3.5 text-blue-600" />
                       </div>
-                    </Card>
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-900">
+                          Active transaction
+                        </span>
+                        <span className="mx-2 text-gray-400">·</span>
+                        <span className="text-sm text-gray-600">
+                          {multisigConfig.threshold} of{' '}
+                          {multisigConfig.signatories.length} signatures needed
+                        </span>
+                      </div>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 w-6 p-0"
+                          >
+                            <Info className="h-3.5 w-3.5 text-gray-400" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-xs">
+                          <p className="text-xs">
+                            Call Hash: {existingApproval.callHash.slice(0, 16)}
+                            ...
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </>
                   ) : (
-                    <Card className="border-green-200 bg-green-50 p-4">
-                      <div className="flex items-start gap-3">
-                        <CheckCircle className="h-5 w-5 text-green-600" />
-                        <div className="flex-1">
-                          <p className="font-medium text-green-900">
-                            Ready to Create New Multisig Transaction
-                          </p>
-                          <p className="mt-1 text-sm text-green-700">
-                            No existing approval found. If you approve, a new
-                            multisig transaction will be created on the
-                            blockchain.
-                          </p>
-                        </div>
+                    <>
+                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-green-100">
+                        <CheckCircle className="h-3.5 w-3.5 text-green-600" />
                       </div>
-                    </Card>
+                      <div className="flex-1">
+                        <span className="text-sm font-medium text-gray-900">
+                          Ready to initiate
+                        </span>
+                        <span className="mx-2 text-gray-400">·</span>
+                        <span className="text-sm text-gray-600">
+                          {multisigConfig.threshold} of{' '}
+                          {multisigConfig.signatories.length} signatures needed
+                        </span>
+                      </div>
+                    </>
                   )}
                 </div>
               )}
@@ -856,90 +1093,91 @@ export function MilestoneReviewDialog({
                     onValueChange={value =>
                       setSelectedVote(value as 'approve' | 'reject' | 'abstain')
                     }
+                    className="grid grid-cols-1 gap-3 md:grid-cols-3"
                   >
-                    <div className="space-y-2">
-                      <div className="flex items-center space-x-3 rounded-lg border border-green-200 bg-green-50 p-3 hover:bg-green-100">
-                        <RadioGroupItem value="approve" id="approve" />
-                        <Label
-                          htmlFor="approve"
-                          className="flex flex-1 cursor-pointer items-center gap-2"
+                    <label
+                      htmlFor="approve"
+                      className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all hover:bg-green-50 ${
+                        selectedVote === 'approve'
+                          ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
+                          : 'border-gray-200 bg-white'
+                      }`}
+                    >
+                      <RadioGroupItem
+                        value="approve"
+                        id="approve"
+                        className="sr-only"
+                      />
+                      <CheckCircle
+                        className={`h-8 w-8 ${selectedVote === 'approve' ? 'text-green-600' : 'text-gray-400'}`}
+                      />
+                      <div>
+                        <p
+                          className={`font-semibold ${selectedVote === 'approve' ? 'text-green-900' : 'text-gray-700'}`}
                         >
-                          <CheckCircle className="h-4 w-4 text-green-600" />
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2">
-                              <p className="font-medium text-green-900">
-                                Approve
-                              </p>
-                              {isMergedWorkflow && multisigConfig && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Info className="h-3 w-3 text-green-600" />
-                                  </TooltipTrigger>
-                                  <TooltipContent className="max-w-xs">
-                                    <div className="space-y-1">
-                                      <p className="font-semibold">
-                                        On-Chain Approval Required
-                                      </p>
-                                      <p className="text-xs">
-                                        Approving will create or add to a
-                                        multisig transaction on the blockchain.
-                                        This requires {multisigConfig.threshold}{' '}
-                                        of {multisigConfig.signatories.length}{' '}
-                                        signatures before payment can be
-                                        executed.
-                                      </p>
-                                    </div>
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
-                            </div>
-                            <p className="text-xs text-green-700">
-                              Milestone meets all requirements
-                              {isMergedWorkflow &&
-                                multisigConfig &&
-                                isConnected &&
-                                (existingApproval
-                                  ? '. Your signature will be added to the existing transaction.'
-                                  : '. This will create a new multisig transaction.')}
-                            </p>
-                          </div>
-                        </Label>
+                          Approve
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Meets requirements
+                        </p>
                       </div>
+                    </label>
 
-                      <div className="flex items-center space-x-3 rounded-lg border border-red-200 bg-red-50 p-3 hover:bg-red-100">
-                        <RadioGroupItem value="reject" id="reject" />
-                        <Label
-                          htmlFor="reject"
-                          className="flex flex-1 cursor-pointer items-center gap-2"
+                    <label
+                      htmlFor="reject"
+                      className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all hover:bg-red-50 ${
+                        selectedVote === 'reject'
+                          ? 'border-red-500 bg-red-50 ring-2 ring-red-200'
+                          : 'border-gray-200 bg-white'
+                      }`}
+                    >
+                      <RadioGroupItem
+                        value="reject"
+                        id="reject"
+                        className="sr-only"
+                      />
+                      <XCircle
+                        className={`h-8 w-8 ${selectedVote === 'reject' ? 'text-red-600' : 'text-gray-400'}`}
+                      />
+                      <div>
+                        <p
+                          className={`font-semibold ${selectedVote === 'reject' ? 'text-red-900' : 'text-gray-700'}`}
                         >
-                          <XCircle className="h-4 w-4 text-red-600" />
-                          <div>
-                            <p className="font-medium text-red-900">Reject</p>
-                            <p className="text-xs text-red-700">
-                              Milestone needs significant changes
-                            </p>
-                          </div>
-                        </Label>
+                          Reject
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          Needs changes
+                        </p>
                       </div>
+                    </label>
 
-                      <div className="flex items-center space-x-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3 hover:bg-yellow-100">
-                        <RadioGroupItem value="abstain" id="abstain" />
-                        <Label
-                          htmlFor="abstain"
-                          className="flex flex-1 cursor-pointer items-center gap-2"
+                    <label
+                      htmlFor="abstain"
+                      className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all hover:bg-yellow-50 ${
+                        selectedVote === 'abstain'
+                          ? 'border-yellow-500 bg-yellow-50 ring-2 ring-yellow-200'
+                          : 'border-gray-200 bg-white'
+                      }`}
+                    >
+                      <RadioGroupItem
+                        value="abstain"
+                        id="abstain"
+                        className="sr-only"
+                      />
+                      <Clock
+                        className={`h-8 w-8 ${selectedVote === 'abstain' ? 'text-yellow-600' : 'text-gray-400'}`}
+                      />
+                      <div>
+                        <p
+                          className={`font-semibold ${selectedVote === 'abstain' ? 'text-yellow-900' : 'text-gray-700'}`}
                         >
-                          <Clock className="h-4 w-4 text-yellow-600" />
-                          <div>
-                            <p className="font-medium text-yellow-900">
-                              Abstain
-                            </p>
-                            <p className="text-xs text-yellow-700">
-                              Cannot make a decision at this time
-                            </p>
-                          </div>
-                        </Label>
+                          Abstain
+                        </p>
+                        <p className="mt-1 text-xs text-gray-500">
+                          No decision
+                        </p>
                       </div>
-                    </div>
+                    </label>
                   </RadioGroup>
                 </div>
 
@@ -969,41 +1207,62 @@ export function MilestoneReviewDialog({
                   >
                     Cancel
                   </Button>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={
-                          !selectedVote || isSubmitting || isSigningMultisig
-                        }
+                  {/* TODO: Add link to documentation when available - e.g., href="/docs/multisig-approvals" */}
+                  {selectedVote === 'approve' &&
+                  isMergedWorkflow &&
+                  multisigConfig &&
+                  isConnected ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          onClick={handleSubmit}
+                          disabled={isSubmitting || isSigningMultisig}
+                        >
+                          {isSigningMultisig
+                            ? 'Signing Transaction...'
+                            : isSubmitting
+                              ? 'Submitting...'
+                              : 'Sign & Submit'}
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent
+                        side="top"
+                        className="max-w-sm p-3"
+                        sideOffset={8}
                       >
-                        {isSigningMultisig
-                          ? 'Signing Transaction...'
-                          : isSubmitting
-                            ? 'Submitting Review...'
-                            : 'Submit Review'}
-                      </Button>
-                    </TooltipTrigger>
-                    {isMergedWorkflow &&
-                      selectedVote === 'approve' &&
-                      multisigConfig && (
-                        <TooltipContent className="max-w-xs">
-                          <div className="space-y-1">
-                            <p className="font-semibold">What Happens Next</p>
-                            <p className="text-xs">
-                              {existingApproval
-                                ? 'Your signature will be added to the existing multisig transaction (multisig.approve_as_multi), then your review vote will be recorded.'
-                                : 'A new multisig transaction will be created (multisig.as_multi_threshold_1), then your review vote will be recorded.'}
-                            </p>
-                            <p className="mt-2 text-xs font-medium">
-                              Requires {multisigConfig.threshold} signatures to
-                              execute payment
+                        <div className="space-y-2">
+                          <p className="text-sm font-semibold">
+                            {existingApproval
+                              ? 'Add Your Signature'
+                              : 'Create Multisig Transaction'}
+                          </p>
+                          <p className="text-xs text-gray-300">
+                            {existingApproval
+                              ? 'Your wallet will sign the existing transaction. Once the threshold is reached, payment executes automatically.'
+                              : 'Your wallet will create a new child bounty transaction on-chain. Other signatories can then add their approvals.'}
+                          </p>
+                          <div className="mt-2 border-t border-gray-600 pt-2">
+                            <p className="text-xs text-gray-400">
+                              Requires {multisigConfig.threshold} of{' '}
+                              {multisigConfig.signatories.length} signatures •
+                              Gas fees apply
                             </p>
                           </div>
-                        </TooltipContent>
-                      )}
-                  </Tooltip>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={
+                        !selectedVote || isSubmitting || isSigningMultisig
+                      }
+                    >
+                      {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                    </Button>
+                  )}
                 </div>
               </div>
             </div>

@@ -30,6 +30,12 @@ export async function createMilestoneApproval(data: {
   // Child bounty tracking
   parentBountyId: number // Parent bounty ID from committee config
   childBountyId?: number // Predicted child bounty ID (set during initiation)
+  // Price conversion info (for transparency)
+  priceUsd?: string // Price per token in USD (e.g., "7.5432")
+  priceDate?: Date // When the price was fetched
+  priceSource?: string // Source: 'mock', 'coingecko', 'chainlink', etc.
+  tokenSymbol?: string // Token symbol (e.g., 'PAS', 'DOT')
+  tokenAmount?: string // Amount in tokens (BigInt as string)
 }) {
   console.log('[db/writes/milestone-approvals]: Creating approval', {
     ...data,
@@ -51,6 +57,12 @@ export async function createMilestoneApproval(data: {
       beneficiaryAddress: data.beneficiaryAddress,
       parentBountyId: data.parentBountyId,
       childBountyId: data.childBountyId,
+      // Price conversion info
+      priceUsd: data.priceUsd,
+      priceDate: data.priceDate,
+      priceSource: data.priceSource,
+      tokenSymbol: data.tokenSymbol,
+      tokenAmount: data.tokenAmount,
     })
     .returning()
 

@@ -3,11 +3,20 @@
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { Settings, ExternalLink, Github, DollarSign } from 'lucide-react'
+import {
+  Settings,
+  ExternalLink,
+  Github,
+  DollarSign,
+  Users,
+  Shield,
+  Wallet,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import type { CommitteeWithDetails } from '@/lib/db/queries/committees'
 import Image from 'next/image'
+import type { SignatoryMapping } from '@/lib/db/schema/jsonTypes/GroupSettings'
 
 interface CommitteeFinancials {
   totalBudget: number
@@ -21,6 +30,149 @@ interface CommitteeDetailViewProps {
   committee: NonNullable<CommitteeWithDetails>
   isAdmin: boolean
   financials?: CommitteeFinancials | null
+}
+
+/**
+ * Merged Members & Signatories Card
+ * Shows committee members with signatory badges + external signatories
+ */
+function MembersAndSignatoriesCard({
+  committee,
+}: {
+  committee: NonNullable<CommitteeWithDetails>
+}) {
+  const multisig = committee.settings?.multisig
+  const signatories: SignatoryMapping[] = multisig?.signatories ?? []
+
+  // Create a map of signatory addresses to their linked user IDs
+  const signatoryAddressToUserId = new Map<string, number | undefined>()
+  signatories.forEach(s => {
+    signatoryAddressToUserId.set(s.address, s.userId)
+  })
+
+  // Find which members are signatories (by userId)
+  const memberSignatoryMap = new Map<number, string>() // userId -> address
+  signatories.forEach(s => {
+    if (s.userId) {
+      memberSignatoryMap.set(s.userId, s.address)
+    }
+  })
+
+  // Find external signatories (those not linked to any member)
+  const _linkedUserIds = new Set(signatories.map(s => s.userId).filter(Boolean))
+  const memberUserIds = new Set(committee.members?.map(m => m.user.id) ?? [])
+  const externalSignatories = signatories.filter(
+    s => !s.userId || !memberUserIds.has(s.userId)
+  )
+
+  const hasMultisig = multisig && signatories.length > 0
+  const hasMembers = committee.members && committee.members.length > 0
+
+  if (!hasMembers && !hasMultisig) {
+    return null
+  }
+
+  return (
+    <Card className="p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
+          <Users className="h-5 w-5" />
+          {hasMultisig ? 'Members & Signatories' : 'Committee Members'}
+        </h2>
+        {hasMultisig && (
+          <div className="flex items-center gap-3 text-sm">
+            <Badge variant="outline" className="gap-1">
+              <Shield className="h-3 w-3" />
+              {multisig.network === 'polkadot' ? 'Polkadot' : 'Paseo'}
+            </Badge>
+            <span className="text-muted-foreground">
+              Threshold: {multisig.threshold} of {signatories.length}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Members Grid */}
+      {hasMembers && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          {committee.members?.map(member => {
+            const isSignatory = memberSignatoryMap.has(member.user.id)
+            const signatoryAddress = memberSignatoryMap.get(member.user.id)
+
+            return (
+              <div
+                key={member.id}
+                className="flex items-center gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700"
+              >
+                {member.user.avatarUrl ? (
+                  <Image
+                    src={member.user.avatarUrl ?? ''}
+                    alt={member.user.name ?? ''}
+                    className="h-10 w-10 rounded-full"
+                    width={40}
+                    height={40}
+                  />
+                ) : (
+                  <div className="bg-muted flex h-10 w-10 items-center justify-center rounded-full">
+                    <Users className="text-muted-foreground h-5 w-5" />
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{member.user.name}</p>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Badge variant="outline" className="text-xs">
+                      {member.role}
+                    </Badge>
+                    {isSignatory && (
+                      <Badge
+                        variant="secondary"
+                        className="gap-1 text-xs text-green-700 dark:text-green-400"
+                      >
+                        <Shield className="h-3 w-3" />
+                        Signatory
+                      </Badge>
+                    )}
+                  </div>
+                  {isSignatory && signatoryAddress && (
+                    <code className="text-muted-foreground mt-1 block text-xs">
+                      {signatoryAddress.slice(0, 8)}...
+                      {signatoryAddress.slice(-6)}
+                    </code>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* External Signatories (not linked to members) */}
+      {hasMultisig && externalSignatories.length > 0 && (
+        <div className="mt-4 border-t pt-4">
+          <h3 className="text-muted-foreground mb-3 flex items-center gap-2 text-sm font-medium">
+            <Wallet className="h-4 w-4" />
+            External Signatories ({externalSignatories.length})
+          </h3>
+          <div className="space-y-2">
+            {externalSignatories.map(signatory => (
+              <div
+                key={signatory.address}
+                className="bg-muted/50 flex items-center justify-between rounded-md p-2"
+              >
+                <code className="text-xs">
+                  {signatory.address.slice(0, 12)}...
+                  {signatory.address.slice(-8)}
+                </code>
+                <Badge variant="outline" className="text-xs">
+                  Not linked
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </Card>
+  )
 }
 
 export function CommitteeDetailView({
@@ -225,43 +377,8 @@ export function CommitteeDetailView({
         </Card>
       )}
 
-      {/* Members */}
-      {committee.members && committee.members.length > 0 && (
-        <Card className="p-6">
-          <h2 className="mb-4 text-lg font-semibold">Committee Members</h2>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {committee.members.map(member => (
-              <div
-                key={member.id}
-                className="flex items-center gap-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700"
-              >
-                {member.user.avatarUrl ? (
-                  <Image
-                    src={member.user.avatarUrl ?? ''}
-                    alt={member.user.name ?? ''}
-                    className="h-10 w-10 rounded-full"
-                    width={40}
-                    height={40}
-                  />
-                ) : null}
-                <div className="flex-1">
-                  <p className="font-medium">{member.user.name}</p>
-                  <div className="flex items-center gap-2">
-                    <Badge variant="outline" className="text-xs">
-                      {member.role}
-                    </Badge>
-                    {member.user.primaryRole && (
-                      <Badge variant="secondary" className="text-xs">
-                        {member.user.primaryRole}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </Card>
-      )}
+      {/* Members & Signatories */}
+      <MembersAndSignatoriesCard committee={committee} />
 
       {/* Recent Submissions */}
       {committee.reviewingSubmissions &&
