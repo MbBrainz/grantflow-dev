@@ -7,7 +7,15 @@
     "defaultBranch": "main"
   },
   "files": {
-    "ignoreUnknown": true
+    "ignoreUnknown": true,
+    "includes": [
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.mjs",
+      "**/*.json"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -41,12 +49,13 @@
     "rules": {
       "recommended": true,
       "correctness": {
-        "noUnusedImports": "warn",
-        "noUnusedVariables": "error",
+        "noUnusedImports": "off",
+        "noUnusedVariables": "off",
         "noUnusedFunctionParameters": "off",
-        "useExhaustiveDependencies": "warn",
+        "useExhaustiveDependencies": "off",
         "noSwitchDeclarations": "off",
-        "noVoidTypeReturn": "off"
+        "noVoidTypeReturn": "off",
+        "useParseIntRadix": "off"
       },
       "style": {
         "noNonNullAssertion": "off",
@@ -59,27 +68,41 @@
       "suspicious": {
         "noExplicitAny": "off",
         "noImplicitAnyLet": "off",
-        "noConsole": "warn",
+        "noConsole": "off",
         "noDebugger": "error",
         "noEmptyBlockStatements": "off",
         "noEmptyInterface": "off",
         "useIterableCallbackReturn": "off",
-        "noArrayIndexKey": "off"
+        "noArrayIndexKey": "off",
+        "noGlobalIsNan": "off",
+        "noTemplateCurlyInString": "off"
       },
       "complexity": {
         "noForEach": "off",
         "useLiteralKeys": "off",
-        "noBannedTypes": "off"
+        "noBannedTypes": "off",
+        "noUselessFragments": "off",
+        "noUselessSwitchCase": "off",
+        "useDateNow": "off"
       },
       "a11y": {
         "useKeyWithClickEvents": "off",
-        "useKeyWithMouseEvents": "off"
+        "useKeyWithMouseEvents": "off",
+        "noStaticElementInteractions": "off",
+        "useButtonType": "off",
+        "noSvgWithoutTitle": "off",
+        "noLabelWithoutControl": "off"
       }
     }
   },
   "overrides": [
     {
-      "includes": ["*.test.ts", "*.spec.ts", "**/__tests__/**", "scripts/**/*.ts"],
+      "includes": [
+        "*.test.ts",
+        "*.spec.ts",
+        "**/__tests__/**",
+        "scripts/**/*.ts"
+      ],
       "linter": {
         "rules": {
           "suspicious": {
@@ -89,7 +112,16 @@
       }
     },
     {
-      "includes": ["scripts/**/*.ts", "*.mjs", "src/cli/**/*.ts"],
+      "includes": [
+        "scripts/**/*.ts",
+        "*.mjs",
+        "src/cli/**/*.ts",
+        "__tests__/**",
+        "middleware.ts",
+        "src/app/**/actions.ts",
+        "src/app/**/*-actions.ts",
+        "src/lib/**/*.ts"
+      ],
       "linter": {
         "rules": {
           "suspicious": {

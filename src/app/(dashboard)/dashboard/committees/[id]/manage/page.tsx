@@ -1,8 +1,8 @@
 import { notFound, redirect } from 'next/navigation'
 import {
   getCommitteeById,
-  isCommitteeAdmin,
   getCommitteeFinancials,
+  isCommitteeAdmin,
 } from '@/lib/db/queries'
 import { ManageCommitteeView } from './manage-committee-view'
 

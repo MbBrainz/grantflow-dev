@@ -1,8 +1,8 @@
-import { eq, and } from 'drizzle-orm'
-import { db } from '../drizzle'
-import { users, groupMemberships, type User } from '../schema'
-import { getSession as getCustomSession } from '@/lib/auth/session'
+import { and, eq } from 'drizzle-orm'
 import { getSession as getNextAuthSession } from '@/lib/auth/next-auth'
+import { getSession as getCustomSession } from '@/lib/auth/session'
+import { db } from '../drizzle'
+import { groupMemberships, type User, users } from '../schema'
 
 export async function getUser(): Promise<User | null> {
   // Try NextAuth session first (for GitHub OAuth)

@@ -1,6 +1,8 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import Link from 'next/link'
+import { useMemo, useState } from 'react'
+import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -9,8 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import Link from 'next/link'
-import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge'
 import type { UserSubmissions } from './actions'
 
 function StatusBadge({ status }: { status: string }) {

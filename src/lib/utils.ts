@@ -1,4 +1,4 @@
-import { clsx, type ClassValue } from 'clsx'
+import { type ClassValue, clsx } from 'clsx'
 import type { FetcherResponse } from 'swr/_internal'
 import { twMerge } from 'tailwind-merge'
 

@@ -1,4 +1,4 @@
-import { eq, desc } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import { db } from '../drizzle'
 import { notifications } from '../schema'
 

@@ -6,10 +6,10 @@
 
 import {
   computeMultisigAddress,
-  validateMultisigConfig,
-  isSignatory,
   getSignatoryIndex,
+  isSignatory,
   normalizeToPolkadot,
+  validateMultisigConfig,
 } from '../src/lib/polkadot/multisig-address'
 
 // Known test data from Paseo Asset Hub bounty #31

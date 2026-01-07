@@ -1,12 +1,12 @@
+import { relations } from 'drizzle-orm'
 import {
+  integer,
   pgTable,
   serial,
-  integer,
   text,
-  varchar,
   timestamp,
+  varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
 import { createSchemaFactory } from 'drizzle-zod'
 import { discussions } from './discussions'
 import { users } from './users'

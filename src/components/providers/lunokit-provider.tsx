@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 
 interface ClientLunoKitProviderProps {
   children: ReactNode

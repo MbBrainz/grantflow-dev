@@ -1,35 +1,35 @@
 'use server'
 
-import { z } from 'zod'
 import { and, eq, isNull, sql } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
+import { validatedActionWithUser } from '@/lib/auth/middleware'
 import { db } from '@/lib/db/drizzle'
-import type { NewReview } from '@/lib/db/schema'
 import {
-  submissions,
-  milestones,
-  type NewSubmission,
-  type NewMilestone,
-  reviews,
-  groups,
-  groupMemberships,
-} from '@/lib/db/schema'
-import {
-  getUser,
-  ensureDiscussionForSubmission,
   ensureDiscussionForMilestone,
+  ensureDiscussionForSubmission,
   getSubmissionById,
+  getUser,
 } from '@/lib/db/queries'
 import { getGroups } from '@/lib/db/queries/groups'
-import { revalidatePath } from 'next/cache'
+import type { NewReview } from '@/lib/db/schema'
+import {
+  groupMemberships,
+  groups,
+  milestones,
+  type NewMilestone,
+  type NewSubmission,
+  reviews,
+  submissions,
+} from '@/lib/db/schema'
+import {
+  type SubmitReviewInput,
+  submitReviewSchema,
+} from '@/lib/db/schema/actions'
 import {
   GITHUB_URL_REGEX,
   parseRequirements,
 } from '@/lib/validation/submission'
-import { validatedActionWithUser } from '@/lib/auth/middleware'
-import {
-  submitReviewSchema,
-  type SubmitReviewInput,
-} from '@/lib/db/schema/actions'
 
 // Get submission details for milestone approval
 export async function getSubmissionDetails(submissionId: number) {
@@ -646,8 +646,9 @@ async function checkQuorumAndUpdateStatus(params: {
       // Create notifications when milestone is rejected
       if (milestoneStatus === 'rejected' && milestone.submission) {
         try {
-          const { createNotification } =
-            await import('@/lib/db/writes/notifications')
+          const { createNotification } = await import(
+            '@/lib/db/writes/notifications'
+          )
 
           // Get rejection feedback summary from reviews
           const rejectionReviews = allReviews.filter(r => r.vote === 'reject')

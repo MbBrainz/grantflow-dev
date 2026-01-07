@@ -1,20 +1,20 @@
-import type { ReactNode } from 'react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { StatusBadge } from '@/components/ui/status-badge'
-import { MetadataGrid } from '@/components/ui/metadata-grid'
 import {
-  DollarSign,
-  CheckCircle,
-  XCircle,
-  Clock,
-  GitBranch,
   Calendar,
+  CheckCircle,
   ChevronDown,
   ChevronRight,
+  Clock,
+  DollarSign,
+  GitBranch,
+  XCircle,
 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import type { ReactNode } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { MetadataGrid } from '@/components/ui/metadata-grid'
+import { StatusBadge } from '@/components/ui/status-badge'
 import type { Milestone } from '@/lib/db/schema'
+import { cn } from '@/lib/utils'
 
 interface MilestoneCardProps {
   milestone: Pick<

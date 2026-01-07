@@ -1,21 +1,21 @@
 'use client'
 
-import { Card } from '@/components/ui/card'
+import {
+  AlertTriangle,
+  Building2,
+  CheckCircle,
+  Crown,
+  Github,
+  Globe,
+  Shield,
+  Users,
+  Wallet,
+} from 'lucide-react'
+import Image from 'next/image'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import {
-  Building2,
-  Users,
-  Globe,
-  Github,
-  Wallet,
-  CheckCircle,
-  AlertTriangle,
-  Crown,
-  Shield,
-} from 'lucide-react'
+import { Card } from '@/components/ui/card'
 import type { Committee } from '@/lib/db/schema'
-import Image from 'next/image'
 
 interface CommitteeInfoCardProps {
   committee: Pick<

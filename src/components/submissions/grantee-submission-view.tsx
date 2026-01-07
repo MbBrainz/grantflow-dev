@@ -1,34 +1,33 @@
 'use client'
 
-import { useState } from 'react'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { DiscussionThread } from '@/components/discussion/discussion-thread'
-import { MilestoneStatusOverview } from '@/components/submissions/milestone-status-overview'
 import {
-  Clock,
-  MessageSquare,
-  CheckCircle,
   AlertCircle,
-  Calendar,
-  Target,
-  GitBranch,
-  Edit,
-  Send,
-  HelpCircle,
   AlertTriangle,
-  Github,
+  Calendar,
+  CheckCircle,
+  Clock,
+  Edit,
   ExternalLink,
-  Lock,
   FileText,
+  GitBranch,
+  Github,
+  HelpCircle,
+  Lock,
+  MessageSquare,
+  Send,
+  Target,
 } from 'lucide-react'
-import { MilestoneSubmissionForm } from '@/components/milestone-submission-form'
-import { MilestoneSubmissionViewDialog } from '@/components/milestone/milestone-submission-view-dialog'
+import { useState } from 'react'
 import { submitMilestone } from '@/app/(dashboard)/dashboard/submissions/milestone-actions'
+import { DiscussionThread } from '@/components/discussion/discussion-thread'
+import { MilestoneSubmissionViewDialog } from '@/components/milestone/milestone-submission-view-dialog'
+import { MilestoneSubmissionForm } from '@/components/milestone-submission-form'
+import { MilestoneStatusOverview } from '@/components/submissions/milestone-status-overview'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import type { Milestone, SubmissionWithMilestones, User } from '@/lib/db/schema'
 import { useToast } from '@/lib/hooks/use-toast'
-
-import type { SubmissionWithMilestones, User, Milestone } from '@/lib/db/schema'
 
 interface GranteeSubmissionViewProps {
   submission: SubmissionWithMilestones

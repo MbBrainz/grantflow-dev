@@ -1,15 +1,15 @@
-import { drizzle } from 'drizzle-orm/postgres-js'
-import { eq, isNull } from 'drizzle-orm'
-import postgres from 'postgres'
 import { config } from 'dotenv'
+import { eq, isNull } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/postgres-js'
+import postgres from 'postgres'
 import {
-  users,
-  groups,
-  groupMemberships,
-  submissions,
   discussions,
-  type User,
   type Group,
+  groupMemberships,
+  groups,
+  submissions,
+  type User,
+  users,
 } from '../../src/lib/db/schema'
 
 config()

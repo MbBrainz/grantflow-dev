@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
 import Lottie from 'lottie-react'
+import { useEffect, useState } from 'react'
 
 interface LottieAnimationProps {
   animationPath: string

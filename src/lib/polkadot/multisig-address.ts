@@ -8,8 +8,8 @@
 
 import {
   createKeyMulti,
-  encodeAddress,
   decodeAddress,
+  encodeAddress,
 } from '@polkadot/util-crypto'
 
 // Polkadot SS58 prefix (addresses start with 1)
@@ -112,7 +112,8 @@ export function validateMultisigConfig(
       valid: false,
       computedAddress: '',
       expectedAddress: normalizeToPolkadot(expectedMultisig),
-      error: e instanceof Error ? e.message : 'Failed to compute multisig address',
+      error:
+        e instanceof Error ? e.message : 'Failed to compute multisig address',
     }
   }
 }

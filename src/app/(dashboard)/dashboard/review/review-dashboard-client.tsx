@@ -1,23 +1,23 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
+  AlertCircle,
+  ArrowRight,
+  CheckCircle,
   Clock,
   FileText,
-  CheckCircle,
   XCircle,
-  AlertCircle,
 } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import {
-  PendingActionsPanel,
   type PendingAction,
+  PendingActionsPanel,
 } from '@/components/review/pending-actions-panel'
+import { ActionableCard } from '@/components/submissions/actionable-card'
 import { CommitteeBadge } from '@/components/submissions/committee-badge'
 import { MilestoneProgressBadge } from '@/components/submissions/milestone-progress-badge'
-import { ActionableCard } from '@/components/submissions/actionable-card'
-import { ArrowRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Committee, Milestone } from '@/lib/db/schema'
 
 interface Submitter {

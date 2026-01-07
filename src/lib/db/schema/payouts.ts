@@ -1,16 +1,16 @@
+import { relations } from 'drizzle-orm'
 import {
+  bigint,
+  integer,
   pgTable,
   serial,
-  integer,
-  varchar,
   timestamp,
-  bigint,
+  varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
 import { createSchemaFactory } from 'drizzle-zod'
-import { submissions } from './submissions'
-import { milestones } from './milestones'
 import { groups } from './groups'
+import { milestones } from './milestones'
+import { submissions } from './submissions'
 import { users } from './users'
 
 const { createInsertSchema, createSelectSchema } = createSchemaFactory({

@@ -1,26 +1,25 @@
 'use client'
 
 import {
+  AlertTriangle,
+  Calendar,
+  CheckCircle,
+  DollarSign,
+  FileText,
+  GitBranch,
+  Pause,
+  Send,
+  Target,
+} from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-
-import {
-  Target,
-  CheckCircle,
-  AlertTriangle,
-  Pause,
-  FileText,
-  GitBranch,
-  DollarSign,
-  Calendar,
-  Send,
-} from 'lucide-react'
-import { Button } from '@/components/ui/button'
 import type { Milestone, Submission } from '@/lib/db/schema'
 
 interface MilestoneStatusOverviewProps {

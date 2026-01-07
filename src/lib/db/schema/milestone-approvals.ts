@@ -1,20 +1,20 @@
+import { relations } from 'drizzle-orm'
 import {
+  boolean,
+  integer,
+  jsonb,
+  pgEnum,
   pgTable,
   serial,
-  integer,
-  varchar,
   text,
   timestamp,
-  pgEnum,
-  jsonb,
-  boolean,
+  varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
-import { milestones } from './milestones'
 import { groups } from './groups'
-import { users } from './users'
+import { milestones } from './milestones'
 import { reviews } from './reviews'
+import { users } from './users'
 
 // Approval status enum
 const APPROVAL_STATUS_OPTIONS = [

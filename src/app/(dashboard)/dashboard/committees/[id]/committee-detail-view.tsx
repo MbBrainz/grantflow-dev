@@ -1,21 +1,21 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
 import {
-  Settings,
+  DollarSign,
   ExternalLink,
   Github,
-  DollarSign,
-  Users,
+  Settings,
   Shield,
+  Users,
   Wallet,
 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import type { CommitteeWithDetails } from '@/lib/db/queries/committees'
 import Image from 'next/image'
+import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import type { CommitteeWithDetails } from '@/lib/db/queries/committees'
 import type { SignatoryMapping } from '@/lib/db/schema/jsonTypes/GroupSettings'
 
 interface CommitteeFinancials {

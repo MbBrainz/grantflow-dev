@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { MilestoneCompletionForm } from './milestone-completion-form'
 import type { Milestone, Payout, User } from '@/lib/db/schema'
+import { MilestoneCompletionForm } from './milestone-completion-form'
 
 interface MilestoneStatusProps {
   milestone: Pick<

@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation'
 import {
   getCommitteeById,
-  isCommitteeAdmin,
   getCommitteeFinancials,
+  isCommitteeAdmin,
 } from '@/lib/db/queries'
 import { CommitteeDetailView } from './committee-detail-view'
 

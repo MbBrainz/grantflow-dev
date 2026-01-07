@@ -1,12 +1,12 @@
 'use client'
 
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { ArrowRight, Loader2, Users } from 'lucide-react'
+import Image from 'next/image'
+import Link from 'next/link'
+import useSWR from 'swr'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Users, ArrowRight, Loader2 } from 'lucide-react'
-import Link from 'next/link'
-import Image from 'next/image'
-import useSWR from 'swr'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { Group } from '@/lib/db/schema'
 
 interface UserCommitteesResponse {

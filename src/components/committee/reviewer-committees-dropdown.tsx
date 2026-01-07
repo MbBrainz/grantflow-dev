@@ -1,19 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
+  AlertTriangle,
   Building2,
+  CheckCircle,
   ChevronDown,
   Crown,
+  Loader2,
   Shield,
   Users,
-  CheckCircle,
-  AlertTriangle,
-  Loader2,
 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import type { Committee, User } from '@/lib/db/schema'
 
 interface CommitteeMembership {

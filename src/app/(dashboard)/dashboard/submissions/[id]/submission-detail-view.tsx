@@ -1,34 +1,33 @@
 'use client'
 
-import { Badge } from '@/components/ui/badge'
 import {
-  type LucideIcon,
   Award,
   CalendarDays,
   CheckCircle2,
   CircleDot,
   Clock,
+  DollarSign,
   Eye,
   FilePenLine,
-  Hash,
-  MessageSquare,
-  DollarSign,
-  Target,
   GitBranch,
+  Hash,
+  type LucideIcon,
+  MessageSquare,
+  Target,
   Users,
   XCircle,
 } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { Card, CardContent } from '@/components/ui/card'
-import { postMessageToSubmission } from '../discussion-actions'
-import type { SubmissionWithMilestones } from '@/lib/db/schema'
-import type { User } from '@/lib/db/schema'
-import { useSubmissionContext } from '@/lib/hooks/use-submission-context'
-import { ReviewerSubmissionView } from '@/components/submissions/reviewer-submission-view'
 import { GranteeSubmissionView } from '@/components/submissions/grantee-submission-view'
 import { PublicSubmissionView } from '@/components/submissions/public-submission-view'
+import { ReviewerSubmissionView } from '@/components/submissions/reviewer-submission-view'
 import { calculateSubmissionMetrics } from '@/components/submissions/submission-metrics'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent } from '@/components/ui/card'
+import type { SubmissionWithMilestones, User } from '@/lib/db/schema'
+import { useSubmissionContext } from '@/lib/hooks/use-submission-context'
+import { postMessageToSubmission } from '../discussion-actions'
 
 interface SubmissionDetailViewProps {
   submission: SubmissionWithMilestones

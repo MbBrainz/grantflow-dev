@@ -1,27 +1,27 @@
 'use client'
 
-import { useState, useTransition, useEffect } from 'react'
+import {
+  AlertCircle,
+  Clock,
+  MessageCircle,
+  Send,
+  User,
+  Wifi,
+  WifiOff,
+} from 'lucide-react'
+import { useEffect, useState, useTransition } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import {
-  MessageCircle,
-  Send,
-  Clock,
-  User,
-  Wifi,
-  WifiOff,
-  AlertCircle,
-} from 'lucide-react'
-import type { User as UserType, DiscussionWithMessages } from '@/lib/db/schema'
+import type { DiscussionWithMessages, User as UserType } from '@/lib/db/schema'
 import type {
   RealtimeNotification,
   WindowWithNotificationHandler,
 } from '@/lib/notifications/client'
 import {
-  useSubmissionNotifications,
   useConnectionStatus,
+  useSubmissionNotifications,
 } from '@/lib/notifications/client'
 
 // Type alias for backwards compatibility

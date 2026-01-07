@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from '@/lib/hooks/use-toast'
 import type { NotificationData } from './server'
 
@@ -141,10 +141,7 @@ export function useNotificationStream(shouldConnect = true) {
 
         // Attempt to reconnect with exponential backoff (only if shouldConnect is true)
         if (shouldConnect && reconnectAttempts.current < maxReconnectAttempts) {
-          const delay = Math.min(
-            1000 * Math.pow(2, reconnectAttempts.current),
-            30000
-          )
+          const delay = Math.min(1000 * 2 ** reconnectAttempts.current, 30000)
           reconnectAttempts.current++
 
           console.log(

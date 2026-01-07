@@ -1,24 +1,24 @@
 'use client'
 
+import {
+  CheckCircle,
+  Clock,
+  GitBranch,
+  MessageSquare,
+  Target,
+  Vote,
+  XCircle,
+} from 'lucide-react'
 import { useState } from 'react'
-import { Card } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { DiscussionThread } from '@/components/discussion/discussion-thread'
 import { ReviewerVoting } from '@/components/discussion/reviewer-voting'
-import { MilestoneReviewDialog } from '@/components/review/milestone-review-dialog'
-import {
-  Vote,
-  Clock,
-  CheckCircle,
-  XCircle,
-  MessageSquare,
-  GitBranch,
-  Target,
-} from 'lucide-react'
+import { MilestoneCard } from '@/components/milestone/milestone-card'
 // import { CommitteeInfoCard } from '@/components/committee/committee-info-card'
 import { MilestoneVotingPanel } from '@/components/milestone/milestone-voting-panel'
-import { MilestoneCard } from '@/components/milestone/milestone-card'
+import { MilestoneReviewDialog } from '@/components/review/milestone-review-dialog'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import type { Milestone, SubmissionWithMilestones, User } from '@/lib/db/schema'
 
 interface ReviewerSubmissionViewProps {

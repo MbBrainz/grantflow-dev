@@ -1,5 +1,5 @@
 import { compare, hash } from 'bcryptjs'
-import { SignJWT, jwtVerify, type JWTPayload } from 'jose'
+import { type JWTPayload, jwtVerify, SignJWT } from 'jose'
 import { cookies } from 'next/headers'
 import type { NewUser } from '@/lib/db/schema'
 

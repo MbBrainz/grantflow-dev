@@ -1,6 +1,6 @@
 import { generateObject } from 'ai'
-import { akashApi } from './models'
 import type z from 'zod'
+import { akashApi } from './models'
 
 const generateObjectWithAkash = async <T>(
   prompt: string,

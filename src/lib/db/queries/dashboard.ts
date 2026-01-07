@@ -1,11 +1,11 @@
-import { eq, and, desc, or, inArray } from 'drizzle-orm'
+import { and, desc, eq, inArray, or } from 'drizzle-orm'
 import { db } from '../drizzle'
 import {
-  submissions,
-  milestones,
-  groups,
   groupMemberships,
+  groups,
+  milestones,
   reviews,
+  submissions,
 } from '../schema'
 import { getUser } from './users'
 

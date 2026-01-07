@@ -1,7 +1,7 @@
 'use client'
 
+import { CheckCircle, Clock, Target } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
-import { Target, CheckCircle, Clock } from 'lucide-react'
 import type { Milestone } from '@/lib/db/schema'
 
 interface MilestoneProgressBadgeProps {

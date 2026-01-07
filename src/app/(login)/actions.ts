@@ -1,29 +1,29 @@
 'use server'
 
 import { eq } from 'drizzle-orm'
-import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
+import { redirect } from 'next/navigation'
 import {
   validatedActionWithUser,
   validatedActionWithUserState,
 } from '@/lib/auth/middleware'
+import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session'
+import { db } from '@/lib/db/drizzle'
+import { getUser } from '@/lib/db/queries'
 import {
-  users,
   ActivityType,
-  signInSchema,
-  signUpSchema,
-  updatePasswordSchema,
+  type DeleteAccountInput,
   deleteAccountSchema,
-  updateAccountSchema,
   type SignInInput,
   type SignUpInput,
-  type UpdatePasswordInput,
-  type DeleteAccountInput,
+  signInSchema,
+  signUpSchema,
   type UpdateAccountInput,
+  type UpdatePasswordInput,
+  updateAccountSchema,
+  updatePasswordSchema,
+  users,
 } from '@/lib/db/schema'
-import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session'
-import { getUser } from '@/lib/db/queries'
-import { db } from '@/lib/db/drizzle'
 
 // Helper function for activity logging (simplified without team context)
 async function logActivity(userId: number, activityType: ActivityType) {

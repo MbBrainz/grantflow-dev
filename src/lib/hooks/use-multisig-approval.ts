@@ -3,8 +3,8 @@
  * Shared between milestone-review-dialog and milestone-voting-panel
  */
 
-import { useState, useEffect, useCallback } from 'react'
 import { useAccount, useApi, useSigner, useSwitchChain } from '@luno-kit/react'
+import { useCallback, useEffect, useState } from 'react'
 import { getMilestoneApprovalStatus } from '@/app/(dashboard)/dashboard/submissions/multisig-actions'
 import { chains } from '@/lib/polkadot/chains'
 import { useToast } from './use-toast'

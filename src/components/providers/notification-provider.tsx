@@ -1,11 +1,11 @@
 'use client'
 
 import type { ReactNode } from 'react'
-import { useEffect, createContext, useContext, useState } from 'react'
-import { useNotificationStream } from '@/lib/notifications/client'
-import { Toaster } from '@/components/ui/toaster'
+import { createContext, useContext, useEffect, useState } from 'react'
 import useSWR from 'swr'
+import { Toaster } from '@/components/ui/toaster'
 import type { User } from '@/lib/db/schema'
+import { useNotificationStream } from '@/lib/notifications/client'
 import { fetcher } from '@/lib/utils'
 
 interface NotificationContextType {
@@ -137,9 +137,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
         <div className="fixed right-4 bottom-4 z-50">
           <div className="rounded border border-red-400 bg-red-100 px-4 py-3 text-red-700 shadow-lg">
             <div className="flex items-center">
-              <span className="text-sm">
-                ⚠️ Real-time notifications offline
-              </span>
+              <span className="text-sm">⚠️ Real-time notifications offline</span>
               <button
                 onClick={notificationStream.reconnect}
                 className="ml-3 text-xs underline hover:no-underline"

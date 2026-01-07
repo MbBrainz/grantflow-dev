@@ -12,7 +12,7 @@
  */
 
 import type { LegacyClient } from 'dedot'
-import { encodeAddress, decodeAddress } from 'dedot/utils'
+import { decodeAddress, encodeAddress } from 'dedot/utils'
 
 // SS58 prefix for Polkadot/Asset Hub (addresses start with 1)
 const POLKADOT_SS58_PREFIX = 0
@@ -170,7 +170,7 @@ export async function discoverMultisigStructure(
   const proxiesResult = await client.query.proxy.proxies(curatorAddress)
   const proxies = Array.isArray(proxiesResult) ? proxiesResult[0] : []
 
-  let controllingMultisig: MultisigStructure['controllingMultisig'] = undefined
+  let controllingMultisig: MultisigStructure['controllingMultisig']
   let curatorIsMultisig = true // Assume curator is multisig unless we find a controlling account
 
   if (Array.isArray(proxies) && proxies.length > 0) {

@@ -1,21 +1,21 @@
+import { relations } from 'drizzle-orm'
 import {
+  bigint,
+  integer,
+  jsonb,
+  pgEnum,
   pgTable,
   serial,
-  integer,
-  varchar,
   text,
   timestamp,
-  bigint,
-  pgEnum,
-  jsonb,
+  varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
 import { createSchemaFactory } from 'drizzle-zod'
-import { submissions } from './submissions'
-import { groups } from './groups'
 import { discussions } from './discussions'
-import { reviews } from './reviews'
+import { groups } from './groups'
 import { payouts } from './payouts'
+import { reviews } from './reviews'
+import { submissions } from './submissions'
 
 const { createInsertSchema, createSelectSchema } = createSchemaFactory({
   coerce: {

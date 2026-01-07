@@ -5,17 +5,17 @@
  * These tests mock the dedot LegacyClient to verify proper call construction.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { LegacyClient } from 'dedot'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
-  getNextChildBountyId,
-  getChildBounty,
-  getParentBounty,
-  getParentBountyCurator,
+  type ChildBountyParams,
   createChildBountyBundle,
   createPayoutCall,
-  type ChildBountyParams,
+  getChildBounty,
+  getNextChildBountyId,
+  getParentBounty,
+  getParentBountyCurator,
 } from '@/lib/polkadot/child-bounty'
-import type { LegacyClient } from 'dedot'
 
 // Mock call object structure
 const createMockCall = (name: string) => ({

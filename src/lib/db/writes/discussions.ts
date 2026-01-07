@@ -1,7 +1,7 @@
-import { eq, and } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '../drizzle'
-import { discussions, messages, submissions, milestones } from '../schema'
 import { getUser } from '../queries/users'
+import { discussions, messages, milestones, submissions } from '../schema'
 
 export async function ensureDiscussionForSubmission(submissionId: number) {
   const existingDiscussion = await db.query.discussions.findFirst({

@@ -1,8 +1,8 @@
+import { eq } from 'drizzle-orm'
 import { getServerSession, type NextAuthOptions } from 'next-auth'
 import GithubProvider from 'next-auth/providers/github'
 import { db } from '@/lib/db/drizzle'
 import { users } from '@/lib/db/schema'
-import { eq } from 'drizzle-orm'
 
 export const authOptions: NextAuthOptions = {
   providers: [

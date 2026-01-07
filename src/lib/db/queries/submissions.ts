@@ -1,17 +1,17 @@
-import { eq, desc, and, or, sql, inArray } from 'drizzle-orm'
+import { and, desc, eq, inArray, or, sql } from 'drizzle-orm'
 import { db } from '../drizzle'
 import type { SubmissionStatus } from '../schema'
 import {
-  submissions,
+  discussions,
   groupMemberships,
   groups,
-  milestones,
-  discussions,
   messages,
-  reviews,
+  milestones,
   notifications,
+  reviews,
   type Submission,
   type SubmissionWithMilestones,
+  submissions,
 } from '../schema'
 import { getUser } from './users'
 
