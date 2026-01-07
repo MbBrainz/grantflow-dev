@@ -1,6 +1,3 @@
 {
-  "*.{js,jsx,ts,tsx,json,css,md}": [
-    "prettier --write",
-    "git add"
-  ]
+  "*.{js,jsx,ts,tsx,mjs}": ["biome check --write --no-errors-on-unmatched"]
 }

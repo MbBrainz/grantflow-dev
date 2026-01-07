@@ -4,10 +4,10 @@
 echo "Running typecheck..."
 pnpm typecheck || exit 1
 
-# Run lint
-echo "Running lint..."
-pnpm lint:check || exit 1
+# Run biome check (lint + format)
+echo "Running biome check..."
+pnpm check:ci || exit 1
 
-# Run lint-staged (format and stage changes)
-echo "Running formatter..."
+# Run lint-staged (format staged files)
+echo "Running lint-staged..."
 pnpm lint-staged
