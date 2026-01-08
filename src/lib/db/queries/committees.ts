@@ -1,11 +1,11 @@
-import { eq, and, sum } from 'drizzle-orm'
+import { and, eq, sum } from 'drizzle-orm'
 import { db } from '../drizzle'
 import {
-  groups,
-  groupMemberships,
-  submissions,
-  milestones,
   type Group,
+  groupMemberships,
+  groups,
+  milestones,
+  submissions,
 } from '../schema'
 import { getUser } from './users'
 

@@ -13,20 +13,29 @@
 
 'use client'
 
-import { useState, useMemo } from 'react'
 import {
-  useApi,
-  useSwitchChain,
+  ConnectionStatus,
   useAccount,
+  useApi,
   useConnect,
   useConnectors,
-  ConnectionStatus,
+  useSwitchChain,
 } from '@luno-kit/react'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import {
+  AlertCircle,
+  Check,
+  CheckCircle,
+  Copy,
+  ExternalLink,
+  Loader2,
+  Plus,
+  Search,
+  Trash2,
+  Wallet,
+} from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -34,34 +43,25 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  Loader2,
-  Plus,
-  Trash2,
-  AlertCircle,
-  CheckCircle,
-  Search,
-  Copy,
-  Check,
-  Wallet,
-  ExternalLink,
-} from 'lucide-react'
-import { useToast } from '@/lib/hooks/use-toast'
-import { chains } from '@/lib/polkadot/chains'
-import {
-  discoverMultisigStructure,
-  type MultisigStructure,
-} from '@/lib/polkadot/multisig-discovery'
-import {
-  validateMultisigConfig,
-  isSignatory,
-  getSignatoryIndex,
-  normalizeToPolkadot,
-} from '@/lib/polkadot/multisig-address'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import type {
   MultisigConfig,
   SignatoryMapping,
 } from '@/lib/db/schema/jsonTypes/GroupSettings'
+import { useToast } from '@/lib/hooks/use-toast'
+import { chains } from '@/lib/polkadot/chains'
+import {
+  getSignatoryIndex,
+  isSignatory,
+  normalizeToPolkadot,
+  validateMultisigConfig,
+} from '@/lib/polkadot/multisig-address'
+import {
+  discoverMultisigStructure,
+  type MultisigStructure,
+} from '@/lib/polkadot/multisig-discovery'
 
 interface BountyLinkSetupProps {
   initialConfig?: Partial<MultisigConfig>

@@ -1,16 +1,16 @@
 import { createConfig } from '@luno-kit/react'
 import {
+  paseo,
+  paseoAssetHub,
   polkadot,
   polkadotAssetHub,
-  paseoAssetHub,
-  paseo,
 } from '@luno-kit/react/chains'
 import {
-  polkadotjsConnector,
-  talismanConnector,
   mimirConnector,
-  subwalletConnector,
+  polkadotjsConnector,
   polkagateConnector,
+  subwalletConnector,
+  talismanConnector,
 } from '@luno-kit/react/connectors'
 import type { Connector } from '@luno-kit/react/types'
 

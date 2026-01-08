@@ -1,35 +1,5 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { MetadataGrid } from '@/components/ui/metadata-grid'
-import { InfoBox } from '@/components/ui/info-box'
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@/components/ui/tooltip'
-import {
-  CheckCircle,
-  XCircle,
-  Clock,
-  DollarSign,
-  GitBranch,
-  FileCode,
-  Calendar,
-  Target,
-  AlertCircle,
-  X,
-  Wallet,
-  Info,
-  Users,
-} from 'lucide-react'
-import { submitReview } from '@/app/(dashboard)/dashboard/submissions/actions'
-import { useToast } from '@/lib/hooks/use-toast'
 import {
   useAccount,
   useApi,
@@ -38,25 +8,57 @@ import {
   useSigner,
   useSwitchChain,
 } from '@luno-kit/react'
-import type { Milestone } from '@/lib/db/schema'
-import type { GroupSettings } from '@/lib/db/schema/jsonTypes/GroupSettings'
-import {
-  initiateMultisigApproval,
-  castMultisigVote,
-  getMilestoneApprovalStatus,
-} from '@/app/(dashboard)/dashboard/submissions/multisig-actions'
-import { getSubmissionDetails } from '@/app/(dashboard)/dashboard/submissions/actions'
-import {
-  initiateMultisigApproval as initiatePolkadotApproval,
-  approveOrExecuteMultisigCall,
-  willHitQuorum,
-} from '@/lib/polkadot/multisig'
-import { chains } from '@/lib/polkadot/chains'
 import { u8aToHex } from 'dedot/utils'
 import {
+  AlertCircle,
+  Calendar,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  FileCode,
+  GitBranch,
+  Info,
+  Target,
+  Users,
+  Wallet,
+  X,
+  XCircle,
+} from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
+import {
+  getSubmissionDetails,
+  submitReview,
+} from '@/app/(dashboard)/dashboard/submissions/actions'
+import {
+  castMultisigVote,
+  getMilestoneApprovalStatus,
+  initiateMultisigApproval,
+} from '@/app/(dashboard)/dashboard/submissions/multisig-actions'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { InfoBox } from '@/components/ui/info-box'
+import { Label } from '@/components/ui/label'
+import { MetadataGrid } from '@/components/ui/metadata-grid'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import type { Milestone } from '@/lib/db/schema'
+import type { GroupSettings } from '@/lib/db/schema/jsonTypes/GroupSettings'
+import { useToast } from '@/lib/hooks/use-toast'
+import { chains } from '@/lib/polkadot/chains'
+import {
+  approveOrExecuteMultisigCall,
+  initiateMultisigApproval as initiatePolkadotApproval,
+  willHitQuorum,
+} from '@/lib/polkadot/multisig'
+import {
+  type ConversionResultWithRemark,
   convertUsdToTokensWithRemark,
   getTokenSymbol,
-  type ConversionResultWithRemark,
 } from '@/lib/polkadot/price-feed'
 
 interface MilestoneReviewDialogProps {

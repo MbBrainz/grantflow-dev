@@ -1,10 +1,10 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useToast } from '@/lib/hooks/use-toast'
 import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { useToast } from '@/lib/hooks/use-toast'
 
 interface AsyncButtonProps {
   onClick?: () => void | Promise<void>

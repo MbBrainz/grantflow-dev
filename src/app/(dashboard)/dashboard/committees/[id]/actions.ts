@@ -1,18 +1,18 @@
 'use server'
 
-import { validatedActionWithUser } from '@/lib/auth/middleware'
+import { and, eq } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
+import { validatedActionWithUser } from '@/lib/auth/middleware'
+import { db } from '@/lib/db/drizzle'
+import { getCommitteeById, isCommitteeAdmin } from '@/lib/db/queries/committees'
+import { getUserByEmail, searchUsers } from '@/lib/db/queries/users'
+import { groupMemberships } from '@/lib/db/schema'
 import {
-  updateGroup,
   addMemberToGroup,
   removeMemberFromGroup,
+  updateGroup,
 } from '@/lib/db/writes/groups'
-import { isCommitteeAdmin, getCommitteeById } from '@/lib/db/queries/committees'
-import { searchUsers, getUserByEmail } from '@/lib/db/queries/users'
-import { revalidatePath } from 'next/cache'
-import { db } from '@/lib/db/drizzle'
-import { groupMemberships } from '@/lib/db/schema'
-import { and, eq } from 'drizzle-orm'
 
 // ============================================================================
 // Update Committee Information

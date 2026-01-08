@@ -1,20 +1,20 @@
+import { relations } from 'drizzle-orm'
 import {
+  boolean,
+  integer,
+  pgEnum,
   pgTable,
   serial,
-  integer,
-  varchar,
   text,
   timestamp,
-  boolean,
-  pgEnum,
+  varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
-import { submissions } from './submissions'
-import { milestones } from './milestones'
-import { groups } from './groups'
-import { users } from './users'
-import { discussions } from './discussions'
 import { createSchemaFactory } from 'drizzle-zod'
+import { discussions } from './discussions'
+import { groups } from './groups'
+import { milestones } from './milestones'
+import { submissions } from './submissions'
+import { users } from './users'
 
 const { createInsertSchema, createSelectSchema } = createSchemaFactory({
   coerce: {

@@ -11,10 +11,26 @@
 
 'use client'
 
-import { useEffect, useState } from 'react'
 import { useConnect, useConnectors } from '@luno-kit/react'
-import { Button } from '@/components/ui/button'
+import { u8aToString } from 'dedot/utils'
+import {
+  AlertCircle,
+  CheckCircle,
+  Clock,
+  Info,
+  Loader2,
+  Wallet,
+  XCircle,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { getSubmissionDetails } from '@/app/(dashboard)/dashboard/submissions/actions'
+import {
+  castMultisigVote,
+  finalizeMultisigApproval,
+  initiateMultisigApproval,
+} from '@/app/(dashboard)/dashboard/submissions/multisig-actions'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -23,35 +39,19 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import {
-  CheckCircle,
-  Clock,
-  Wallet,
-  AlertCircle,
-  Loader2,
-  XCircle,
-  Info,
-} from 'lucide-react'
-import { useToast } from '@/lib/hooks/use-toast'
-import { useMultisigApproval } from '@/lib/hooks/use-multisig-approval'
-import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
-import { MultisigFlowExplanation } from './multisig-flow-explanation'
-import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
+import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
+import { useMultisigApproval } from '@/lib/hooks/use-multisig-approval'
+import { useToast } from '@/lib/hooks/use-toast'
 import {
-  initiateMultisigApproval as initiatePolkadotApproval,
   approveMultisigCall,
   finalizeMultisigCall,
+  initiateMultisigApproval as initiatePolkadotApproval,
 } from '@/lib/polkadot/multisig'
-import {
-  initiateMultisigApproval,
-  castMultisigVote,
-  finalizeMultisigApproval,
-} from '@/app/(dashboard)/dashboard/submissions/multisig-actions'
-import { getSubmissionDetails } from '@/app/(dashboard)/dashboard/submissions/actions'
-import { u8aToString } from 'dedot/utils'
+import { MultisigFlowExplanation } from './multisig-flow-explanation'
 
 interface MilestoneVotingPanelProps {
   multisigConfig: MultisigConfig

@@ -1,26 +1,26 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import useSWR from 'swr'
-import { Suspense } from 'react'
 import {
-  Loader2,
-  PlusCircle,
+  Activity,
+  AlertCircle,
+  CheckCircle,
+  Clock,
   FileText,
-  Users,
+  Gavel,
+  Loader2,
+  MessageSquare,
+  PlusCircle,
   Target,
   TrendingUp,
-  Activity,
-  Clock,
-  CheckCircle,
-  AlertCircle,
-  MessageSquare,
-  Gavel,
+  Users,
 } from 'lucide-react'
 import Link from 'next/link'
+import { Suspense } from 'react'
+import useSWR from 'swr'
 import { UserCommittees } from '@/components/dashboard/user-committees'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import type { User } from '@/lib/db/schema'
 
 type UserData = Pick<User, 'id' | 'name' | 'email' | 'primaryRole'> & {

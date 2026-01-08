@@ -1,24 +1,24 @@
 'use client'
 
+import {
+  AlertCircle,
+  ArrowRight,
+  ChevronDown,
+  ChevronUp,
+  Target,
+  Vote,
+} from 'lucide-react'
 import { useState } from 'react'
+import type { MetadataItem } from '@/components/submissions/actionable-card'
+import { ActionableCard } from '@/components/submissions/actionable-card'
+import { CommitteeBadge } from '@/components/submissions/committee-badge'
+import { Badge } from '@/components/ui/badge'
 import {
   Card,
   CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import {
-  AlertCircle,
-  Vote,
-  Target,
-  ArrowRight,
-  ChevronDown,
-  ChevronUp,
-} from 'lucide-react'
-import { CommitteeBadge } from '@/components/submissions/committee-badge'
-import type { MetadataItem } from '@/components/submissions/actionable-card'
-import { ActionableCard } from '@/components/submissions/actionable-card'
 import type { Committee } from '@/lib/db/schema'
 
 export interface PendingAction {

@@ -1,4 +1,5 @@
 'use server'
+import { AlertCircle } from 'lucide-react'
 import {
   Card,
   CardContent,
@@ -6,7 +7,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { AlertCircle } from 'lucide-react'
 
 export default async function PricingPage() {
   return Promise.resolve(

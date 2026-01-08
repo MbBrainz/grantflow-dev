@@ -1,5 +1,5 @@
-import type { User } from '@/lib/db/schema'
 import { getUser } from '@/lib/db/queries'
+import type { User } from '@/lib/db/schema'
 
 export interface ActionState {
   error?: string

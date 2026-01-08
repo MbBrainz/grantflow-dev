@@ -1,8 +1,17 @@
 'use client'
 
-import { useActionState, useState, useTransition } from 'react'
+import { useAccount } from '@luno-kit/react'
+import { CheckCircle, Info, Link2, Loader2, Unlink, Wallet } from 'lucide-react'
+import { Suspense, useActionState, useState, useTransition } from 'react'
+import useSWR, { mutate } from 'swr'
+import {
+  type AccountFormState,
+  linkWalletToAccount,
+  unlinkWallet,
+  updateAccountState,
+} from '@/app/(login)/actions'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Card,
   CardContent,
@@ -10,21 +19,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Loader2, Wallet, Link2, Unlink, CheckCircle, Info } from 'lucide-react'
-import {
-  updateAccountState,
-  linkWalletToAccount,
-  unlinkWallet,
-  type AccountFormState,
-} from '@/app/(login)/actions'
 import type { User } from '@/lib/db/schema'
-import useSWR, { mutate } from 'swr'
-import { Suspense } from 'react'
-import { fetcher } from '@/lib/utils'
-import { useAccount } from '@luno-kit/react'
 import { useToast } from '@/lib/hooks/use-toast'
+import { fetcher } from '@/lib/utils'
 
 interface AccountFormProps {
   state: AccountFormState

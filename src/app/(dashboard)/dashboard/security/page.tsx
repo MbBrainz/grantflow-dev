@@ -1,21 +1,20 @@
 'use client'
 
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Label } from '@/components/ui/label'
-import { Lock, Trash2, Loader2 } from 'lucide-react'
-import { useActionState } from 'react'
+import { Loader2, Lock, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { Suspense, useActionState, useEffect } from 'react'
+import useSWR from 'swr'
 import {
-  updatePasswordState,
+  type DeleteState,
   deleteAccountState,
   type PasswordState,
-  type DeleteState,
+  updatePasswordState,
 } from '@/app/(login)/actions'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import type { User } from '@/lib/db/schema'
-import useSWR from 'swr'
-import { Suspense, useEffect } from 'react'
 import { fetcher } from '@/lib/utils'
 
 function PasswordSection({

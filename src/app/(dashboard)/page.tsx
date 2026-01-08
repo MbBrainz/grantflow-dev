@@ -1,15 +1,15 @@
-import { Button } from '@/components/ui/button'
 import {
   ArrowRight,
-  Users,
+  CheckCircle,
+  Clock,
   DollarSign,
   GitBranch,
-  Clock,
-  Shield,
-  Zap,
   Globe,
-  CheckCircle,
+  Shield,
+  Users,
+  Zap,
 } from 'lucide-react'
+import { Button } from '@/components/ui/button'
 import { LottieAnimation } from '@/components/ui/lottie-animation'
 
 export default function HomePage() {

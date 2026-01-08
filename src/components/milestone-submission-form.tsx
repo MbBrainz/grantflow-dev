@@ -1,8 +1,22 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
-import { Button } from '@/components/ui/button'
+// Removed checkbox import - will use HTML input instead
+import {
+  AlertTriangle,
+  Calendar,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  ExternalLink,
+  FileText,
+  GitCommit,
+  Github,
+  Loader2,
+  Target,
+} from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import AsyncButton from '@/components/ui/async-button'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -18,25 +32,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { useToast } from '@/lib/hooks/use-toast'
-
-// Removed checkbox import - will use HTML input instead
-import {
-  Target,
-  Github,
-  GitCommit,
-  Calendar,
-  DollarSign,
-  CheckCircle,
-  Clock,
-  AlertTriangle,
-  ExternalLink,
-  FileText,
-  Loader2,
-} from 'lucide-react'
+import type { Milestone } from '@/lib/db/schema'
 import type { GitHubCommit } from '@/lib/github/simple-client'
 import { getCommitsSince } from '@/lib/github/simple-client'
-import type { Milestone } from '@/lib/db/schema'
+import { useToast } from '@/lib/hooks/use-toast'
 
 // Use GitHubCommit type from simple-client
 type Commit = GitHubCommit

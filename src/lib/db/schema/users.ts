@@ -1,12 +1,12 @@
+import { relations } from 'drizzle-orm'
 import {
+  integer,
   pgTable,
   serial,
-  varchar,
   text,
   timestamp,
-  integer,
+  varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
 import { createSchemaFactory } from 'drizzle-zod'
 import { z } from 'zod'
 import { groups } from './groups'
@@ -18,11 +18,12 @@ const { createInsertSchema, createSelectSchema } = createSchemaFactory({
     boolean: true,
   },
 })
+
 import { groupMemberships } from './group-memberships'
-import { submissions } from './submissions'
 import { messages } from './messages'
-import { reviews } from './reviews'
 import { notifications } from './notifications'
+import { reviews } from './reviews'
+import { submissions } from './submissions'
 
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),

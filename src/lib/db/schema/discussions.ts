@@ -1,17 +1,17 @@
+import { relations } from 'drizzle-orm'
 import {
+  boolean,
+  integer,
   pgTable,
   serial,
-  integer,
-  varchar,
   timestamp,
-  boolean,
+  varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
-import { submissions } from './submissions'
-import { milestones } from './milestones'
 import { groups } from './groups'
 import { messages } from './messages'
+import { milestones } from './milestones'
+import { submissions } from './submissions'
 
 export const discussions = pgTable('discussions', {
   id: serial('id').primaryKey(),

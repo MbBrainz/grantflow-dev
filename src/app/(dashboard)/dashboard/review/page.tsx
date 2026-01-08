@@ -1,3 +1,5 @@
+import { AlertCircle } from 'lucide-react'
+import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
 import {
   Card,
@@ -7,14 +9,12 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import {
+  checkIsReviewer,
   getAllSubmissionsForReview,
+  getReviewerPendingActions,
   getSubmissionStats,
   getUser,
-  checkIsReviewer,
-  getReviewerPendingActions,
 } from '@/lib/db/queries'
-import { redirect } from 'next/navigation'
-import { AlertCircle } from 'lucide-react'
 import { ReviewDashboardClient } from './review-dashboard-client'
 
 async function ReviewDashboard() {

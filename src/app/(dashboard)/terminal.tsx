@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Copy, Check } from 'lucide-react'
+import { Check, Copy } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 export function Terminal() {
   const [terminalStep, setTerminalStep] = useState(0)

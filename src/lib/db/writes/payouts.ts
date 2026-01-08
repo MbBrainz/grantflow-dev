@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import { db } from '../drizzle'
-import { payouts, milestones } from '../schema'
+import { milestones, payouts } from '../schema'
 
 export async function createPayout(data: {
   submissionId?: number

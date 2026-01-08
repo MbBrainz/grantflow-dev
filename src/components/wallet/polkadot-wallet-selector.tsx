@@ -12,15 +12,18 @@
 
 'use client'
 
-import { useState } from 'react'
 import {
-  useConnect,
-  useAccount,
-  useDisconnect,
-  useConnectors,
-  useChain,
   ConnectionStatus,
+  useAccount,
+  useChain,
+  useConnect,
+  useConnectors,
+  useDisconnect,
 } from '@luno-kit/react'
+import { CheckCircle, ChevronDown, Loader2, LogOut, Wallet } from 'lucide-react'
+import { useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,9 +32,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Wallet, ChevronDown, Loader2, CheckCircle, LogOut } from 'lucide-react'
 import { useToast } from '@/lib/hooks/use-toast'
 
 export function PolkadotWalletSelector() {

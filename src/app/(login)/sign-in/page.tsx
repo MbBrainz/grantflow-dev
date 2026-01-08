@@ -1,7 +1,7 @@
-import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import { Login } from '../login'
+import { Suspense } from 'react'
 import { getUser } from '@/lib/db/queries'
+import { Login } from '../login'
 
 export default async function SignInPage() {
   // Redirect to dashboard if already authenticated

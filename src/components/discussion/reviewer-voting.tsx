@@ -1,21 +1,21 @@
 'use client'
 
+import { zodResolver } from '@hookform/resolvers/zod'
+import {
+  AlertCircle,
+  CheckCircle,
+  Loader2,
+  MessageSquare,
+  XCircle,
+} from 'lucide-react'
 import { useState, useTransition } from 'react'
 import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import {
-  CheckCircle,
-  XCircle,
-  MessageSquare,
-  AlertCircle,
-  Loader2,
-} from 'lucide-react'
 import type { User } from '@/lib/db/schema'
 import {
-  submitReviewSchema,
   type SubmitReviewInput,
+  submitReviewSchema,
 } from '@/lib/db/schema/actions'
 
 interface Vote {
@@ -124,8 +124,9 @@ export function ReviewerVoting({
           currentUser: currentUser?.id,
         })
 
-        const { submitReview } =
-          await import('@/app/(dashboard)/dashboard/submissions/actions')
+        const { submitReview } = await import(
+          '@/app/(dashboard)/dashboard/submissions/actions'
+        )
 
         // Call the action with typed data object (no FormData!)
         const result = await submitReview(data)

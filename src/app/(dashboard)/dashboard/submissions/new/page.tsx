@@ -1,11 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import {
+  CheckCircle2,
+  DollarSign,
+  FlaskConical,
+  Save,
+  Send,
+  Users,
+} from 'lucide-react'
 import { useRouter } from 'next/navigation'
-import { Button } from '@/components/ui/button'
+import { useEffect, useState } from 'react'
 import AsyncButton from '@/components/ui/async-button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -13,21 +20,20 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import { Save, Send, FlaskConical, CheckCircle2 } from 'lucide-react'
-import { createSubmission, getActiveCommittees } from '../actions'
-import { useToast } from '@/lib/hooks/use-toast'
-import {
-  isValidGitHubUrl,
-  validateMilestoneAmounts,
-} from '@/lib/validation/submission'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import type { Group as _Group } from '@/lib/db/schema'
-import { Badge } from '@/components/ui/badge'
-import { DollarSign, Users } from 'lucide-react'
+import { useToast } from '@/lib/hooks/use-toast'
+import {
+  isValidGitHubUrl,
+  validateMilestoneAmounts,
+} from '@/lib/validation/submission'
+import { createSubmission, getActiveCommittees } from '../actions'
 
 // Committee IS the grant program now
 interface CommitteeWithBudget {

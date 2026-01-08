@@ -1,11 +1,11 @@
-import { eq, desc } from 'drizzle-orm'
+import { desc, eq } from 'drizzle-orm'
 import { db } from '../drizzle'
 import {
-  milestones,
-  reviews,
-  messages,
-  payouts,
   type Milestone,
+  messages,
+  milestones,
+  payouts,
+  reviews,
 } from '../schema'
 
 export async function getMilestonesBySubmission(

@@ -1,8 +1,8 @@
+import { and, eq } from 'drizzle-orm'
 import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
 import { db } from '@/lib/db/drizzle'
 import { groupMemberships } from '@/lib/db/schema'
-import { eq, and } from 'drizzle-orm'
 
 export async function GET(request: NextRequest) {
   try {

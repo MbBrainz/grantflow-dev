@@ -5,17 +5,17 @@
  * These tests mock the dedot LegacyClient to verify proper call construction.
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import {
-  sortSignatories,
-  getOtherSignatories,
-  willHitQuorum,
-  isQuorumMet,
-  createTransferCall,
-  createBatchedPaymentCall,
-  type Timepoint,
-} from '@/lib/polkadot/multisig'
 import type { LegacyClient } from 'dedot'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  createBatchedPaymentCall,
+  createTransferCall,
+  getOtherSignatories,
+  isQuorumMet,
+  sortSignatories,
+  type Timepoint,
+  willHitQuorum,
+} from '@/lib/polkadot/multisig'
 
 // Test addresses (valid Polkadot-style addresses)
 const ALICE = '5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY'

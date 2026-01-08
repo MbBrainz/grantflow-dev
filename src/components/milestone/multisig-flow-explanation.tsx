@@ -9,9 +9,18 @@
 
 'use client'
 
+import {
+  ArrowRight,
+  CheckCircle,
+  Circle,
+  Info,
+  Users,
+  Wallet,
+  Zap,
+} from 'lucide-react'
 import { useState } from 'react'
-import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -25,15 +34,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip'
-import {
-  CheckCircle,
-  Circle,
-  Info,
-  ArrowRight,
-  Wallet,
-  Users,
-  Zap,
-} from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 interface MultisigFlowExplanationProps {

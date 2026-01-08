@@ -1,9 +1,9 @@
 import type { Chain } from '@luno-kit/react/chains'
 import {
-  polkadot,
-  polkadotAssetHub,
   paseo,
   paseoAssetHub,
+  polkadot,
+  polkadotAssetHub,
 } from '@luno-kit/react/chains'
 
 /**

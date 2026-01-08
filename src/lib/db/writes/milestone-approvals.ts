@@ -2,13 +2,13 @@
  * Database write operations for milestone approvals and signatory votes
  */
 
-import { eq, and } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '../drizzle'
 import {
-  milestoneApprovals,
-  multisigSignatures,
-  milestones,
   type ApprovalStatus,
+  milestoneApprovals,
+  milestones,
+  multisigSignatures,
   type Timepoint,
 } from '../schema'
 

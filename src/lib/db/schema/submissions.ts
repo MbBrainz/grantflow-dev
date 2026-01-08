@@ -1,22 +1,22 @@
+import { relations } from 'drizzle-orm'
 import {
+  bigint,
+  integer,
+  pgEnum,
   pgTable,
   serial,
-  integer,
-  varchar,
   text,
   timestamp,
-  bigint,
-  pgEnum,
+  varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
-import { groups } from './groups'
-import { users } from './users'
 import { discussions } from './discussions'
+import { groups } from './groups'
 import { milestones } from './milestones'
-import { reviews } from './reviews'
-import { payouts } from './payouts'
 import { notifications } from './notifications'
+import { payouts } from './payouts'
+import { reviews } from './reviews'
+import { users } from './users'
 
 const SUBMISSION_STATUS_OPTIONS = [
   'pending',

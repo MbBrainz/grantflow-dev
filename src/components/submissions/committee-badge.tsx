@@ -1,9 +1,9 @@
 'use client'
 
-import { Badge } from '@/components/ui/badge'
 import { Building2 } from 'lucide-react'
-import type { Committee } from '@/lib/db/schema'
 import Image from 'next/image'
+import { Badge } from '@/components/ui/badge'
+import type { Committee } from '@/lib/db/schema'
 
 interface CommitteeBadgeProps {
   committee: Pick<

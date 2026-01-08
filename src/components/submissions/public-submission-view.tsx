@@ -1,8 +1,5 @@
 'use client'
 
-import { Card } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
   CheckCircle,
   Clock,
@@ -12,6 +9,9 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 
 import type { SubmissionWithMilestones } from '@/lib/db/schema'
 

@@ -1,11 +1,11 @@
 import {
+  bigint,
+  integer,
   pgTable,
   serial,
-  varchar,
   text,
   timestamp,
-  integer,
-  bigint,
+  varchar,
 } from 'drizzle-orm/pg-core'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 

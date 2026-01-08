@@ -1,6 +1,6 @@
-import { eq, and } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { db } from '../drizzle'
-import { groups, groupMemberships } from '../schema'
+import { groupMemberships, groups } from '../schema'
 import type {
   FocusAreas,
   GroupSettings,

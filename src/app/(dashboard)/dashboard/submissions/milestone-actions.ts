@@ -1,24 +1,24 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
 import { eq } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
+import { validatedActionWithUser } from '@/lib/auth/middleware'
 import { db } from '@/lib/db/drizzle'
-import { milestones } from '@/lib/db/schema'
 import {
   completeMilestoneWithPayout,
-  isUserReviewer,
-  getMilestoneById,
-  getSubmissionById,
+  createMessage,
   createNotification,
   ensureDiscussionForMilestone,
-  createMessage,
+  getMilestoneById,
+  getSubmissionById,
+  isUserReviewer,
 } from '@/lib/db/queries'
-import { validatedActionWithUser } from '@/lib/auth/middleware'
+import { milestones } from '@/lib/db/schema'
 import {
-  completeMilestoneSchema,
-  submitMilestoneSchema,
   type CompleteMilestoneInput,
+  completeMilestoneSchema,
   type SubmitMilestoneInput,
+  submitMilestoneSchema,
 } from '@/lib/db/schema/actions'
 
 export const completeMilestone = validatedActionWithUser(

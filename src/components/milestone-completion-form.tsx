@@ -1,17 +1,17 @@
 'use client'
 
 import { useState } from 'react'
-import { Button } from '@/components/ui/button'
-import AsyncButton from '@/components/ui/async-button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card } from '@/components/ui/card'
-import { useToast } from '@/lib/hooks/use-toast'
 import {
   completeMilestone,
   validateTransactionHash,
 } from '@/app/(dashboard)/dashboard/submissions/milestone-actions'
+import AsyncButton from '@/components/ui/async-button'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 import type { Milestone } from '@/lib/db/schema'
+import { useToast } from '@/lib/hooks/use-toast'
 
 interface MilestoneCompletionFormProps {
   milestone: Pick<Milestone, 'id' | 'title' | 'amount'>

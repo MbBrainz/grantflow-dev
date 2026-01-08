@@ -10,8 +10,10 @@
 'use client'
 
 import { useChain, useSwitchChain } from '@luno-kit/react'
-import { Button } from '@/components/ui/button'
+import { CheckCircle, ChevronDown, Loader2, Network } from 'lucide-react'
+import { useEffect, useState } from 'react'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,9 +22,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Network, ChevronDown, CheckCircle, Loader2 } from 'lucide-react'
 import { useToast } from '@/lib/hooks/use-toast'
-import { useEffect, useState } from 'react'
 
 export function PolkadotChainSelector() {
   const { chain, chainId } = useChain()

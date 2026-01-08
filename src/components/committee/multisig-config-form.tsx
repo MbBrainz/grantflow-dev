@@ -13,13 +13,18 @@
 
 'use client'
 
-import { useState } from 'react'
 import { useApi, useSwitchChain } from '@luno-kit/react'
-import { Label } from '@/components/ui/label'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
+import {
+  AlertCircle,
+  CheckCircle,
+  Loader2,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react'
+import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+import { Button } from '@/components/ui/button'
 import {
   Card,
   CardContent,
@@ -27,21 +32,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
-import {
-  Loader2,
-  Plus,
-  Trash2,
-  AlertCircle,
-  RefreshCw,
-  CheckCircle,
-} from 'lucide-react'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import type {
   MultisigConfig,
   SignatoryMapping,
 } from '@/lib/db/schema/jsonTypes/GroupSettings'
-import { getParentBounty } from '@/lib/polkadot/child-bounty'
 import { useToast } from '@/lib/hooks/use-toast'
 import { chains } from '@/lib/polkadot/chains'
+import { getParentBounty } from '@/lib/polkadot/child-bounty'
 import { MultisigDiscoveryModal } from './multisig-discovery-modal'
 
 interface MultisigConfigFormProps {

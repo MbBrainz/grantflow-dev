@@ -1,17 +1,18 @@
 // Re-export all tables
-export * from './schema/users'
-export * from './schema/groups'
-export * from './schema/group-memberships'
-export * from './schema/submissions'
+
 export * from './schema/discussions'
-export * from './schema/messages'
-export * from './schema/milestones'
-export * from './schema/milestone-approvals'
-export * from './schema/reviews'
-export * from './schema/payouts'
-export * from './schema/notifications'
 export * from './schema/group-analytics'
+export * from './schema/group-memberships'
+export * from './schema/groups'
+export * from './schema/messages'
+export * from './schema/milestone-approvals'
+export * from './schema/milestones'
+export * from './schema/notifications'
+export * from './schema/payouts'
 export * from './schema/platform-metrics'
+export * from './schema/reviews'
+export * from './schema/submissions'
+export * from './schema/users'
 
 // Activity types for logging
 export enum ActivityType {
@@ -32,14 +33,14 @@ export enum ActivityType {
   LEAVE_GROUP = 'LEAVE_GROUP',
 }
 
+import type { DiscussionWithMessages } from './schema/discussions'
+import type { GroupMembership } from './schema/group-memberships'
+import type { Group } from './schema/groups'
+import type { Milestone } from './schema/milestones'
+import type { Review } from './schema/reviews'
+import type { Submission } from './schema/submissions'
 // Submission with related data
 import type { User } from './schema/users'
-import type { Group } from './schema/groups'
-import type { Submission } from './schema/submissions'
-import type { Milestone } from './schema/milestones'
-import type { DiscussionWithMessages } from './schema/discussions'
-import type { Review } from './schema/reviews'
-import type { GroupMembership } from './schema/group-memberships'
 
 // Committee with budget fields (committee IS the grant program)
 export type CommitteeWithBudget = Group & {

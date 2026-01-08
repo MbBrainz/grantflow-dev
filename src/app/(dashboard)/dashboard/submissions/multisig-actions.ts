@@ -7,24 +7,24 @@
  * implementing the milestone approval workflow with multisig wallets.
  */
 
+import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { validatedActionWithUser } from '@/lib/auth/middleware'
-import { eq } from 'drizzle-orm'
 import { db } from '@/lib/db/drizzle'
+import { getMilestoneById, isUserReviewer } from '@/lib/db/queries'
 import { groups, submissions } from '@/lib/db/schema'
 import {
+  completeMilestoneApproval,
   createMilestoneApproval,
   createMultisigSignature,
   getActiveMilestoneApproval,
-  hasUserVoted,
-  completeMilestoneApproval,
   getApprovalVoteCount,
   getMilestoneApprovalWithVotes,
+  hasUserVoted,
 } from '@/lib/db/writes/milestone-approvals'
-import { createPayout } from '@/lib/db/writes/payouts'
-import { isUserReviewer, getMilestoneById } from '@/lib/db/queries'
 import { createNotification } from '@/lib/db/writes/notifications'
+import { createPayout } from '@/lib/db/writes/payouts'
 
 // ============================================================================
 // Validation Schemas

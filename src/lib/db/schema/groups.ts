@@ -1,24 +1,24 @@
+import { relations } from 'drizzle-orm'
 import {
-  pgTable,
-  serial,
-  varchar,
-  text,
-  timestamp,
+  bigint,
   boolean,
   jsonb,
-  bigint,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
-import { groupMemberships } from './group-memberships'
-import { submissions } from './submissions'
 import { discussions } from './discussions'
-import { milestones } from './milestones'
-import { reviews } from './reviews'
-import { payouts } from './payouts'
 import { groupAnalytics } from './group-analytics'
-import { users } from './users'
+import { groupMemberships } from './group-memberships'
 import type { FocusAreas, GroupSettings } from './jsonTypes/GroupSettings'
+import { milestones } from './milestones'
+import { payouts } from './payouts'
+import { reviews } from './reviews'
+import { submissions } from './submissions'
+import { users } from './users'
 
 // Unified groups table for both committees and teams
 // For committees: This table now includes grant program fields (budget, templates)

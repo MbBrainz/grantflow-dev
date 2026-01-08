@@ -1,13 +1,13 @@
+import { relations } from 'drizzle-orm'
 import {
+  boolean,
+  integer,
   pgTable,
   serial,
-  integer,
-  varchar,
   text,
   timestamp,
-  boolean,
+  varchar,
 } from 'drizzle-orm/pg-core'
-import { relations } from 'drizzle-orm'
 import { createInsertSchema, createSelectSchema } from 'drizzle-zod'
 import { groups } from './groups'
 import { users } from './users'

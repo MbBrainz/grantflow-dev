@@ -1,6 +1,6 @@
-import { eq, and, desc } from 'drizzle-orm'
+import { and, desc, eq } from 'drizzle-orm'
 import { db } from '../drizzle'
-import { discussions, messages, type Discussion } from '../schema'
+import { type Discussion, discussions, messages } from '../schema'
 
 export async function getDiscussionsBySubmission(
   submissionId: number

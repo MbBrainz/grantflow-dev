@@ -1,12 +1,23 @@
 'use client'
 
+import { useAccount } from '@luno-kit/react'
+import {
+  DollarSign,
+  Loader2,
+  Plus,
+  Settings,
+  Shield,
+  Trash2,
+  Users,
+} from 'lucide-react'
+import Image from 'next/image'
+import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
-import { Button } from '@/components/ui/button'
+import { BountyLinkSetup } from '@/components/committee/bounty-link-setup'
+import { AsyncButton } from '@/components/ui/async-button'
 import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
@@ -15,33 +26,22 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import {
-  Settings,
-  Users,
-  Plus,
-  Trash2,
-  Shield,
-  DollarSign,
-  Loader2,
-} from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 import type { CommitteeWithDetails } from '@/lib/db/queries/committees'
-import Image from 'next/image'
+import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
+import { useToast } from '@/lib/hooks/use-toast'
 import {
-  updateCommitteeInfo,
   addCommitteeMember,
+  linkSignatoryToUser,
   removeCommitteeMember,
-  updateMemberRole,
   searchUsersAction,
   updateCommitteeBudget,
+  updateCommitteeInfo,
+  updateMemberRole,
   updateMultisigConfig,
-  linkSignatoryToUser,
 } from '../actions'
-import { useToast } from '@/lib/hooks/use-toast'
-import { AsyncButton } from '@/components/ui/async-button'
-import { BountyLinkSetup } from '@/components/committee/bounty-link-setup'
-import type { MultisigConfig } from '@/lib/db/schema/jsonTypes/GroupSettings'
-import { useAccount } from '@luno-kit/react'
 
 interface CommitteeFinancials {
   totalBudget: number

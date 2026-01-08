@@ -1,28 +1,28 @@
 'use client'
 
 import {
+  Calendar,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  ExternalLink,
+  FileText,
+  GitCommit,
+  Target,
+} from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import {
-  FileText,
-  GitCommit,
-  Calendar,
-  ExternalLink,
-  CheckCircle,
-  DollarSign,
-  Target,
-  Clock,
-} from 'lucide-react'
-import { useState, useEffect } from 'react'
 import type { Milestone } from '@/lib/db/schema'
-import { getCommitDetails } from '@/lib/github/simple-client'
 import type { GitHubCommitDetail } from '@/lib/github/simple-client'
+import { getCommitDetails } from '@/lib/github/simple-client'
 
 interface MilestoneSubmissionViewDialogProps {
   milestone: Pick<

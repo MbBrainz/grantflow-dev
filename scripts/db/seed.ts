@@ -1,21 +1,21 @@
-import { drizzle } from 'drizzle-orm/postgres-js'
-import { eq } from 'drizzle-orm'
-import type { NewMessage } from '../../src/lib/db/schema'
-import {
-  users,
-  groups,
-  groupMemberships,
-  submissions,
-  discussions,
-  messages,
-  milestones,
-  reviews,
-  payouts,
-  notifications,
-} from '../../src/lib/db/schema'
 import { config } from 'dotenv'
+import { eq } from 'drizzle-orm'
+import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
 import { hashPassword } from '@/lib/auth/session'
+import type { NewMessage } from '../../src/lib/db/schema'
+import {
+  discussions,
+  groupMemberships,
+  groups,
+  messages,
+  milestones,
+  notifications,
+  payouts,
+  reviews,
+  submissions,
+  users,
+} from '../../src/lib/db/schema'
 
 config()
 

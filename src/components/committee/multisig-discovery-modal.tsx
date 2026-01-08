@@ -10,8 +10,12 @@
  * - Pending multisig calls (if any)
  */
 
-import { useState } from 'react'
 import { useApi, useSwitchChain } from '@luno-kit/react'
+import { Check, Copy, ExternalLink, Loader2, Search } from 'lucide-react'
+import { useState } from 'react'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
   DialogContent,
@@ -19,12 +23,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Loader2, Search, Copy, Check, ExternalLink } from 'lucide-react'
 import { chains } from '@/lib/polkadot/chains'
 import {
   discoverMultisigStructure,
@@ -164,189 +164,191 @@ export function MultisigDiscoveryModal({
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Multisig Structure Discovery</DialogTitle>
-          <DialogDescription>
-            Enter a bounty ID to discover the curator and multisig structure on{' '}
-            {targetChain?.name ?? network}
-          </DialogDescription>
-        </DialogHeader>
+          <DialogHeader>
+            <DialogTitle>Multisig Structure Discovery</DialogTitle>
+            <DialogDescription>
+              Enter a bounty ID to discover the curator and multisig structure
+              on {targetChain?.name ?? network}
+            </DialogDescription>
+          </DialogHeader>
 
-        <div className="space-y-4">
-          {/* Input */}
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Label htmlFor="bountyId">Bounty ID</Label>
-              <Input
-                id="bountyId"
-                type="number"
-                min={0}
-                placeholder="e.g., 31"
-                value={bountyId}
-                onChange={e => setBountyId(e.target.value)}
-                onKeyDown={e => e.key === 'Enter' && handleDiscover()}
-              />
+          <div className="space-y-4">
+            {/* Input */}
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <Label htmlFor="bountyId">Bounty ID</Label>
+                <Input
+                  id="bountyId"
+                  type="number"
+                  min={0}
+                  placeholder="e.g., 31"
+                  value={bountyId}
+                  onChange={e => setBountyId(e.target.value)}
+                  onKeyDown={e => e.key === 'Enter' && handleDiscover()}
+                />
+              </div>
+              <div className="flex items-end">
+                <Button onClick={handleDiscover} disabled={isLoading}>
+                  {isLoading ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Search className="mr-2 h-4 w-4" />
+                  )}
+                  Discover
+                </Button>
+              </div>
             </div>
-            <div className="flex items-end">
-              <Button onClick={handleDiscover} disabled={isLoading}>
-                {isLoading ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Search className="mr-2 h-4 w-4" />
-                )}
-                Discover
-              </Button>
-            </div>
-          </div>
 
-          {/* Error */}
-          {error && (
-            <div className="rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
-              {error}
-            </div>
-          )}
+            {/* Error */}
+            {error && (
+              <div className="rounded-md bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+                {error}
+              </div>
+            )}
 
-          {/* Results */}
-          {structure && (
-            <div className="space-y-4">
-              {/* Bounty Info */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-sm">
-                    Bounty #{structure.bountyId}
-                    <Badge variant="outline">{structure.bountyStatus}</Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <AddressDisplay
-                    label="Curator (Pure Proxy)"
-                    address={structure.curator.address}
-                    raw={structure.curator.raw}
-                  />
+            {/* Results */}
+            {structure && (
+              <div className="space-y-4">
+                {/* Bounty Info */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="flex items-center gap-2 text-sm">
+                      Bounty #{structure.bountyId}
+                      <Badge variant="outline">{structure.bountyStatus}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <AddressDisplay
+                      label="Curator (Pure Proxy)"
+                      address={structure.curator.address}
+                      raw={structure.curator.raw}
+                    />
 
-                  {structure.controllingMultisig && (
-                    <>
-                      <div className="border-muted flex items-center gap-2 border-t pt-3">
-                        <Badge variant="secondary">
-                          {structure.controllingMultisig.proxyType} Proxy
-                        </Badge>
-                        <span className="text-muted-foreground text-xs">
-                          Curator is controlled by:
-                        </span>
+                    {structure.controllingMultisig && (
+                      <>
+                        <div className="border-muted flex items-center gap-2 border-t pt-3">
+                          <Badge variant="secondary">
+                            {structure.controllingMultisig.proxyType} Proxy
+                          </Badge>
+                          <span className="text-muted-foreground text-xs">
+                            Curator is controlled by:
+                          </span>
+                        </div>
+                        <AddressDisplay
+                          label="Multisig Address"
+                          address={structure.controllingMultisig.address}
+                          raw={structure.controllingMultisig.raw}
+                        />
+                      </>
+                    )}
+
+                    {structure.curatorIsMultisig && (
+                      <div className="text-muted-foreground text-xs">
+                        Curator is directly a multisig (no proxy)
                       </div>
-                      <AddressDisplay
-                        label="Multisig Address"
-                        address={structure.controllingMultisig.address}
-                        raw={structure.controllingMultisig.raw}
-                      />
-                    </>
-                  )}
+                    )}
+                  </CardContent>
+                </Card>
 
-                  {structure.curatorIsMultisig && (
-                    <div className="text-muted-foreground text-xs">
-                      Curator is directly a multisig (no proxy)
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Effective Multisig */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">
-                    Effective Multisig (for configuration)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <AddressDisplay
-                    label="Use this address for multisig operations"
-                    address={structure.effectiveMultisig}
-                  />
-                  <p className="text-muted-foreground mt-2 text-xs">
-                    Signatories cannot be discovered on-chain. You&apos;ll need
-                    to provide them manually or check the block explorer for
-                    historical multisig calls.
-                  </p>
-                </CardContent>
-              </Card>
-
-              {/* Pending Calls */}
-              {pendingCalls.length > 0 && (
+                {/* Effective Multisig */}
                 <Card>
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm">
-                      Pending Multisig Calls ({pendingCalls.length})
+                      Effective Multisig (for configuration)
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-2">
-                    {pendingCalls.map((call, i) => (
-                      <div
-                        key={i}
-                        className="bg-muted/50 rounded-md p-2 text-xs"
-                      >
-                        <div>
-                          <strong>Hash:</strong> {call.callHash}
-                        </div>
-                        <div>
-                          <strong>Depositor:</strong> {call.depositor}
-                        </div>
-                        <div>
-                          <strong>Approvals:</strong>{' '}
-                          {call.approvals.join(', ') || 'None'}
-                        </div>
-                      </div>
-                    ))}
+                  <CardContent>
+                    <AddressDisplay
+                      label="Use this address for multisig operations"
+                      address={structure.effectiveMultisig}
+                    />
+                    <p className="text-muted-foreground mt-2 text-xs">
+                      Signatories cannot be discovered on-chain. You&apos;ll
+                      need to provide them manually or check the block explorer
+                      for historical multisig calls.
+                    </p>
                   </CardContent>
                 </Card>
-              )}
 
-              {/* Structure Diagram */}
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-sm">Structure</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="bg-muted/30 rounded-md p-3 font-mono text-xs">
-                    {structure.controllingMultisig ? (
-                      <>
-                        <div>Signatories (unknown)</div>
-                        <div className="text-muted-foreground pl-2">↓</div>
-                        <div className="pl-2">
-                          Multisig:{' '}
-                          {structure.controllingMultisig.address.slice(0, 8)}...
+                {/* Pending Calls */}
+                {pendingCalls.length > 0 && (
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm">
+                        Pending Multisig Calls ({pendingCalls.length})
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {pendingCalls.map((call, i) => (
+                        <div
+                          key={i}
+                          className="bg-muted/50 rounded-md p-2 text-xs"
+                        >
+                          <div>
+                            <strong>Hash:</strong> {call.callHash}
+                          </div>
+                          <div>
+                            <strong>Depositor:</strong> {call.depositor}
+                          </div>
+                          <div>
+                            <strong>Approvals:</strong>{' '}
+                            {call.approvals.join(', ') || 'None'}
+                          </div>
                         </div>
-                        <div className="text-muted-foreground pl-4">
-                          ↓ ({structure.controllingMultisig.proxyType} proxy)
-                        </div>
-                        <div className="pl-4">
-                          Pure Proxy: {structure.curator.address.slice(0, 8)}...
-                        </div>
-                        <div className="text-muted-foreground pl-6">↓</div>
-                        <div className="pl-6">
-                          Bounty #{structure.bountyId} Curator
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div>Signatories (unknown)</div>
-                        <div className="text-muted-foreground pl-2">↓</div>
-                        <div className="pl-2">
-                          Multisig/Curator:{' '}
-                          {structure.curator.address.slice(0, 8)}...
-                        </div>
-                        <div className="text-muted-foreground pl-4">↓</div>
-                        <div className="pl-4">
-                          Bounty #{structure.bountyId} Curator
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
-        </div>
-      </DialogContent>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Structure Diagram */}
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm">Structure</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="bg-muted/30 rounded-md p-3 font-mono text-xs">
+                      {structure.controllingMultisig ? (
+                        <>
+                          <div>Signatories (unknown)</div>
+                          <div className="text-muted-foreground pl-2">↓</div>
+                          <div className="pl-2">
+                            Multisig:{' '}
+                            {structure.controllingMultisig.address.slice(0, 8)}
+                            ...
+                          </div>
+                          <div className="text-muted-foreground pl-4">
+                            ↓ ({structure.controllingMultisig.proxyType} proxy)
+                          </div>
+                          <div className="pl-4">
+                            Pure Proxy: {structure.curator.address.slice(0, 8)}
+                            ...
+                          </div>
+                          <div className="text-muted-foreground pl-6">↓</div>
+                          <div className="pl-6">
+                            Bounty #{structure.bountyId} Curator
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div>Signatories (unknown)</div>
+                          <div className="text-muted-foreground pl-2">↓</div>
+                          <div className="pl-2">
+                            Multisig/Curator:{' '}
+                            {structure.curator.address.slice(0, 8)}...
+                          </div>
+                          <div className="text-muted-foreground pl-4">↓</div>
+                          <div className="pl-4">
+                            Bounty #{structure.bountyId} Curator
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
+        </DialogContent>
       </Dialog>
     </>
   )

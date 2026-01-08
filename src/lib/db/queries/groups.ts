@@ -1,6 +1,6 @@
-import { eq, desc, and, or, ilike, sql } from 'drizzle-orm'
+import { and, desc, eq, ilike, or, sql } from 'drizzle-orm'
 import { db } from '../drizzle'
-import { groups, groupMemberships, submissions, type Group } from '../schema'
+import { type Group, groupMemberships, groups, submissions } from '../schema'
 
 // Group-related queries
 // For committees: the committee IS the grant program (budget fields on groups table)

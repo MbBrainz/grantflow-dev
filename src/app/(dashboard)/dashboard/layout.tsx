@@ -1,18 +1,18 @@
 'use client'
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
-import { Button } from '@/components/ui/button'
 import {
-  Users,
-  Settings,
-  Shield,
   Activity,
-  Menu,
   FileText,
   Gavel,
+  Menu,
+  Settings,
+  Shield,
+  Users,
 } from 'lucide-react'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 
 export default function DashboardLayout({
   children,
