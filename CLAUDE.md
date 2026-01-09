@@ -2,6 +2,18 @@
 
 This configuration combines: Next.js 15, shadcn/ui, Vercel AI SDK, Drizzle ORM, Tailwind CSS
 
+## Notion Project Management
+
+This project is tracked in Notion. Use the `notion-workspace` skill to manage tasks.
+
+| Resource | ID |
+|----------|-----|
+| Project Page | `2373198d-3b69-8009-9ea6-dce3a1a41125` |
+| Project URL | https://www.notion.so/2373198d3b6980099ea6dce3a1a41125 |
+| Tasks Data Source | `1b93198d-3b69-8005-b2cc-000b8b53f7f2` |
+
+To find open tasks for this project, search the Tasks database filtering by the project relation.
+
 ---
 
 ## Project Context
