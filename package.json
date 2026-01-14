@@ -36,6 +36,7 @@
     "@octokit/rest": "^22.0.1",
     "@polkadot/util": "^14.0.1",
     "@polkadot/util-crypto": "^14.0.1",
+    "@radix-ui/react-select": "^2.2.6",
     "@radix-ui/react-slot": "^1.2.4",
     "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-tooltip": "^1.2.8",
