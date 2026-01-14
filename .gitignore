@@ -43,3 +43,6 @@ next-env.d.ts
 # Docker
 postgres_data/
 .env*.local
+
+# Local fonts (using fontsource packages instead)
+src/fonts/
