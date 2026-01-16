@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import {
   useAccount,
@@ -7,8 +7,8 @@ import {
   useConnectors,
   useSigner,
   useSwitchChain,
-} from '@luno-kit/react'
-import { u8aToHex } from 'dedot/utils'
+} from "@luno-kit/react";
+import { u8aToHex } from "dedot/utils";
 import {
   AlertCircle,
   Calendar,
@@ -23,68 +23,75 @@ import {
   Wallet,
   X,
   XCircle,
-} from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import {
   getSubmissionDetails,
   submitReview,
-} from '@/app/(dashboard)/dashboard/submissions/actions'
+} from "@/app/(dashboard)/dashboard/submissions/actions";
 import {
   castMultisigVote,
   getMilestoneApprovalStatus,
   initiateMultisigApproval,
-} from '@/app/(dashboard)/dashboard/submissions/multisig-actions'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { InfoBox } from '@/components/ui/info-box'
-import { Label } from '@/components/ui/label'
-import { MetadataGrid } from '@/components/ui/metadata-grid'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
+} from "@/app/(dashboard)/dashboard/submissions/multisig-actions";
+import { Badge } from "@/components/ui/badge";
+import { BlockchainErrorAlert } from "@/components/ui/blockchain-error-alert";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { InfoBox } from "@/components/ui/info-box";
+import { Label } from "@/components/ui/label";
+import { MetadataGrid } from "@/components/ui/metadata-grid";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from '@/components/ui/tooltip'
-import type { Milestone } from '@/lib/db/schema'
-import type { GroupSettings } from '@/lib/db/schema/jsonTypes/GroupSettings'
-import { useToast } from '@/lib/hooks/use-toast'
-import { chains } from '@/lib/polkadot/chains'
+} from "@/components/ui/tooltip";
+import type { Milestone } from "@/lib/db/schema";
+import type { GroupSettings } from "@/lib/db/schema/jsonTypes/GroupSettings";
+import {
+  type ParsedBlockchainError,
+  getErrorSummary,
+  isRetryableError,
+  parseBlockchainError,
+} from "@/lib/errors/blockchain-errors";
+import { useToast } from "@/lib/hooks/use-toast";
+import { chains } from "@/lib/polkadot/chains";
 import {
   approveOrExecuteMultisigCall,
   initiateMultisigApproval as initiatePolkadotApproval,
   willHitQuorum,
-} from '@/lib/polkadot/multisig'
+} from "@/lib/polkadot/multisig";
 import {
   type ConversionResultWithRemark,
   convertUsdToTokensWithRemark,
   getTokenSymbol,
-} from '@/lib/polkadot/price-feed'
+} from "@/lib/polkadot/price-feed";
 
 interface MilestoneReviewDialogProps {
   milestone: Pick<
     Milestone,
-    | 'id'
-    | 'title'
-    | 'description'
-    | 'status'
-    | 'amount'
-    | 'dueDate'
-    | 'deliverables'
-    | 'requirements'
-    | 'githubRepoUrl'
-    | 'githubPrUrl'
-    | 'githubCommitHash'
-    | 'codeAnalysis'
-    | 'submittedAt'
-  >
-  submissionId: number
-  milestoneNumber: number
-  committeeId: number
-  committeeSettings?: GroupSettings | null
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onReviewSubmitted: () => void
+    | "id"
+    | "title"
+    | "description"
+    | "status"
+    | "amount"
+    | "dueDate"
+    | "deliverables"
+    | "requirements"
+    | "githubRepoUrl"
+    | "githubPrUrl"
+    | "githubCommitHash"
+    | "codeAnalysis"
+    | "submittedAt"
+  >;
+  submissionId: number;
+  milestoneNumber: number;
+  committeeId: number;
+  committeeSettings?: GroupSettings | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onReviewSubmitted: () => void;
 }
 
 export function MilestoneReviewDialog({
@@ -98,128 +105,132 @@ export function MilestoneReviewDialog({
   onReviewSubmitted,
 }: MilestoneReviewDialogProps) {
   const [selectedVote, setSelectedVote] = useState<
-    'approve' | 'reject' | 'abstain' | null
-  >(null)
-  const [feedback, setFeedback] = useState('')
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isSigningMultisig, setIsSigningMultisig] = useState(false)
+    "approve" | "reject" | "abstain" | null
+  >(null);
+  const [feedback, setFeedback] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSigningMultisig, setIsSigningMultisig] = useState(false);
   const [existingApproval, setExistingApproval] = useState<{
-    id: number
-    callHash: string
-    callData: string
-    timepoint: { height: number; index: number } | null
-    initiatorAddress: string
-    approvalWorkflow: string
-    createdAt: Date
+    id: number;
+    callHash: string;
+    callData: string;
+    timepoint: { height: number; index: number } | null;
+    initiatorAddress: string;
+    approvalWorkflow: string;
+    createdAt: Date;
     // Price conversion info (for transparency to subsequent signatories)
-    priceUsd?: string | null
-    priceDate?: Date | null
-    priceSource?: string | null
-    tokenSymbol?: string | null
-    tokenAmount?: string | null
-  } | null>(null)
-  const [isLoadingApproval, setIsLoadingApproval] = useState(false)
+    priceUsd?: string | null;
+    priceDate?: Date | null;
+    priceSource?: string | null;
+    tokenSymbol?: string | null;
+    tokenAmount?: string | null;
+  } | null>(null);
+  const [isLoadingApproval, setIsLoadingApproval] = useState(false);
   const [priceConversion, setPriceConversion] =
-    useState<ConversionResultWithRemark | null>(null)
-  const [isLoadingPrice, setIsLoadingPrice] = useState(false)
-  const multisigConfig = committeeSettings?.multisig
-  const { toast } = useToast()
+    useState<ConversionResultWithRemark | null>(null);
+  const [isLoadingPrice, setIsLoadingPrice] = useState(false);
+  const [blockchainError, setBlockchainError] =
+    useState<ParsedBlockchainError | null>(null);
+  const multisigConfig = committeeSettings?.multisig;
+  const { toast } = useToast();
 
   // LunoKit hooks for wallet connection
-  const { account, address } = useAccount()
-  const { currentChainId } = useSwitchChain()
+  const { account, address } = useAccount();
+  const { currentChainId } = useSwitchChain();
   useEffect(() => {
     const networkChain = multisigConfig?.network
       ? chains[multisigConfig.network]
-      : null
+      : null;
     if (currentChainId !== networkChain?.genesisHash && networkChain) {
-      const toChain = networkChain.name
-      const logText = ` Please switch your network to ${toChain} to continue`
-      console.log(`[MilestoneReviewDialog]: ${logText}`)
+      const toChain = networkChain.name;
+      const logText = ` Please switch your network to ${toChain} to continue`;
+      console.log(`[MilestoneReviewDialog]: ${logText}`);
 
       // toast({title: 'Network Change Required',description: logText,})
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentChainId])
-  const { connect } = useConnect()
-  const connectors = useConnectors()
-  const { data: signer } = useSigner()
-  const { api: client } = useApi()
+  }, [currentChainId]);
+  const { connect } = useConnect();
+  const connectors = useConnectors();
+  const { data: signer } = useSigner();
+  const { api: client } = useApi();
 
   // Derive connection state
-  const isConnected = !!account && !!address && !!client
-  const selectedSigner = signer
+  const isConnected = !!account && !!address && !!client;
+  const selectedSigner = signer;
 
   // Check if merged workflow is enabled
-  const isMergedWorkflow = multisigConfig?.approvalWorkflow === 'merged'
+  const isMergedWorkflow = multisigConfig?.approvalWorkflow === "merged";
 
   const deliverables = Array.isArray(milestone.deliverables)
     ? milestone.deliverables
-    : []
+    : [];
 
   const requirements = Array.isArray(milestone.requirements)
     ? milestone.requirements
-    : []
+    : [];
 
   const checkExistingApproval = useCallback(async () => {
-    setIsLoadingApproval(true)
+    setIsLoadingApproval(true);
     try {
-      const approvalStatus = await getMilestoneApprovalStatus(milestone.id)
-      if (approvalStatus.status === 'active' && approvalStatus.approval) {
+      const approvalStatus = await getMilestoneApprovalStatus(milestone.id);
+      if (approvalStatus.status === "active" && approvalStatus.approval) {
         const approval = approvalStatus.approval as {
-          callData?: string
-          priceUsd?: string | null
-          priceDate?: Date | null
-          priceSource?: string | null
-          tokenSymbol?: string | null
-          tokenAmount?: string | null
-        }
+          callData?: string;
+          priceUsd?: string | null;
+          priceDate?: Date | null;
+          priceSource?: string | null;
+          tokenSymbol?: string | null;
+          tokenAmount?: string | null;
+        };
         setExistingApproval({
           ...approvalStatus.approval,
-          callData: approval.callData ?? '',
+          callData: approval.callData ?? "",
           priceUsd: approval.priceUsd,
           priceDate: approval.priceDate,
           priceSource: approval.priceSource,
           tokenSymbol: approval.tokenSymbol,
           tokenAmount: approval.tokenAmount,
-        })
+        });
         console.log(
-          '[MilestoneReviewDialog]: Found existing approval',
-          approvalStatus
-        )
+          "[MilestoneReviewDialog]: Found existing approval",
+          approvalStatus,
+        );
       } else {
-        setExistingApproval(null)
-        console.log('[MilestoneReviewDialog]: No existing approval found')
+        setExistingApproval(null);
+        console.log("[MilestoneReviewDialog]: No existing approval found");
       }
     } catch (error) {
       console.error(
-        '[MilestoneReviewDialog]: Failed to check existing approval',
-        error
-      )
-      setExistingApproval(null)
+        "[MilestoneReviewDialog]: Failed to check existing approval",
+        error,
+      );
+      setExistingApproval(null);
     } finally {
-      setIsLoadingApproval(false)
+      setIsLoadingApproval(false);
     }
-  }, [milestone.id])
+  }, [milestone.id]);
 
-  // Check for existing approval when dialog opens
+  // Check for existing approval when dialog opens, and clear errors
   useEffect(() => {
     if (open) {
+      // Clear any previous blockchain error when dialog opens
+      setBlockchainError(null);
       if (isMergedWorkflow) {
-        void checkExistingApproval()
+        void checkExistingApproval();
       }
     }
-  }, [open, isMergedWorkflow, checkExistingApproval])
+  }, [open, isMergedWorkflow, checkExistingApproval]);
 
   // Fetch price conversion when dialog opens (for merged workflow)
   // If an existing approval exists, use the stored price info for consistency
   useEffect(() => {
     async function fetchPriceConversion() {
-      if (!open || !isMergedWorkflow || !multisigConfig) return
+      if (!open || !isMergedWorkflow || !multisigConfig) return;
 
-      setIsLoadingPrice(true)
+      setIsLoadingPrice(true);
       try {
-        const network = multisigConfig.network ?? 'paseo'
+        const network = multisigConfig.network ?? "paseo";
 
         // If existing approval has price info, use that for consistency
         if (
@@ -228,41 +239,41 @@ export function MilestoneReviewDialog({
           existingApproval?.priceSource
         ) {
           // Reconstruct price conversion from stored approval data
-          const storedPriceDate = new Date(existingApproval.priceDate)
+          const storedPriceDate = new Date(existingApproval.priceDate);
           const storedConversion: ConversionResultWithRemark = {
             amountUsd: milestone.amount ?? 0,
-            amountTokens: parseFloat(existingApproval.tokenAmount ?? '0'),
+            amountTokens: parseFloat(existingApproval.tokenAmount ?? "0"),
             amountPlanck: BigInt(0), // Not needed for display
             price: {
-              symbol: existingApproval.tokenSymbol ?? 'PAS',
+              symbol: existingApproval.tokenSymbol ?? "PAS",
               priceUsd: parseFloat(existingApproval.priceUsd),
               timestamp: storedPriceDate,
               source: existingApproval.priceSource as
-                | 'mock'
-                | 'coingecko'
-                | 'chainlink'
-                | 'subscan',
+                | "mock"
+                | "coingecko"
+                | "chainlink"
+                | "subscan",
             },
             decimals: 10,
             remarkInfo: {
               priceUsd: existingApproval.priceUsd,
               priceDate: storedPriceDate.toISOString(),
-              priceDateFormatted: `${storedPriceDate.toISOString().replace('T', ' ').slice(0, 19)} UTC`,
+              priceDateFormatted: `${storedPriceDate.toISOString().replace("T", " ").slice(0, 19)} UTC`,
               priceSource: existingApproval.priceSource,
-              remarkString: '', // Not needed for display
+              remarkString: "", // Not needed for display
             },
-          }
-          setPriceConversion(storedConversion)
+          };
+          setPriceConversion(storedConversion);
           console.log(
-            '[MilestoneReviewDialog]: Using stored price conversion from approval',
+            "[MilestoneReviewDialog]: Using stored price conversion from approval",
             {
               priceUsd: existingApproval.priceUsd,
               priceDate: existingApproval.priceDate,
               priceSource: existingApproval.priceSource,
               tokenAmount: existingApproval.tokenAmount,
-            }
-          )
-          return
+            },
+          );
+          return;
         }
 
         // No existing approval or no stored price info - fetch fresh price
@@ -270,27 +281,27 @@ export function MilestoneReviewDialog({
           milestone.amount ?? 0,
           network,
           milestone.id,
-          milestone.title
-        )
-        setPriceConversion(conversion)
-        console.log('[MilestoneReviewDialog]: Price conversion fetched', {
+          milestone.title,
+        );
+        setPriceConversion(conversion);
+        console.log("[MilestoneReviewDialog]: Price conversion fetched", {
           amountUsd: conversion.amountUsd,
           amountTokens: conversion.amountTokens,
           priceUsd: conversion.price.priceUsd,
           priceDate: conversion.remarkInfo.priceDateFormatted,
           priceSource: conversion.remarkInfo.priceSource,
-        })
+        });
       } catch (error) {
         console.error(
-          '[MilestoneReviewDialog]: Failed to fetch price conversion',
-          error
-        )
+          "[MilestoneReviewDialog]: Failed to fetch price conversion",
+          error,
+        );
       } finally {
-        setIsLoadingPrice(false)
+        setIsLoadingPrice(false);
       }
     }
 
-    void fetchPriceConversion()
+    void fetchPriceConversion();
   }, [
     open,
     isMergedWorkflow,
@@ -299,89 +310,94 @@ export function MilestoneReviewDialog({
     milestone.id,
     milestone.title,
     existingApproval,
-  ])
+  ]);
 
   const handleMultisigApproval = async () => {
     if (!account || !address || !multisigConfig) {
       console.error(
-        '[MilestoneReviewDialog]: Missing account or multisig config'
-      )
-      throw new Error('Missing account or multisig configuration')
+        "[MilestoneReviewDialog]: Missing account or multisig config",
+      );
+      throw new Error("Missing account or multisig configuration");
     }
 
-    setIsSigningMultisig(true)
+    setIsSigningMultisig(true);
+    // Clear any previous error when starting a new attempt
+    setBlockchainError(null);
 
     try {
       if (existingApproval) {
         // There's an existing approval - this is a subsequent vote
-        await handleSubsequentApproval()
+        await handleSubsequentApproval();
       } else {
         // No existing approval - this is the initial approval
-        await handleInitialApproval()
+        await handleInitialApproval();
       }
     } catch (error) {
-      console.error('[MilestoneReviewDialog]: Multisig approval failed', error)
+      console.error("[MilestoneReviewDialog]: Multisig approval failed", error);
 
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error occurred'
-      const isWasmError =
-        errorMessage.includes('wasm trap') ||
-        errorMessage.includes('unreachable')
+      // Parse the error into a structured format with context
+      const network = multisigConfig.network ?? "paseo";
+      const parsedError = parseBlockchainError(error, {
+        network,
+        parentBountyId: multisigConfig.parentBountyId,
+        accountAddress: address,
+        threshold: multisigConfig.threshold,
+      });
 
+      // Store the parsed error for detailed display
+      setBlockchainError(parsedError);
+
+      // Show a brief toast notification with summary
       toast({
-        title: isWasmError ? 'Blockchain Transaction Failed' : 'Multisig Error',
-        description: isWasmError
-          ? 'Transaction validation failed. Please ensure your account has Paseo testnet tokens from https://faucet.polkadot.io/paseo'
-          : errorMessage.length > 200
-            ? `${errorMessage.substring(0, 200)}...`
-            : errorMessage,
-        variant: 'destructive',
-      })
+        title: parsedError.title,
+        description: getErrorSummary(parsedError),
+        variant: "destructive",
+      });
 
-      throw error // Re-throw to be caught by handleSubmit
+      throw error; // Re-throw to be caught by handleSubmit
     } finally {
-      setIsSigningMultisig(false)
+      setIsSigningMultisig(false);
     }
-  }
+  };
 
   const handleInitialApproval = async () => {
-    console.log('[MilestoneReviewDialog]: Handling initial approval')
+    console.log("[MilestoneReviewDialog]: Handling initial approval");
 
     if (!account || !address || !multisigConfig || !selectedSigner || !client) {
-      throw new Error('Missing account, multisig configuration, or signer')
+      throw new Error("Missing account, multisig configuration, or signer");
     }
 
     toast({
-      title: 'Initiating Multisig Transaction',
-      description: 'Creating new multisig transaction for milestone approval.',
-    })
+      title: "Initiating Multisig Transaction",
+      description: "Creating new multisig transaction for milestone approval.",
+    });
 
     try {
       // Get submission details for beneficiary address
-      const submissionResult = await getSubmissionDetails(submissionId)
+      const submissionResult = await getSubmissionDetails(submissionId);
       if (submissionResult.error || !submissionResult.success) {
         throw new Error(
-          submissionResult.error ?? 'Failed to get submission details'
-        )
+          submissionResult.error ?? "Failed to get submission details",
+        );
       }
       if (!submissionResult.submission?.walletAddress) {
-        throw new Error('Submission beneficiary address not found')
+        throw new Error("Submission beneficiary address not found");
       }
-      const beneficiaryAddress = submissionResult.submission.walletAddress
+      const beneficiaryAddress = submissionResult.submission.walletAddress;
 
       // Use the pre-fetched price conversion (with remark info)
       // This ensures the price displayed to the user matches the on-chain remark
-      const network = multisigConfig.network ?? 'paseo'
+      const network = multisigConfig.network ?? "paseo";
       const conversion =
         priceConversion ??
         (await convertUsdToTokensWithRemark(
           milestone.amount ?? 0,
           network,
           milestone.id,
-          milestone.title
-        ))
+          milestone.title,
+        ));
 
-      console.log('[MilestoneReviewDialog]: USD to token conversion', {
+      console.log("[MilestoneReviewDialog]: USD to token conversion", {
         amountUsd: milestone.amount,
         amountTokens: conversion.amountTokens,
         amountPlanck: conversion.amountPlanck.toString(),
@@ -389,7 +405,7 @@ export function MilestoneReviewDialog({
         priceDate: conversion.remarkInfo.priceDateFormatted,
         priceSource: conversion.remarkInfo.priceSource,
         network,
-      })
+      });
 
       // Create Polkadot multisig transaction with price info remark
       const polkadotResult = await initiatePolkadotApproval({
@@ -403,13 +419,13 @@ export function MilestoneReviewDialog({
         signer: selectedSigner,
         network,
         priceInfo: conversion.remarkInfo, // Include price info for on-chain remark
-      })
+      });
 
       // Record the approval in database (with bounty tracking and price info)
-      console.log('[MilestoneReviewDialog]: Recording approval in database', {
+      console.log("[MilestoneReviewDialog]: Recording approval in database", {
         milestoneId: milestone.id,
         timepoint: polkadotResult.timepoint,
-        approvalWorkflow: 'merged',
+        approvalWorkflow: "merged",
         txHash: polkadotResult.txHash,
         initiatorWalletAddress: address,
         callHash: polkadotResult.callHash,
@@ -417,11 +433,11 @@ export function MilestoneReviewDialog({
         predictedChildBountyId: polkadotResult.predictedChildBountyId,
         parentBountyId: multisigConfig.parentBountyId,
         priceInfo: conversion.remarkInfo,
-      })
+      });
       await initiateMultisigApproval({
         milestoneId: milestone.id,
         timepoint: polkadotResult.timepoint,
-        approvalWorkflow: 'merged',
+        approvalWorkflow: "merged",
         txHash: polkadotResult.txHash,
         initiatorWalletAddress: address,
         callHash: polkadotResult.callHash,
@@ -435,23 +451,23 @@ export function MilestoneReviewDialog({
         priceSource: conversion.remarkInfo.priceSource,
         tokenSymbol: getTokenSymbol(network),
         tokenAmount: conversion.amountTokens.toString(),
-      })
+      });
 
       toast({
-        title: 'Initial Approval Created',
+        title: "Initial Approval Created",
         description: `Multisig transaction initiated. Transaction hash: ${polkadotResult.txHash.slice(0, 10)}...`,
-      })
+      });
     } catch (error) {
       console.error(
-        '[MilestoneReviewDialog]: Failed to create initial approval',
-        error
-      )
-      throw error
+        "[MilestoneReviewDialog]: Failed to create initial approval",
+        error,
+      );
+      throw error;
     }
-  }
+  };
 
   const handleSubsequentApproval = async () => {
-    console.log('[MilestoneReviewDialog]: Handling subsequent approval')
+    console.log("[MilestoneReviewDialog]: Handling subsequent approval");
 
     if (
       !account ||
@@ -462,8 +478,8 @@ export function MilestoneReviewDialog({
       !client
     ) {
       throw new Error(
-        'Missing account, multisig config, existing approval, or signer'
-      )
+        "Missing account, multisig config, existing approval, or signer",
+      );
     }
 
     // Validate timepoint exists
@@ -473,44 +489,44 @@ export function MilestoneReviewDialog({
       existingApproval.timepoint.index === 0
     ) {
       toast({
-        title: 'Invalid Timepoint',
+        title: "Invalid Timepoint",
         description:
-          'The multisig timepoint is missing or invalid. The initiator may need to retry the initial approval.',
-        variant: 'destructive',
-      })
+          "The multisig timepoint is missing or invalid. The initiator may need to retry the initial approval.",
+        variant: "destructive",
+      });
       throw new Error(
-        'Invalid or missing timepoint for existing multisig approval'
-      )
+        "Invalid or missing timepoint for existing multisig approval",
+      );
     }
 
     try {
       // Get submission details for beneficiary address (needed for potential execution)
-      const submissionResult = await getSubmissionDetails(submissionId)
+      const submissionResult = await getSubmissionDetails(submissionId);
       if (submissionResult.error || !submissionResult.success) {
         throw new Error(
-          submissionResult.error ?? 'Failed to get submission details'
-        )
+          submissionResult.error ?? "Failed to get submission details",
+        );
       }
       if (!submissionResult.submission?.walletAddress) {
-        throw new Error('Submission beneficiary address not found')
+        throw new Error("Submission beneficiary address not found");
       }
-      const beneficiaryAddress = submissionResult.submission.walletAddress
+      const beneficiaryAddress = submissionResult.submission.walletAddress;
 
       // Use the pre-fetched price conversion (should match the initial approval's price)
       // Note: For subsequent approvals, ideally we'd retrieve the original price from DB
       // For now, we use the current price conversion (will be stored in DB later)
-      const network = multisigConfig.network ?? 'paseo'
+      const network = multisigConfig.network ?? "paseo";
       const conversion =
         priceConversion ??
         (await convertUsdToTokensWithRemark(
           milestone.amount ?? 0,
           network,
           milestone.id,
-          milestone.title
-        ))
+          milestone.title,
+        ));
 
       console.log(
-        '[MilestoneReviewDialog]: USD to token conversion (subsequent)',
+        "[MilestoneReviewDialog]: USD to token conversion (subsequent)",
         {
           amountUsd: milestone.amount,
           amountTokens: conversion.amountTokens,
@@ -519,30 +535,30 @@ export function MilestoneReviewDialog({
           priceDate: conversion.remarkInfo.priceDateFormatted,
           priceSource: conversion.remarkInfo.priceSource,
           network,
-        }
-      )
+        },
+      );
 
       // Get current approval count to check if this vote will hit quorum
-      const approvalStatus = await getMilestoneApprovalStatus(milestone.id)
+      const approvalStatus = await getMilestoneApprovalStatus(milestone.id);
       const currentApprovals =
-        approvalStatus.status === 'active'
+        approvalStatus.status === "active"
           ? (approvalStatus.votes?.approvals ?? 0)
-          : 0
+          : 0;
 
       // Check if this vote will hit quorum (for display purposes)
       const willExecute = willHitQuorum(
         currentApprovals,
-        multisigConfig.threshold
-      )
+        multisigConfig.threshold,
+      );
 
       toast({
         title: willExecute
-          ? 'Executing Final Approval'
-          : 'Adding Your Approval',
+          ? "Executing Final Approval"
+          : "Adding Your Approval",
         description: willExecute
-          ? 'Threshold will be met! Executing the multisig transaction.'
-          : 'Adding your signature to the existing multisig transaction.',
-      })
+          ? "Threshold will be met! Executing the multisig transaction."
+          : "Adding your signature to the existing multisig transaction.",
+      });
 
       // Use approveOrExecuteMultisigCall which handles quorum detection automatically
       // If quorum is hit, it will execute atomically (approval + execution in one tx)
@@ -553,7 +569,7 @@ export function MilestoneReviewDialog({
         callHash: existingApproval.callHash,
         timepoint: existingApproval.timepoint,
         threshold: multisigConfig.threshold,
-        allSignatories: multisigConfig.signatories.map(s => s.address),
+        allSignatories: multisigConfig.signatories.map((s) => s.address),
         approverAddress: address,
         signer: selectedSigner,
         beneficiaryAddress,
@@ -563,35 +579,35 @@ export function MilestoneReviewDialog({
         multisigConfig,
         network,
         priceInfo: conversion.remarkInfo, // Pass price info for call reconstruction
-      })
+      });
 
       // Record the vote in database (with execution info if it was executed)
       await castMultisigVote({
         approvalId: existingApproval.id,
         signatoryAddress: address,
-        signatureType: 'signed',
+        signatureType: "signed",
         txHash: polkadotResult.txHash,
         wasExecuted: polkadotResult.wasExecuted,
         executionBlockNumber: polkadotResult.blockNumber,
         // childBountyId would be extracted from chain events if using childBounty workflow
-      })
+      });
 
       if (polkadotResult.wasExecuted) {
         toast({
-          title: 'Transaction Executed Successfully!',
+          title: "Transaction Executed Successfully!",
           description: `Payment completed. Execution hash: ${polkadotResult.txHash.slice(0, 10)}...`,
-        })
+        });
       } else {
         toast({
-          title: 'Approval Added',
+          title: "Approval Added",
           description: `Your signature has been added. Transaction hash: ${polkadotResult.txHash.slice(0, 10)}...`,
-        })
+        });
       }
     } catch (error) {
-      console.error('[MilestoneReviewDialog]: Failed to add approval', error)
-      throw error
+      console.error("[MilestoneReviewDialog]: Failed to add approval", error);
+      throw error;
     }
-  }
+  };
 
   // NOTE: handleFinalApproval is no longer needed as a separate function
   // The quorum detection and execution is now handled automatically in
@@ -601,57 +617,53 @@ export function MilestoneReviewDialog({
   const handleSubmit = async () => {
     if (!selectedVote) {
       toast({
-        title: 'Vote Required',
-        description: 'Please select your vote before submitting.',
-        variant: 'destructive',
-      })
-      return
+        title: "Vote Required",
+        description: "Please select your vote before submitting.",
+        variant: "destructive",
+      });
+      return;
     }
 
     // For merged workflow with approve vote, check wallet connection first
-    if (isMergedWorkflow && selectedVote === 'approve' && !isConnected) {
+    if (isMergedWorkflow && selectedVote === "approve" && !isConnected) {
       toast({
-        title: 'Wallet Connection Required',
+        title: "Wallet Connection Required",
         description:
-          'For on-chain payment approval, please connect your Polkadot wallet first.',
-        variant: 'destructive',
-      })
-      return
+          "For on-chain payment approval, please connect your Polkadot wallet first.",
+        variant: "destructive",
+      });
+      return;
     }
 
-    setIsSubmitting(true)
+    setIsSubmitting(true);
 
     try {
       // For merged workflow + approve vote, handle multisig transaction FIRST
       if (
         isMergedWorkflow &&
-        selectedVote === 'approve' &&
+        selectedVote === "approve" &&
         multisigConfig &&
         account
       ) {
         try {
-          await handleMultisigApproval()
+          await handleMultisigApproval();
 
           toast({
-            title: 'Blockchain Transaction Successful',
+            title: "Blockchain Transaction Successful",
             description:
-              'Your on-chain approval has been recorded. Now recording your review vote.',
-          })
+              "Your on-chain approval has been recorded. Now recording your review vote.",
+          });
         } catch (multisigError) {
-          // Multisig failed - don't proceed with review submission
+          // Multisig failed - error already parsed and displayed via handleMultisigApproval
+          // The blockchainError state is already set with detailed information
           console.error(
-            '[MilestoneReviewDialog]: Multisig transaction failed',
-            multisigError
-          )
-
-          toast({
-            title: 'Blockchain Transaction Failed',
-            description: 'The blockchain transaction failed. Please try again.',
-            variant: 'destructive',
-          })
+            "[MilestoneReviewDialog]: Multisig transaction failed",
+            multisigError,
+          );
 
           // Don't submit review - keep dialog open for retry
-          return
+          // The BlockchainErrorAlert will show detailed error information
+          return;
         }
       }
 
@@ -661,44 +673,44 @@ export function MilestoneReviewDialog({
         milestoneId: milestone.id,
         vote: selectedVote,
         feedback: feedback.trim() || undefined,
-      }
+      };
 
-      const result = await submitReview(reviewData)
+      const result = await submitReview(reviewData);
 
       if (result.error) {
         toast({
-          title: 'Error',
+          title: "Error",
           description: result.error,
-          variant: 'destructive',
-        })
-        return
+          variant: "destructive",
+        });
+        return;
       }
 
       // Success - both blockchain (if needed) and off-chain vote recorded
       toast({
-        title: 'Review Submitted',
+        title: "Review Submitted",
         description: `Your ${selectedVote} vote has been recorded for this milestone.`,
-      })
+      });
 
       // Success - close dialog and refresh
-      onReviewSubmitted()
-      onOpenChange(false)
-      setSelectedVote(null)
-      setFeedback('')
+      onReviewSubmitted();
+      onOpenChange(false);
+      setSelectedVote(null);
+      setFeedback("");
     } catch (error) {
-      console.error('[MilestoneReviewDialog]: Error submitting review', error)
+      console.error("[MilestoneReviewDialog]: Error submitting review", error);
       toast({
-        title: 'Error',
-        description: 'Failed to submit review. Please try again.',
-        variant: 'destructive',
-      })
+        title: "Error",
+        description: "Failed to submit review. Please try again.",
+        variant: "destructive",
+      });
     } finally {
-      setIsSubmitting(false)
-      setIsSigningMultisig(false)
+      setIsSubmitting(false);
+      setIsSigningMultisig(false);
     }
-  }
+  };
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
@@ -718,12 +730,12 @@ export function MilestoneReviewDialog({
               <Badge
                 variant="outline"
                 className={
-                  milestone.status === 'in-review'
-                    ? 'border-purple-300 bg-purple-50 text-purple-700'
-                    : 'border-blue-300 bg-blue-50 text-blue-700'
+                  milestone.status === "in-review"
+                    ? "border-purple-300 bg-purple-50 text-purple-700"
+                    : "border-blue-300 bg-blue-50 text-blue-700"
                 }
               >
-                {milestone.status.replace('-', ' ')}
+                {milestone.status.replace("-", " ")}
               </Badge>
             </div>
             <Button
@@ -756,7 +768,7 @@ export function MilestoneReviewDialog({
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {connectors.length > 0 ? (
-                        connectors.map(connector => (
+                        connectors.map((connector) => (
                           <Button
                             key={connector.id}
                             size="sm"
@@ -783,7 +795,7 @@ export function MilestoneReviewDialog({
                   <div className="mt-2 flex items-center gap-2 text-sm">
                     <CheckCircle className="h-4 w-4 text-green-600" />
                     <span className="text-green-700">
-                      Connected:{' '}
+                      Connected:{" "}
                       <code className="rounded bg-blue-100 px-1 py-0.5 text-xs">
                         {address.slice(0, 8)}...
                         {address.slice(-6)}
@@ -798,19 +810,19 @@ export function MilestoneReviewDialog({
               items={[
                 {
                   icon: <DollarSign className="h-4 w-4 text-gray-500" />,
-                  label: 'Funding Amount',
+                  label: "Funding Amount",
                   value: `$${(milestone.amount ?? 0).toLocaleString()}`,
                 },
                 {
                   icon: <Calendar className="h-4 w-4 text-gray-500" />,
-                  label: 'Due Date',
+                  label: "Due Date",
                   value: milestone.dueDate
                     ? new Date(milestone.dueDate).toLocaleDateString()
-                    : 'Not specified',
+                    : "Not specified",
                 },
                 milestone.submittedAt && {
                   icon: <Clock className="h-4 w-4 text-gray-500" />,
-                  label: 'Submitted At',
+                  label: "Submitted At",
                   value: new Date(milestone.submittedAt).toLocaleString(),
                 },
               ].filter(Boolean)}
@@ -847,9 +859,9 @@ export function MilestoneReviewDialog({
                         <p className="font-medium text-gray-900">
                           {priceConversion.amountTokens.toLocaleString(
                             undefined,
-                            { maximumFractionDigits: 4 }
-                          )}{' '}
-                          {getTokenSymbol(multisigConfig.network ?? 'paseo')}
+                            { maximumFractionDigits: 4 },
+                          )}{" "}
+                          {getTokenSymbol(multisigConfig.network ?? "paseo")}
                         </p>
                       </div>
                     </div>
@@ -880,8 +892,8 @@ export function MilestoneReviewDialog({
                     </div>
                     <p className="text-xs text-gray-500">
                       {existingApproval
-                        ? 'This conversion rate was recorded when the initial transaction was created.'
-                        : 'This conversion rate will be recorded on-chain when the transaction is created, ensuring transparency for all signatories.'}
+                        ? "This conversion rate was recorded when the initial transaction was created."
+                        : "This conversion rate will be recorded on-chain when the transaction is created, ensuring transparency for all signatories."}
                     </p>
                   </div>
                 ) : (
@@ -951,7 +963,7 @@ export function MilestoneReviewDialog({
                         )}
                       {deliverable.submittedAt && (
                         <p className="mt-2 text-xs text-gray-500">
-                          Submitted:{' '}
+                          Submitted:{" "}
                           {new Date(deliverable.submittedAt).toLocaleString()}
                         </p>
                       )}
@@ -1020,6 +1032,25 @@ export function MilestoneReviewDialog({
             )}
 
             <div className="border-t pt-6">
+              {/* Blockchain Error Display */}
+              {blockchainError && (
+                <div className="mb-6">
+                  <BlockchainErrorAlert
+                    error={blockchainError}
+                    onRetry={
+                      isRetryableError(blockchainError)
+                        ? () => {
+                            setBlockchainError(null);
+                            void handleSubmit();
+                          }
+                        : undefined
+                    }
+                    onDismiss={() => setBlockchainError(null)}
+                    showTechnicalDetails={true}
+                  />
+                </div>
+              )}
+
               {/* Compact Multisig Status for Merged Workflow */}
               {isMergedWorkflow && multisigConfig && (
                 <div className="mb-4 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
@@ -1041,7 +1072,7 @@ export function MilestoneReviewDialog({
                         </span>
                         <span className="mx-2 text-gray-400">·</span>
                         <span className="text-sm text-gray-600">
-                          {multisigConfig.threshold} of{' '}
+                          {multisigConfig.threshold} of{" "}
                           {multisigConfig.signatories.length} signatures needed
                         </span>
                       </div>
@@ -1074,7 +1105,7 @@ export function MilestoneReviewDialog({
                         </span>
                         <span className="mx-2 text-gray-400">·</span>
                         <span className="text-sm text-gray-600">
-                          {multisigConfig.threshold} of{' '}
+                          {multisigConfig.threshold} of{" "}
                           {multisigConfig.signatories.length} signatures needed
                         </span>
                       </div>
@@ -1091,18 +1122,18 @@ export function MilestoneReviewDialog({
                     Your Decision
                   </Label>
                   <RadioGroup
-                    value={selectedVote ?? ''}
-                    onValueChange={value =>
-                      setSelectedVote(value as 'approve' | 'reject' | 'abstain')
+                    value={selectedVote ?? ""}
+                    onValueChange={(value) =>
+                      setSelectedVote(value as "approve" | "reject" | "abstain")
                     }
                     className="grid grid-cols-1 gap-3 md:grid-cols-3"
                   >
                     <label
                       htmlFor="approve"
                       className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all hover:bg-green-50 ${
-                        selectedVote === 'approve'
-                          ? 'border-green-500 bg-green-50 ring-2 ring-green-200'
-                          : 'border-gray-200 bg-white'
+                        selectedVote === "approve"
+                          ? "border-green-500 bg-green-50 ring-2 ring-green-200"
+                          : "border-gray-200 bg-white"
                       }`}
                     >
                       <RadioGroupItem
@@ -1111,11 +1142,11 @@ export function MilestoneReviewDialog({
                         className="sr-only"
                       />
                       <CheckCircle
-                        className={`h-8 w-8 ${selectedVote === 'approve' ? 'text-green-600' : 'text-gray-400'}`}
+                        className={`h-8 w-8 ${selectedVote === "approve" ? "text-green-600" : "text-gray-400"}`}
                       />
                       <div>
                         <p
-                          className={`font-semibold ${selectedVote === 'approve' ? 'text-green-900' : 'text-gray-700'}`}
+                          className={`font-semibold ${selectedVote === "approve" ? "text-green-900" : "text-gray-700"}`}
                         >
                           Approve
                         </p>
@@ -1128,9 +1159,9 @@ export function MilestoneReviewDialog({
                     <label
                       htmlFor="reject"
                       className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all hover:bg-red-50 ${
-                        selectedVote === 'reject'
-                          ? 'border-red-500 bg-red-50 ring-2 ring-red-200'
-                          : 'border-gray-200 bg-white'
+                        selectedVote === "reject"
+                          ? "border-red-500 bg-red-50 ring-2 ring-red-200"
+                          : "border-gray-200 bg-white"
                       }`}
                     >
                       <RadioGroupItem
@@ -1139,11 +1170,11 @@ export function MilestoneReviewDialog({
                         className="sr-only"
                       />
                       <XCircle
-                        className={`h-8 w-8 ${selectedVote === 'reject' ? 'text-red-600' : 'text-gray-400'}`}
+                        className={`h-8 w-8 ${selectedVote === "reject" ? "text-red-600" : "text-gray-400"}`}
                       />
                       <div>
                         <p
-                          className={`font-semibold ${selectedVote === 'reject' ? 'text-red-900' : 'text-gray-700'}`}
+                          className={`font-semibold ${selectedVote === "reject" ? "text-red-900" : "text-gray-700"}`}
                         >
                           Reject
                         </p>
@@ -1156,9 +1187,9 @@ export function MilestoneReviewDialog({
                     <label
                       htmlFor="abstain"
                       className={`flex cursor-pointer flex-col items-center gap-2 rounded-lg border-2 p-4 text-center transition-all hover:bg-yellow-50 ${
-                        selectedVote === 'abstain'
-                          ? 'border-yellow-500 bg-yellow-50 ring-2 ring-yellow-200'
-                          : 'border-gray-200 bg-white'
+                        selectedVote === "abstain"
+                          ? "border-yellow-500 bg-yellow-50 ring-2 ring-yellow-200"
+                          : "border-gray-200 bg-white"
                       }`}
                     >
                       <RadioGroupItem
@@ -1167,11 +1198,11 @@ export function MilestoneReviewDialog({
                         className="sr-only"
                       />
                       <Clock
-                        className={`h-8 w-8 ${selectedVote === 'abstain' ? 'text-yellow-600' : 'text-gray-400'}`}
+                        className={`h-8 w-8 ${selectedVote === "abstain" ? "text-yellow-600" : "text-gray-400"}`}
                       />
                       <div>
                         <p
-                          className={`font-semibold ${selectedVote === 'abstain' ? 'text-yellow-900' : 'text-gray-700'}`}
+                          className={`font-semibold ${selectedVote === "abstain" ? "text-yellow-900" : "text-gray-700"}`}
                         >
                           Abstain
                         </p>
@@ -1190,7 +1221,7 @@ export function MilestoneReviewDialog({
                   <textarea
                     id="feedback"
                     value={feedback}
-                    onChange={e => setFeedback(e.target.value)}
+                    onChange={(e) => setFeedback(e.target.value)}
                     placeholder="Provide detailed feedback on the milestone deliverables..."
                     className="min-h-[120px] w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                   />
@@ -1210,7 +1241,7 @@ export function MilestoneReviewDialog({
                     Cancel
                   </Button>
                   {/* TODO: Add link to documentation when available - e.g., href="/docs/multisig-approvals" */}
-                  {selectedVote === 'approve' &&
+                  {selectedVote === "approve" &&
                   isMergedWorkflow &&
                   multisigConfig &&
                   isConnected ? (
@@ -1222,10 +1253,10 @@ export function MilestoneReviewDialog({
                           disabled={isSubmitting || isSigningMultisig}
                         >
                           {isSigningMultisig
-                            ? 'Signing Transaction...'
+                            ? "Signing Transaction..."
                             : isSubmitting
-                              ? 'Submitting...'
-                              : 'Sign & Submit'}
+                              ? "Submitting..."
+                              : "Sign & Submit"}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent
@@ -1236,17 +1267,17 @@ export function MilestoneReviewDialog({
                         <div className="space-y-2">
                           <p className="text-sm font-semibold">
                             {existingApproval
-                              ? 'Add Your Signature'
-                              : 'Create Multisig Transaction'}
+                              ? "Add Your Signature"
+                              : "Create Multisig Transaction"}
                           </p>
                           <p className="text-xs text-gray-300">
                             {existingApproval
-                              ? 'Your wallet will sign the existing transaction. Once the threshold is reached, payment executes automatically.'
-                              : 'Your wallet will create a new child bounty transaction on-chain. Other signatories can then add their approvals.'}
+                              ? "Your wallet will sign the existing transaction. Once the threshold is reached, payment executes automatically."
+                              : "Your wallet will create a new child bounty transaction on-chain. Other signatories can then add their approvals."}
                           </p>
                           <div className="mt-2 border-t border-gray-600 pt-2">
                             <p className="text-xs text-gray-400">
-                              Requires {multisigConfig.threshold} of{' '}
+                              Requires {multisigConfig.threshold} of{" "}
                               {multisigConfig.signatories.length} signatures •
                               Gas fees apply
                             </p>
@@ -1262,7 +1293,7 @@ export function MilestoneReviewDialog({
                         !selectedVote || isSubmitting || isSigningMultisig
                       }
                     >
-                      {isSubmitting ? 'Submitting...' : 'Submit Review'}
+                      {isSubmitting ? "Submitting..." : "Submit Review"}
                     </Button>
                   )}
                 </div>
@@ -1272,5 +1303,5 @@ export function MilestoneReviewDialog({
         </div>
       </Card>
     </div>
-  )
+  );
 }
