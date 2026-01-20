@@ -434,7 +434,7 @@ export function MilestoneReviewDialog({
         parentBountyId: multisigConfig.parentBountyId,
         priceInfo: conversion.remarkInfo,
       })
-      await initiateMultisigApproval({
+      const dbResult = await initiateMultisigApproval({
         milestoneId: milestone.id,
         timepoint: polkadotResult.timepoint,
         approvalWorkflow: 'merged',
@@ -452,6 +452,19 @@ export function MilestoneReviewDialog({
         tokenSymbol: getTokenSymbol(network),
         tokenAmount: conversion.amountTokens.toString(),
       })
+
+      if (dbResult.error) {
+        console.error(
+          '[MilestoneReviewDialog]: Failed to record approval in database',
+          dbResult.error
+        )
+        toast({
+          title: 'Database Error',
+          description: `Blockchain transaction succeeded but failed to record in database: ${dbResult.error}. Please contact support.`,
+          variant: 'destructive',
+        })
+        throw new Error(dbResult.error)
+      }
 
       toast({
         title: 'Initial Approval Created',

@@ -44,7 +44,7 @@ const initiateApprovalSchema = z.object({
   reviewId: z.number().int().positive().optional(), // Link to review for merged workflow
   // Child bounty tracking (required for on-chain indexing)
   parentBountyId: z.number().int().positive(),
-  predictedChildBountyId: z.number().int().positive(),
+  predictedChildBountyId: z.number().int().nonnegative(), // Allow 0 for first child bounty
   // Price conversion info (for transparency)
   priceUsd: z.string().optional(), // Price per token in USD
   priceDate: z.string().optional(), // ISO date string when price was fetched

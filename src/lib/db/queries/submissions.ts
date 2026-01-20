@@ -57,8 +57,21 @@ export async function getSubmissionById(
       submitter: true,
       submitterGroup: true,
       // reviewerGroup is the committee (which IS the grant program)
-      reviewerGroup: true,
-      milestones: true,
+      reviewerGroup: {
+        with: {
+          members: {
+            where: eq(groupMemberships.isActive, true),
+            columns: {
+              id: true,
+              userId: true,
+              isActive: true,
+            },
+          },
+        },
+      },
+      milestones: {
+        orderBy: [milestones.id],
+      },
       discussions: {
         with: {
           messages: {
@@ -491,12 +504,23 @@ export async function getSubmissionWithMilestones(
       where: eq(submissions.id, id),
       with: {
         milestones: {
-          orderBy: [milestones.createdAt],
+          orderBy: [milestones.id],
         },
         submitter: true,
         submitterGroup: true,
         // reviewerGroup is the committee (which IS the grant program)
-        reviewerGroup: true,
+        reviewerGroup: {
+          with: {
+            members: {
+              where: eq(groupMemberships.isActive, true),
+              columns: {
+                id: true,
+                userId: true,
+                isActive: true,
+              },
+            },
+          },
+        },
         discussions: {
           with: {
             messages: {

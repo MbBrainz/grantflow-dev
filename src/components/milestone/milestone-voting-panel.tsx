@@ -176,7 +176,7 @@ export function MilestoneVotingPanel({
       })
 
       // Record the approval in database
-      await initiateMultisigApproval({
+      const dbResult = await initiateMultisigApproval({
         milestoneId,
         timepoint: polkadotResult.timepoint,
         approvalWorkflow: 'separated',
@@ -187,6 +187,19 @@ export function MilestoneVotingPanel({
         predictedChildBountyId: polkadotResult.predictedChildBountyId,
         parentBountyId: multisigConfig.parentBountyId,
       })
+
+      if (dbResult.error) {
+        console.error(
+          '[MilestoneVotingPanel]: Failed to record approval in database',
+          dbResult.error
+        )
+        toast({
+          title: 'Database Error',
+          description: `Blockchain transaction succeeded but failed to record in database: ${dbResult.error}. Please contact support.`,
+          variant: 'destructive',
+        })
+        throw new Error(dbResult.error)
+      }
 
       toast({
         title: 'Initial Approval Created',
