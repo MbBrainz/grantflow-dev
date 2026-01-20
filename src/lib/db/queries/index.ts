@@ -37,3 +37,5 @@ export * from './reviews'
 export * from './submissions'
 // User queries
 export * from './users'
+// Onboarding queries
+export * from './onboarding'

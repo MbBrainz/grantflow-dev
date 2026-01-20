@@ -1,6 +1,6 @@
+import '@fontsource-variable/manrope'
 import './globals.css'
 import type { Metadata, Viewport } from 'next'
-import { Manrope } from 'next/font/google'
 import { SWRConfig } from 'swr'
 import { NotificationProvider } from '@/components/providers/notification-provider'
 import { SessionProvider } from '@/components/providers/session-provider'
@@ -16,8 +16,6 @@ export const viewport: Viewport = {
   maximumScale: 1,
 }
 
-const manrope = Manrope({ subsets: ['latin'] })
-
 export default async function RootLayout({
   children,
 }: {
@@ -27,7 +25,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
-      <body className={manrope.className}>
+      <body className="font-sans">
         <SessionProvider session={session}>
           <SWRConfig
             value={{
