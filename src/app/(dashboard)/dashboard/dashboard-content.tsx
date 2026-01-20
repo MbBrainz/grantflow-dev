@@ -218,11 +218,31 @@ function RecentActivity({
   )
 }
 
-function QuickActions() {
-  const result = useSWR<UserData>('/api/user', fetcher)
-  const user = result.data
-  const isReviewer = user?.role === 'committee' || user?.role === 'admin'
+function ReviewerQuickActions() {
+  return (
+    <Card className="border-orange-200 bg-orange-50">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Gavel className="h-5 w-5 text-orange-600" />
+          Review Queue
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="mb-4 text-sm text-gray-600">
+          Review pending submissions and milestones awaiting your approval.
+        </p>
+        <Link href="/dashboard/review">
+          <Button className="w-full bg-orange-500 hover:bg-orange-600">
+            <Gavel className="mr-2 h-4 w-4" />
+            Open Review Queue
+          </Button>
+        </Link>
+      </CardContent>
+    </Card>
+  )
+}
 
+function QuickActions() {
   return (
     <Card>
       <CardHeader>
@@ -230,14 +250,12 @@ function QuickActions() {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          {!isReviewer && (
-            <Link href="/dashboard/submissions/new">
-              <Button className="flex h-16 w-full flex-col items-center justify-center space-y-2">
-                <PlusCircle className="h-6 w-6" />
-                <span>New Submission</span>
-              </Button>
-            </Link>
-          )}
+          <Link href="/dashboard/submissions/new">
+            <Button className="flex h-16 w-full flex-col items-center justify-center space-y-2">
+              <PlusCircle className="h-6 w-6" />
+              <span>New Submission</span>
+            </Button>
+          </Link>
 
           <Link href="/dashboard/submissions">
             <Button
@@ -245,20 +263,9 @@ function QuickActions() {
               className="flex h-16 w-full flex-col items-center justify-center space-y-2"
             >
               <FileText className="h-6 w-6" />
-              <span>
-                {isReviewer ? 'Review Submissions' : 'View Submissions'}
-              </span>
+              <span>View Submissions</span>
             </Button>
           </Link>
-
-          {isReviewer && (
-            <Link href="/dashboard/review">
-              <Button className="flex h-16 w-full flex-col items-center justify-center space-y-2">
-                <Gavel className="h-6 w-6" />
-                <span>Reviewer Dashboard</span>
-              </Button>
-            </Link>
-          )}
 
           <Link href="/dashboard/activity">
             <Button
@@ -382,12 +389,14 @@ function DashboardStats() {
     )
   }
 
+  const isReviewer = stats.committees.isReviewer
+
   return (
     <>
       <DashboardStatsDisplay stats={stats} />
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="space-y-6">
-          <QuickActions />
+          {isReviewer ? <ReviewerQuickActions /> : <QuickActions />}
           <UserCommittees userId={user.id} />
           <UpcomingDeadlines deadlines={stats.upcomingDeadlines} />
         </div>

@@ -1,62 +1,32 @@
-import type { NextRequest } from 'next/server'
 import { NextResponse } from 'next/server'
-import { getUserCommittees } from '@/lib/db/queries'
+import { getUser, getUserCommittees } from '@/lib/db/queries'
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url)
-    const userId = searchParams.get('userId')
+    // Get user from session
+    const user = await getUser()
 
-    if (!userId) {
+    if (!user) {
       return NextResponse.json(
-        {
-          error: 'Missing required parameter: userId',
-        },
-        { status: 400 }
+        { error: 'Unauthorized' },
+        { status: 401 }
       )
     }
 
-    console.log('[user-committees]: Fetching committees for user', {
-      userId: parseInt(userId),
-    })
-
     // Get all committees the user is a member of
-    const userCommittees = await getUserCommittees(parseInt(userId))
+    const userCommittees = await getUserCommittees(user.id)
 
-    // Transform the data for the frontend
-    const memberships = userCommittees.map(committee => ({
-      committee: {
-        id: committee.id,
-        name: committee.name,
-        description: committee.description,
-        logoUrl: committee.logoUrl,
-        focusAreas: committee.focusAreas,
-        isActive: committee.isActive,
-        type: committee.type,
-        websiteUrl: committee.websiteUrl,
-        githubOrg: committee.githubOrg,
-        walletAddress: committee.walletAddress,
-      },
-      role: 'member', // Default role since we don't have membership details
-      permissions: [],
-      joinedAt: new Date().toISOString(), // Placeholder
-      isActive: committee.isActive,
+    // Return simplified format for dashboard navigation
+    const committees = userCommittees.map(committee => ({
+      id: committee.id,
+      name: committee.name,
     }))
 
-    return NextResponse.json({
-      success: true,
-      memberships,
-      totalMemberships: memberships.length,
-      activeMemberships: memberships.filter(
-        m => m.isActive && m.committee.isActive
-      ).length,
-    })
+    return NextResponse.json({ committees })
   } catch (error) {
     console.error('[user-committees]: Error fetching committees', error)
     return NextResponse.json(
-      {
-        error: 'Failed to fetch user committees',
-      },
+      { error: 'Failed to fetch user committees' },
       { status: 500 }
     )
   }

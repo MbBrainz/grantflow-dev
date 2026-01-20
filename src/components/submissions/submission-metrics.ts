@@ -15,6 +15,7 @@ export interface SubmissionMetrics {
   daysSinceApplied: number | null
   totalMessages: number
   publicMessages: number
+  claimedAmount: number // Amount from completed milestones
 }
 
 export function calculateSubmissionMetrics(
@@ -50,6 +51,11 @@ export function calculateSubmissionMetrics(
   const publicMessages =
     discussions.find(discussion => discussion.isPublic)?.messages?.length ?? 0
 
+  // Calculate claimed amount from completed milestones
+  const claimedAmount = milestones
+    .filter(m => m.status === 'completed')
+    .reduce((sum, m) => sum + (Number(m.amount) || 0), 0)
+
   return {
     approveVotes,
     rejectVotes,
@@ -61,5 +67,6 @@ export function calculateSubmissionMetrics(
     daysSinceApplied,
     totalMessages,
     publicMessages,
+    claimedAmount,
   }
 }

@@ -16,7 +16,8 @@ import type { Connector } from '@luno-kit/react/types'
 
 export const config = createConfig({
   appName: 'GrantFlow.Dev',
-  chains: [polkadot, polkadotAssetHub, paseo, paseoAssetHub],
+  // Paseo Asset Hub is the default for testing
+  chains: [paseoAssetHub, paseo, polkadotAssetHub, polkadot],
   connectors: [
     polkadotjsConnector(),
     talismanConnector(),

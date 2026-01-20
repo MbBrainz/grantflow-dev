@@ -6,7 +6,9 @@ import {
   CheckCircle2,
   CircleDot,
   Clock,
+  Copy,
   DollarSign,
+  ExternalLink,
   Eye,
   FilePenLine,
   GitBranch,
@@ -15,6 +17,7 @@ import {
   MessageSquare,
   Target,
   Users,
+  Wallet,
   XCircle,
 } from 'lucide-react'
 import Link from 'next/link'
@@ -177,13 +180,24 @@ export function SubmissionDetailView({
             <div className="border-border/70 bg-muted/30 rounded-lg border p-4 shadow-sm">
               <div className="text-foreground mb-2 flex items-center gap-2 text-sm font-medium">
                 <Users className="h-4 w-4 text-blue-600" />
-                Committee Votes
+                Review Status
               </div>
-              <p className="text-xl font-semibold">
-                {metrics.approveVotes}/{metrics.totalVotes}
-              </p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <span className="text-lg font-semibold text-emerald-600">
+                    {metrics.approveVotes}
+                  </span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <XCircle className="h-4 w-4 text-red-500" />
+                  <span className="text-lg font-semibold text-red-600">
+                    {metrics.rejectVotes}
+                  </span>
+                </div>
+              </div>
               <p className="text-muted-foreground text-xs">
-                Approve / Total votes
+                {metrics.totalVotes} total review{metrics.totalVotes !== 1 ? 's' : ''}
               </p>
             </div>
 
@@ -193,7 +207,12 @@ export function SubmissionDetailView({
                 Funding
               </div>
               <p className="text-xl font-semibold">{funding}</p>
-              <p className="text-muted-foreground text-xs">Requested amount</p>
+              <div className="text-muted-foreground mt-1 text-xs">
+                <span className="text-emerald-600 font-medium">
+                  ${metrics.claimedAmount.toLocaleString()}
+                </span>{' '}
+                claimed of total requested
+              </div>
             </div>
 
             <div className="border-border/70 bg-muted/30 rounded-lg border p-4 shadow-sm">
@@ -319,6 +338,36 @@ export function SubmissionDetailView({
                           {metrics.totalMilestones}
                         </span>
                       </div>
+                      {submission.walletAddress && (
+                        <div className="pt-2 border-t border-border/50">
+                          <span className="text-xs text-muted-foreground block mb-1">Beneficiary Address</span>
+                          <div className="flex items-center gap-2">
+                            <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
+                            <span className="text-foreground font-mono text-xs">
+                              {submission.walletAddress.slice(0, 8)}...{submission.walletAddress.slice(-6)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                navigator.clipboard.writeText(submission.walletAddress!)
+                              }}
+                              className="text-muted-foreground hover:text-foreground transition-colors"
+                              title="Copy address"
+                            >
+                              <Copy className="h-3.5 w-3.5" />
+                            </button>
+                            <a
+                              href={`https://paseo.subscan.io/account/${submission.walletAddress}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-muted-foreground hover:text-primary transition-colors"
+                              title="View on explorer"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
+                          </div>
+                        </div>
+                      )}
                       {submission.githubRepoUrl && (
                         <a
                           href={submission.githubRepoUrl}
