@@ -26,6 +26,8 @@ export type BlockchainErrorCategory =
   | 'user_rejected'
   | 'call_data_mismatch'
   | 'permission_denied'
+  | 'simulation_failed'
+  | 'child_bounty_workflow_error'
   | 'unknown'
 
 export type ErrorSeverity = 'error' | 'warning' | 'info'
@@ -111,8 +113,9 @@ const ERROR_PATTERNS = {
   // Transaction errors
   transactionTimeout: /timeout|timed out|failed to extract timepoint/i,
 
-  // User actions
+  // User actions (also catches wallet errors that appear as "Cancelled")
   userRejected: /user rejected|cancelled by user|denied by user/i,
+  walletCancelled: /^Cancelled$/i,
 
   // Network errors
   networkError: /network error|connection failed|disconnected/i,
@@ -120,6 +123,11 @@ const ERROR_PATTERNS = {
   // Permission errors
   permissionDenied:
     /not authorized|unauthorized|permission denied|access denied/i,
+
+  // Simulation errors
+  simulationFailed: /transaction simulation failed|simulation failed/i,
+  childBountyWorkflowError:
+    /proposeCurator and acceptCurator|curator state dependency|child bounty workflow/i,
 }
 
 /**
@@ -375,6 +383,30 @@ function matchErrorPattern(
     }
   }
 
+  // Check for wallet "Cancelled" error (often indicates wallet-side validation failure)
+  if (ERROR_PATTERNS.walletCancelled.test(message.trim())) {
+    return {
+      ...baseError,
+      category: 'wasm_error', // Using wasm_error since this usually indicates validation failure
+      severity: 'error',
+      title: 'Transaction Rejected by Wallet',
+      description:
+        'Your wallet rejected the transaction. This usually happens when:\n' +
+        '• The transaction payload failed validation\n' +
+        '• The transaction would fail on-chain (detected by wallet pre-check)\n' +
+        '• There was an issue with the transaction encoding\n\n' +
+        'Check the browser console for detailed simulation logs.',
+      actionItems: [
+        'Check the browser console (F12 → Console tab) for detailed error information',
+        'Look for "TRANSACTION SIMULATION RESULT" in the console for specifics',
+        'Verify you have sufficient tokens for transaction fees',
+        'Ensure the parent bounty has enough funds for the payout',
+        'Try refreshing the page and reconnecting your wallet',
+      ],
+      context: { ...additionalContext },
+    }
+  }
+
   // Check for network errors
   if (ERROR_PATTERNS.networkError.test(message)) {
     return {
@@ -407,6 +439,61 @@ function matchErrorPattern(
         'Contact the committee administrator',
         'Ensure your wallet is properly connected',
       ],
+      context: { ...additionalContext },
+    }
+  }
+
+  // Check for child bounty workflow errors
+  if (ERROR_PATTERNS.childBountyWorkflowError.test(message)) {
+    return {
+      ...baseError,
+      category: 'child_bounty_workflow_error',
+      severity: 'error',
+      title: 'Child Bounty Workflow Error',
+      description:
+        'The child bounty transaction bundle contains operations that cannot be executed in a single transaction. ' +
+        'This is a known limitation of the Polkadot childBounties pallet.',
+      actionItems: [
+        'This is a system configuration issue - please contact the development team',
+        'The child bounty workflow needs to be split into multiple transactions',
+        'Workaround: Manual execution through polkadot.js apps may be required',
+      ],
+      context: { ...additionalContext },
+      helpLink: 'https://wiki.polkadot.network/docs/learn-treasury#bounties',
+    }
+  }
+
+  // Check for general simulation failures
+  if (
+    ERROR_PATTERNS.simulationFailed.test(message) ||
+    message.includes('Transaction Will Fail')
+  ) {
+    // Extract suggestions from the error message if present
+    const suggestionsMatch = message.match(/Suggestions:\n([\s\S]*?)(?:\n\n|$)/)
+    const suggestions = suggestionsMatch
+      ? suggestionsMatch[1]
+          .split('\n')
+          .map(s => s.replace(/^[•-]\s*/, '').trim())
+          .filter(Boolean)
+      : []
+
+    return {
+      ...baseError,
+      category: 'simulation_failed',
+      severity: 'error',
+      title: 'Transaction Simulation Failed',
+      description:
+        'Pre-flight simulation detected that this transaction will likely fail. ' +
+        'Review the details below to understand why.',
+      actionItems:
+        suggestions.length > 0
+          ? suggestions
+          : [
+              'Review the transaction parameters',
+              'Check account balances and permissions',
+              'Try refreshing and attempting again',
+              'Contact support if the problem persists',
+            ],
       context: { ...additionalContext },
     }
   }
@@ -507,6 +594,8 @@ export function getErrorIconName(category: BlockchainErrorCategory): string {
     user_rejected: 'XCircle',
     call_data_mismatch: 'FileWarning',
     permission_denied: 'ShieldX',
+    simulation_failed: 'FlaskConical',
+    child_bounty_workflow_error: 'GitBranchPlus',
     unknown: 'AlertCircle',
   }
   return iconMap[category]

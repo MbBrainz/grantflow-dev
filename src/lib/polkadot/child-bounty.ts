@@ -43,6 +43,14 @@ export interface ChildBountyParams {
   description: string // On-chain description (e.g., "Milestone 1: Project XYZ")
   /** Optional price info for on-chain transparency remark */
   priceInfo?: PriceInfo
+  /**
+   * Whether to wrap the batch in a proxy.proxy call.
+   * Required when the multisig has proxy rights over the curator account.
+   * The proxy wrapper allows accept_curator to succeed because the origin
+   * becomes the curator address rather than the multisig.
+   * Default: true
+   */
+  useProxyWrapper?: boolean
 }
 
 /**
@@ -271,6 +279,8 @@ export async function createChildBountyBundle(
   client: LegacyClient,
   params: ChildBountyParams
 ): Promise<ChildBountyBundleResult> {
+  const useProxyWrapper = params.useProxyWrapper ?? true // Default to true
+
   console.log('[createChildBountyBundle]: Creating child bounty bundle', {
     parentBountyId: params.parentBountyId,
     beneficiaryAddress: params.beneficiaryAddress,
@@ -278,6 +288,7 @@ export async function createChildBountyBundle(
     curatorAddress: params.curatorAddress,
     curatorFee: params.curatorFee.toString(),
     description: params.description,
+    useProxyWrapper,
   })
 
   // Get the next child bounty ID
@@ -342,20 +353,65 @@ export async function createChildBountyBundle(
       remarkString: params.priceInfo.remarkString,
     })
   }
-  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   // Bundle all calls atomically
   // eslint-disable-next-line @typescript-eslint/no-unsafe-argument
   const batchCall = client.tx.utility.batchAll(calls)
 
+  // Wrap in proxy.proxy call if enabled
+  // This is CRITICAL: The batch must be executed via the curator proxy account.
+  // Without this wrapper, accept_curator fails because the origin is the multisig,
+  // not the curator. With the proxy wrapper, the origin becomes the curator address,
+  // allowing accept_curator to succeed.
+  //
+  // Transaction structure:
+  // Multisig.asMulti → Proxy.proxy(real=curator) → Utility.batchAll → [child bounty calls]
+  let finalCall: any
+  let finalCallHex: string
+  let finalCallHash: string
+
+  if (useProxyWrapper) {
+    // Wrap the batch in a proxy.proxy call
+    // Parameters: real (curator address), force_proxy_type (null = any), call (the batch)
+    const proxyCall = client.tx.proxy.proxy(
+      params.curatorAddress, // real - the curator proxy account
+      undefined, // force_proxy_type - null means any proxy type is accepted
+      batchCall.call // the inner call (batch of child bounty operations)
+    )
+
+    finalCall = proxyCall.call
+    finalCallHex = proxyCall.callHex
+    finalCallHash = proxyCall.hash
+
+    console.log(
+      '[createChildBountyBundle]: Wrapped batch in proxy.proxy call',
+      {
+        curatorAddress: params.curatorAddress,
+        innerCallHash: batchCall.hash,
+        proxyCallHash: proxyCall.hash,
+      }
+    )
+  } else {
+    // Use the batch directly (not recommended for child bounty workflow)
+    finalCall = batchCall.call
+    finalCallHex = batchCall.callHex
+    finalCallHash = batchCall.hash
+
+    console.warn(
+      '[createChildBountyBundle]: Proxy wrapper disabled - accept_curator may fail!'
+    )
+  }
+  /* eslint-enable @typescript-eslint/no-explicit-any */
+
   console.log('[createChildBountyBundle]: Bundle created', {
     predictedChildBountyId,
-    callHash: batchCall.hash,
+    callHash: finalCallHash,
+    useProxyWrapper,
   })
 
   return {
-    callHex: batchCall.callHex,
-    callHash: batchCall.hash,
+    callHex: finalCallHex,
+    callHash: finalCallHash,
     predictedChildBountyId,
     calls: {
       addChildBounty: addChildBountyCall.call,
@@ -373,6 +429,9 @@ export async function createChildBountyBundle(
  * This is the main entry point for creating milestone payout calls.
  * Uses the childBounties pallet for proper on-chain indexing.
  *
+ * The call is wrapped in a proxy.proxy call to execute as the curator,
+ * which is required for accept_curator to succeed.
+ *
  * @param client - The LegacyClient instance from useApi()
  * @param params - Payout parameters (all required)
  * @returns Call bundle result with predicted child bounty ID
@@ -389,6 +448,8 @@ export async function createPayoutCall(
     curatorFee?: bigint
     /** Optional price info for on-chain transparency remark */
     priceInfo?: PriceInfo
+    /** Whether to use proxy wrapper (default: true) */
+    useProxyWrapper?: boolean
   }
 ): Promise<{
   callHex: string
@@ -396,14 +457,17 @@ export async function createPayoutCall(
   call: unknown
   predictedChildBountyId: number
 }> {
+  const useProxyWrapper = params.useProxyWrapper ?? true
+
   console.log('[createPayoutCall]: Creating child bounty payout call', {
     milestoneId: params.milestoneId,
     amount: params.amount.toString(),
     parentBountyId: params.parentBountyId,
     hasPriceInfo: !!params.priceInfo,
+    useProxyWrapper,
   })
 
-  // Create child bounty bundle
+  // Create child bounty bundle (already wrapped in proxy.proxy if useProxyWrapper is true)
   const bundleResult = await createChildBountyBundle(client, {
     parentBountyId: params.parentBountyId,
     beneficiaryAddress: params.beneficiaryAddress,
@@ -412,25 +476,70 @@ export async function createPayoutCall(
     curatorFee: params.curatorFee ?? BigInt(0),
     description: `Milestone ${params.milestoneId}: ${params.milestoneTitle}`,
     priceInfo: params.priceInfo,
+    useProxyWrapper,
   })
 
-  // Create the batch call for the full bundle
-  // The calls from createChildBountyBundle are typed as unknown due to dedot's generic types
-  // We cast to any to satisfy the batchAll type requirements
-  const calls = [
-    bundleResult.calls.addChildBounty,
-    bundleResult.calls.proposeCurator,
-    bundleResult.calls.acceptCurator,
-    bundleResult.calls.awardChildBounty,
-    bundleResult.calls.claimChildBounty,
-  ]
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
-  const batchCall = client.tx.utility.batchAll(calls as any)
+  // The call from createChildBountyBundle is already the final call
+  // (either proxy-wrapped batch or raw batch depending on useProxyWrapper)
+  // We need to get the actual call object from the bundle
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let finalCall: any
+
+  if (useProxyWrapper) {
+    // Recreate the proxy call to get the call object
+    // First create the batch of individual calls
+    const calls = [
+      bundleResult.calls.addChildBounty,
+      bundleResult.calls.proposeCurator,
+      bundleResult.calls.acceptCurator,
+      bundleResult.calls.awardChildBounty,
+      bundleResult.calls.claimChildBounty,
+    ]
+
+    // Add price info remark if provided
+    if (params.priceInfo?.remarkString) {
+      const remarkBytes = new TextEncoder().encode(
+        params.priceInfo.remarkString
+      )
+      const priceRemarkCall = client.tx.system.remark(remarkBytes)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      calls.push(priceRemarkCall.call as any)
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+    const batchCall = client.tx.utility.batchAll(calls as any)
+
+    // Wrap in proxy.proxy
+    const proxyCall = client.tx.proxy.proxy(
+      params.curatorAddress,
+      undefined,
+      batchCall.call
+    )
+    finalCall = proxyCall.call
+
+    console.log('[createPayoutCall]: Created proxy-wrapped call', {
+      curatorAddress: params.curatorAddress,
+      callHash: bundleResult.callHash,
+    })
+  } else {
+    // Use raw batch (not recommended)
+    const calls = [
+      bundleResult.calls.addChildBounty,
+      bundleResult.calls.proposeCurator,
+      bundleResult.calls.acceptCurator,
+      bundleResult.calls.awardChildBounty,
+      bundleResult.calls.claimChildBounty,
+    ]
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-argument, @typescript-eslint/no-explicit-any
+    const batchCall = client.tx.utility.batchAll(calls as any)
+    finalCall = batchCall.call
+  }
 
   return {
     callHex: bundleResult.callHex,
     callHash: bundleResult.callHash,
-    call: batchCall.call,
+    call: finalCall,
     predictedChildBountyId: bundleResult.predictedChildBountyId,
   }
 }

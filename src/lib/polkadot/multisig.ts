@@ -30,12 +30,21 @@ import {
   createPayoutCall,
   type PriceInfo,
 } from './child-bounty'
+import {
+  createSimulationErrorSummary,
+  formatSimulationResultForConsole,
+  type SimulationResult,
+  simulateTransaction,
+} from './transaction-simulation'
 
 // Re-export Signer as PolkadotSigner for backward compatibility
 export type PolkadotSigner = Signer
 
 // Re-export child bounty types for convenience
 export type { ChildBountyParams, PriceInfo }
+
+// Re-export simulation types for use in components
+export type { SimulationResult }
 
 /**
  * Multisig event interface
@@ -370,6 +379,62 @@ export async function initiateMultisigApproval(params: {
       otherSignatories,
       predictedChildBountyId: payoutResult.predictedChildBountyId,
     })
+
+    // Run transaction simulation before signing
+    console.log('[initiateMultisigApproval]: Running transaction simulation')
+    const simulationResult = await simulateTransaction(
+      client,
+      {
+        callHex: multisigCall.callHex,
+        call: multisigCall.call,
+        paymentInfo: (address: string) => multisigCall.paymentInfo(address),
+      },
+      initiatorAddress
+    )
+
+    // Log simulation results in detail
+    console.log(
+      '[initiateMultisigApproval]: Simulation result:',
+      simulationResult
+    )
+    console.log(formatSimulationResultForConsole(simulationResult))
+
+    // Check for critical simulation errors
+    if (!simulationResult.success) {
+      const errorSummary = createSimulationErrorSummary(simulationResult)
+      if (errorSummary) {
+        console.error(
+          '[initiateMultisigApproval]: Transaction simulation failed',
+          {
+            title: errorSummary.title,
+            description: errorSummary.description,
+            suggestions: errorSummary.suggestions,
+            errors: simulationResult.errors,
+          }
+        )
+
+        // Throw a detailed error that can be parsed by the error handler
+        const errorMessage =
+          `${errorSummary.title}\n\n` +
+          `${errorSummary.description}\n\n` +
+          (errorSummary.suggestions.length > 0
+            ? `Suggestions:\n${errorSummary.suggestions.map(s => `• ${s}`).join('\n')}\n\n`
+            : '') +
+          `Simulation Details:\n` +
+          `- Batch calls: ${simulationResult.details.batchCallMethods?.join(', ') ?? 'unknown'}\n` +
+          `- Call data size: ${simulationResult.details.callDataSize ?? 0} bytes`
+
+        throw new Error(errorMessage)
+      }
+    }
+
+    // Log simulation warnings even on success
+    if (simulationResult.warnings.length > 0) {
+      console.warn(
+        '[initiateMultisigApproval]: Transaction simulation warnings:',
+        simulationResult.warnings
+      )
+    }
 
     // Sign and submit the transaction
     console.log(
@@ -838,6 +903,55 @@ export async function approveOrExecuteMultisigCall(params: {
         timepoint,
       })
 
+      // Run transaction simulation before signing
+      console.log(
+        '[approveOrExecuteMultisigCall]: Running transaction simulation'
+      )
+      const simulationResult = await simulateTransaction(
+        client,
+        {
+          callHex: executeCall.callHex,
+          call: executeCall.call,
+          paymentInfo: (address: string) => executeCall.paymentInfo(address),
+        },
+        approverAddress
+      )
+
+      // Log simulation results in detail
+      console.log(
+        '[approveOrExecuteMultisigCall]: Simulation result:',
+        simulationResult
+      )
+      console.log(formatSimulationResultForConsole(simulationResult))
+
+      // Check for critical simulation errors
+      if (!simulationResult.success) {
+        const errorSummary = createSimulationErrorSummary(simulationResult)
+        if (errorSummary) {
+          console.error(
+            '[approveOrExecuteMultisigCall]: Transaction simulation failed',
+            {
+              title: errorSummary.title,
+              description: errorSummary.description,
+              suggestions: errorSummary.suggestions,
+              errors: simulationResult.errors,
+            }
+          )
+
+          const errorMessage =
+            `${errorSummary.title}\n\n` +
+            `${errorSummary.description}\n\n` +
+            (errorSummary.suggestions.length > 0
+              ? `Suggestions:\n${errorSummary.suggestions.map(s => `• ${s}`).join('\n')}\n\n`
+              : '') +
+            `Simulation Details:\n` +
+            `- Batch calls: ${simulationResult.details.batchCallMethods?.join(', ') ?? 'unknown'}\n` +
+            `- Call data size: ${simulationResult.details.callDataSize ?? 0} bytes`
+
+          throw new Error(errorMessage)
+        }
+      }
+
       // Sign and submit the transaction
       const unsub = await executeCall.signAndSend(
         approverAddress,
@@ -945,6 +1059,45 @@ export async function approveOrExecuteMultisigCall(params: {
         callHash,
         timepoint,
       })
+
+      // Run transaction simulation before signing (lighter check for approve-only)
+      console.log(
+        '[approveOrExecuteMultisigCall]: Running transaction simulation for approval'
+      )
+      const approvalSimulationResult = await simulateTransaction(
+        client,
+        {
+          callHex: approvalCall.callHex,
+          call: approvalCall.call,
+          paymentInfo: (address: string) => approvalCall.paymentInfo(address),
+        },
+        approverAddress
+      )
+
+      console.log(
+        '[approveOrExecuteMultisigCall]: Approval simulation result:',
+        approvalSimulationResult
+      )
+      console.log(formatSimulationResultForConsole(approvalSimulationResult))
+
+      // For approval-only, we're less strict - only fail on critical errors
+      const criticalErrors = approvalSimulationResult.errors.filter(
+        e => e.severity === 'critical'
+      )
+      if (criticalErrors.length > 0) {
+        const errorSummary = createSimulationErrorSummary(
+          approvalSimulationResult
+        )
+        if (errorSummary) {
+          console.error(
+            '[approveOrExecuteMultisigCall]: Approval simulation failed',
+            errorSummary
+          )
+          throw new Error(
+            `${errorSummary.title}\n\n${errorSummary.description}`
+          )
+        }
+      }
 
       // Sign and submit the transaction
       const unsub = await approvalCall.signAndSend(

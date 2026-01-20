@@ -11,6 +11,8 @@ import {
   Copy,
   ExternalLink,
   FileWarning,
+  FlaskConical,
+  GitBranchPlus,
   ShieldX,
   Timer,
   TimerOff,
@@ -55,6 +57,8 @@ function getErrorIcon(category: BlockchainErrorCategory) {
     user_rejected: <XCircle className="h-5 w-5" />,
     call_data_mismatch: <FileWarning className="h-5 w-5" />,
     permission_denied: <ShieldX className="h-5 w-5" />,
+    simulation_failed: <FlaskConical className="h-5 w-5" />,
+    child_bounty_workflow_error: <GitBranchPlus className="h-5 w-5" />,
     unknown: <AlertCircle className="h-5 w-5" />,
   }
   return iconMap[category]
