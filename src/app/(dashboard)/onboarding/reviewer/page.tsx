@@ -89,7 +89,9 @@ export default function ReviewerOnboardingPage() {
       if ('success' in result && result.success && result.data) {
         if (result.data.exists && 'committeeId' in result.data) {
           // Committee exists, redirect to join page
-          router.push(`/onboarding/reviewer/join?committeeId=${result.data.committeeId}`)
+          router.push(
+            `/onboarding/reviewer/join?committeeId=${result.data.committeeId}`
+          )
         } else {
           // Bounty not in system, redirect to create page
           router.push(
@@ -128,7 +130,8 @@ export default function ReviewerOnboardingPage() {
         <CardHeader>
           <CardTitle className="text-lg">Search Existing Committees</CardTitle>
           <CardDescription>
-            Find and join a committee that&apos;s already registered on GrantFlow.
+            Find and join a committee that&apos;s already registered on
+            GrantFlow.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -177,7 +180,11 @@ export default function ReviewerOnboardingPage() {
                   {committee.focusAreas && committee.focusAreas.length > 0 && (
                     <div className="hidden gap-1 sm:flex">
                       {committee.focusAreas.slice(0, 2).map(area => (
-                        <Badge key={area} variant="secondary" className="text-xs">
+                        <Badge
+                          key={area}
+                          variant="secondary"
+                          className="text-xs"
+                        >
                           {area}
                         </Badge>
                       ))}
@@ -254,9 +261,7 @@ export default function ReviewerOnboardingPage() {
             </div>
           </div>
 
-          {lookupError && (
-            <p className="text-sm text-red-600">{lookupError}</p>
-          )}
+          {lookupError && <p className="text-sm text-red-600">{lookupError}</p>}
 
           <Button
             onClick={handleLookUpBounty}

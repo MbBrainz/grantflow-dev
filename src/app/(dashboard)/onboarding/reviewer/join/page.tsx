@@ -1,6 +1,11 @@
 'use client'
 
-import { ConnectionStatus, useAccount, useConnect, useConnectors } from '@luno-kit/react'
+import {
+  ConnectionStatus,
+  useAccount,
+  useConnect,
+  useConnectors,
+} from '@luno-kit/react'
 import {
   AlertCircle,
   ArrowLeft,
@@ -121,7 +126,8 @@ export default function JoinCommitteePage() {
       console.error('Failed to connect wallet:', err)
       toast({
         title: 'Connection failed',
-        description: err instanceof Error ? err.message : 'Failed to connect wallet',
+        description:
+          err instanceof Error ? err.message : 'Failed to connect wallet',
         variant: 'destructive',
       })
     }

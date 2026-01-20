@@ -319,9 +319,7 @@ export default function CreateCommitteePage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">1. Bounty Discovery</CardTitle>
-          <CardDescription>
-            Verify the bounty details on-chain.
-          </CardDescription>
+          <CardDescription>Verify the bounty details on-chain.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
@@ -522,7 +520,9 @@ export default function CreateCommitteePage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="githubOrg">GitHub Organization (optional)</Label>
+                <Label htmlFor="githubOrg">
+                  GitHub Organization (optional)
+                </Label>
                 <Input
                   id="githubOrg"
                   placeholder="e.g., polkadot-developers"

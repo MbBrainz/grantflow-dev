@@ -35,6 +35,7 @@ import {
   initiateMultisigApproval,
 } from '@/app/(dashboard)/dashboard/submissions/multisig-actions'
 import { Badge } from '@/components/ui/badge'
+import { BlockchainErrorAlert } from '@/components/ui/blockchain-error-alert'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { InfoBox } from '@/components/ui/info-box'
@@ -48,6 +49,12 @@ import {
 } from '@/components/ui/tooltip'
 import type { Milestone } from '@/lib/db/schema'
 import type { GroupSettings } from '@/lib/db/schema/jsonTypes/GroupSettings'
+import {
+  getErrorSummary,
+  isRetryableError,
+  type ParsedBlockchainError,
+  parseBlockchainError,
+} from '@/lib/errors/blockchain-errors'
 import { useToast } from '@/lib/hooks/use-toast'
 import { chains } from '@/lib/polkadot/chains'
 import {
@@ -122,6 +129,8 @@ export function MilestoneReviewDialog({
   const [priceConversion, setPriceConversion] =
     useState<ConversionResultWithRemark | null>(null)
   const [isLoadingPrice, setIsLoadingPrice] = useState(false)
+  const [blockchainError, setBlockchainError] =
+    useState<ParsedBlockchainError | null>(null)
   const multisigConfig = committeeSettings?.multisig
   const { toast } = useToast()
 
@@ -202,9 +211,11 @@ export function MilestoneReviewDialog({
     }
   }, [milestone.id])
 
-  // Check for existing approval when dialog opens
+  // Check for existing approval when dialog opens, and clear errors
   useEffect(() => {
     if (open) {
+      // Clear any previous blockchain error when dialog opens
+      setBlockchainError(null)
       if (isMergedWorkflow) {
         void checkExistingApproval()
       }
@@ -310,6 +321,8 @@ export function MilestoneReviewDialog({
     }
 
     setIsSigningMultisig(true)
+    // Clear any previous error when starting a new attempt
+    setBlockchainError(null)
 
     try {
       if (existingApproval) {
@@ -322,19 +335,22 @@ export function MilestoneReviewDialog({
     } catch (error) {
       console.error('[MilestoneReviewDialog]: Multisig approval failed', error)
 
-      const errorMessage =
-        error instanceof Error ? error.message : 'Unknown error occurred'
-      const isWasmError =
-        errorMessage.includes('wasm trap') ||
-        errorMessage.includes('unreachable')
+      // Parse the error into a structured format with context
+      const network = multisigConfig.network ?? 'paseo'
+      const parsedError = parseBlockchainError(error, {
+        network,
+        parentBountyId: multisigConfig.parentBountyId,
+        accountAddress: address,
+        threshold: multisigConfig.threshold,
+      })
 
+      // Store the parsed error for detailed display
+      setBlockchainError(parsedError)
+
+      // Show a brief toast notification with summary
       toast({
-        title: isWasmError ? 'Blockchain Transaction Failed' : 'Multisig Error',
-        description: isWasmError
-          ? 'Transaction validation failed. Please ensure your account has Paseo testnet tokens from https://faucet.polkadot.io/paseo'
-          : errorMessage.length > 200
-            ? `${errorMessage.substring(0, 200)}...`
-            : errorMessage,
+        title: parsedError.title,
+        description: getErrorSummary(parsedError),
         variant: 'destructive',
       })
 
@@ -638,19 +654,15 @@ export function MilestoneReviewDialog({
               'Your on-chain approval has been recorded. Now recording your review vote.',
           })
         } catch (multisigError) {
-          // Multisig failed - don't proceed with review submission
+          // Multisig failed - error already parsed and displayed via handleMultisigApproval
+          // The blockchainError state is already set with detailed information
           console.error(
             '[MilestoneReviewDialog]: Multisig transaction failed',
             multisigError
           )
 
-          toast({
-            title: 'Blockchain Transaction Failed',
-            description: 'The blockchain transaction failed. Please try again.',
-            variant: 'destructive',
-          })
-
           // Don't submit review - keep dialog open for retry
+          // The BlockchainErrorAlert will show detailed error information
           return
         }
       }
@@ -1020,6 +1032,25 @@ export function MilestoneReviewDialog({
             )}
 
             <div className="border-t pt-6">
+              {/* Blockchain Error Display */}
+              {blockchainError && (
+                <div className="mb-6">
+                  <BlockchainErrorAlert
+                    error={blockchainError}
+                    onRetry={
+                      isRetryableError(blockchainError)
+                        ? () => {
+                            setBlockchainError(null)
+                            void handleSubmit()
+                          }
+                        : undefined
+                    }
+                    onDismiss={() => setBlockchainError(null)}
+                    showTechnicalDetails={true}
+                  />
+                </div>
+              )}
+
               {/* Compact Multisig Status for Merged Workflow */}
               {isMergedWorkflow && multisigConfig && (
                 <div className="mb-4 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">

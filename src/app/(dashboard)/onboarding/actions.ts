@@ -1,5 +1,6 @@
 'use server'
 
+import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 import { validatedActionWithUser } from '@/lib/auth/middleware'
@@ -17,7 +18,6 @@ import { getUser } from '@/lib/db/queries/users'
 import { groupMemberships, groups, users } from '@/lib/db/schema'
 import type { GroupSettings } from '@/lib/db/schema/jsonTypes/GroupSettings'
 import { createGroup } from '@/lib/db/writes/groups'
-import { eq } from 'drizzle-orm'
 
 // ============================================================================
 // Search Committees
@@ -251,7 +251,9 @@ const CreateCommitteeSchema = z.object({
   parentBountyId: z.coerce.number().int().nonnegative(),
   curatorProxyAddress: z.string().min(1, 'Curator proxy address is required'),
   multisigAddress: z.string().min(1, 'Multisig address is required'),
-  signatories: z.array(SignatorySchema).min(2, 'At least 2 signatories required'),
+  signatories: z
+    .array(SignatorySchema)
+    .min(2, 'At least 2 signatories required'),
   threshold: z.coerce.number().int().min(1, 'Threshold must be at least 1'),
 
   // Creator's wallet for verification
@@ -381,7 +383,9 @@ const CreateTeamSchema = z.object({
 export const createTeamAction = validatedActionWithUser(
   CreateTeamSchema,
   async (data, user) => {
-    console.log(`[createTeamAction]: User ${user.id} creating team "${data.name}"`)
+    console.log(
+      `[createTeamAction]: User ${user.id} creating team "${data.name}"`
+    )
 
     try {
       const result = await createTeamAndJoin(user.id, {

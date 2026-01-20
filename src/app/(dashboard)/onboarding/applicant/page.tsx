@@ -169,7 +169,9 @@ export default function ApplicantOnboardingPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="githubOrg">GitHub Organization (optional)</Label>
+                <Label htmlFor="githubOrg">
+                  GitHub Organization (optional)
+                </Label>
                 <Input
                   id="githubOrg"
                   placeholder="e.g., acme-labs"
