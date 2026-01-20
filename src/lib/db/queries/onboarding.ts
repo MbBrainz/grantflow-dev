@@ -209,7 +209,8 @@ export async function linkSignatoryAndJoin(
   const updatedSettings = {
     // Preserve existing settings or use defaults
     votingThreshold: committee.settings?.votingThreshold ?? 1,
-    requiredApprovalPercentage: committee.settings?.requiredApprovalPercentage ?? 100,
+    requiredApprovalPercentage:
+      committee.settings?.requiredApprovalPercentage ?? 100,
     stages: committee.settings?.stages ?? ['review', 'approved', 'rejected'],
     multisig: {
       ...multisig,

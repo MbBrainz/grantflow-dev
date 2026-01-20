@@ -29,6 +29,8 @@ export * from './groups'
 export * from './milestones'
 // Notification queries
 export * from './notifications'
+// Onboarding queries
+export * from './onboarding'
 // Payout queries
 export * from './payouts'
 // Review queries
@@ -37,5 +39,3 @@ export * from './reviews'
 export * from './submissions'
 // User queries
 export * from './users'
-// Onboarding queries
-export * from './onboarding'
