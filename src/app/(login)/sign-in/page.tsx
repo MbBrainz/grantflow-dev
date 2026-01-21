@@ -1,18 +1,11 @@
-import { redirect } from 'next/navigation'
 import { Suspense } from 'react'
-import { getUser } from '@/lib/db/queries'
 import { Login } from '../login'
 
-export default async function SignInPage() {
-  // Redirect to dashboard if already authenticated
-  const user = await getUser()
-  if (user) {
-    redirect('/dashboard')
-  }
-
+export default function SignInPage() {
+  // Auth check is handled by middleware
   return (
     <Suspense>
-      <Login mode="signin" />
+      <Login />
     </Suspense>
   )
 }

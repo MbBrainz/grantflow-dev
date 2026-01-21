@@ -1,48 +1,52 @@
-import type { NextRequest } from 'next/server'
-import { NextResponse } from 'next/server'
-import { signToken, verifyToken } from '@/lib/auth/session'
+import { auth } from '@/lib/auth'
 
-const protectedRoutes = '/dashboard'
+/**
+ * Auth.js v5 Middleware
+ *
+ * Handles:
+ * - Protected route authentication (/dashboard/*)
+ * - Redirects authenticated users away from auth pages
+ * - Session refresh on each request
+ */
+export default auth(req => {
+  const { pathname } = req.nextUrl
+  const isAuthenticated = !!req.auth
 
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
-  const sessionCookie = request.cookies.get('session')
-  const isProtectedRoute = pathname.startsWith(protectedRoutes)
+  // Protected routes - redirect to sign-in if not authenticated
+  const protectedRoutes = ['/dashboard']
+  const isProtectedRoute = protectedRoutes.some(route =>
+    pathname.startsWith(route)
+  )
 
-  if (isProtectedRoute && !sessionCookie) {
-    return NextResponse.redirect(new URL('/sign-in', request.url))
+  if (isProtectedRoute && !isAuthenticated) {
+    const signInUrl = new URL('/sign-in', req.url)
+    signInUrl.searchParams.set('callbackUrl', pathname)
+    return Response.redirect(signInUrl)
   }
 
-  const res = NextResponse.next()
+  // Auth pages - redirect to dashboard if already authenticated
+  const authPages = ['/sign-in', '/sign-up', '/verify-email']
+  const isAuthPage = authPages.some(page => pathname === page)
 
-  if (sessionCookie && request.method === 'GET') {
-    try {
-      const parsed = await verifyToken(sessionCookie.value)
-      const expiresInOneDay = new Date(Date.now() + 24 * 60 * 60 * 1000)
-
-      res.cookies.set({
-        name: 'session',
-        value: await signToken({
-          ...parsed,
-          expires: expiresInOneDay.toISOString(),
-        }),
-        httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-        expires: expiresInOneDay,
-      })
-    } catch (error) {
-      console.error('Error updating session:', error)
-      res.cookies.delete('session')
-      if (isProtectedRoute) {
-        return NextResponse.redirect(new URL('/sign-in', request.url))
-      }
-    }
+  if (isAuthPage && isAuthenticated) {
+    return Response.redirect(new URL('/dashboard', req.url))
   }
 
-  return res
-}
+  // Continue with request
+  return
+})
 
 export const config = {
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)'],
+  // Match all routes except static files and API routes that don't need auth
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public folder files (images, etc.)
+     * - API routes for auth (handled by Auth.js)
+     */
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+  ],
 }

@@ -2,7 +2,6 @@ import { config } from 'dotenv'
 import { eq } from 'drizzle-orm'
 import { drizzle } from 'drizzle-orm/postgres-js'
 import postgres from 'postgres'
-import { hashPassword } from '@/lib/auth/session'
 import type { NewMessage } from '../../src/lib/db/schema'
 import {
   discussions,
@@ -49,14 +48,16 @@ async function seed() {
 
   console.log('Creating reviewer users...')
 
-  const reviewerPassword = await hashPassword('reviewer123')
+  // Note: These test accounts use OTP code 000000 for authentication
+  // See src/lib/auth/otp.ts for test account configuration
 
   // Reviewer 1 - Alex Chen (Signatory 1)
   const [reviewer1] = await db
     .insert(users)
     .values({
       email: 'reviewer1@test.com',
-      passwordHash: reviewerPassword,
+      passwordHash: null, // Passwordless auth via OTP
+      emailVerified: new Date(), // Mark as verified for immediate access
       name: 'Alex Chen',
       githubId: 'alex-reviewer',
       primaryRole: 'committee',
@@ -69,7 +70,8 @@ async function seed() {
     .insert(users)
     .values({
       email: 'reviewer2@test.com',
-      passwordHash: reviewerPassword,
+      passwordHash: null, // Passwordless auth via OTP
+      emailVerified: new Date(), // Mark as verified for immediate access
       name: 'Maria Rodriguez',
       githubId: 'maria-reviewer',
       primaryRole: 'committee',
@@ -1535,10 +1537,8 @@ async function seed() {
   console.log('   • Network: Paseo Testnet')
 
   console.log('\n👤 Created 2 reviewers (committee members):')
-  console.log('   • Alex Chen (reviewer1@test.com) - password: reviewer123')
-  console.log(
-    '   • Maria Rodriguez (reviewer2@test.com) - password: reviewer123'
-  )
+  console.log('   • Alex Chen (reviewer1@test.com) - OTP code: 000000')
+  console.log('   • Maria Rodriguez (reviewer2@test.com) - OTP code: 000000')
 
   console.log('\n📋 Created 5 submissions:')
   console.log('   IN-REVIEW (2) - Waiting for votes:')

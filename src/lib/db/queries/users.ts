@@ -1,38 +1,35 @@
 import { and, eq } from 'drizzle-orm'
-import { getSession as getNextAuthSession } from '@/lib/auth/next-auth'
-import { getSession as getCustomSession } from '@/lib/auth/session'
+import { auth } from '@/lib/auth'
 import { db } from '../drizzle'
 import { groupMemberships, type User, users } from '../schema'
 
+/**
+ * Get the current authenticated user from the Auth.js session
+ *
+ * Uses unified Auth.js v5 session (database sessions)
+ * No more dual session checking - single source of truth
+ */
 export async function getUser(): Promise<User | null> {
-  // Try NextAuth session first (for GitHub OAuth)
-  const nextAuthSession = await getNextAuthSession()
-  if (nextAuthSession?.user?.id) {
-    const userId = parseInt(nextAuthSession.user.id)
-    const result = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, userId))
-      .limit(1)
+  const session = await auth()
 
-    if (result.length > 0) {
-      return result[0]
-    }
+  if (!session?.user?.id) {
+    return null
   }
 
-  // Fallback to custom JWT session (for email/password auth)
-  const customSession = await getCustomSession()
-  if (customSession?.user?.id) {
-    const result = await db
-      .select()
-      .from(users)
-      .where(eq(users.id, customSession.user.id))
-      .limit(1)
+  const userId = parseInt(session.user.id)
 
-    return result.length > 0 ? result[0] : null
+  if (isNaN(userId)) {
+    console.error('[getUser]: Invalid user ID in session:', session.user.id)
+    return null
   }
 
-  return null
+  const result = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1)
+
+  return result.length > 0 ? result[0] : null
 }
 
 export async function getUserById(userId: number): Promise<User | null> {
