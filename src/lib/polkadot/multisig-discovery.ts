@@ -174,6 +174,11 @@ export async function discoverMultisigStructure(
   let curatorIsMultisig = true // Assume curator is multisig unless we find a controlling account
 
   if (Array.isArray(proxies) && proxies.length > 0) {
+    if (proxies.length > 1) {
+      console.warn(
+        `[discoverMultisigStructure] More than one proxy found for this account!: ${proxies.map(p => JSON.stringify(p))}`
+      )
+    }
     // Curator is a proxy with a delegate (controlling account)
     const delegate = proxies[0]
     const delegateAddress = toPolkadotAddress(delegate.delegate)

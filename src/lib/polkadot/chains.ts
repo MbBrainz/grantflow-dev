@@ -19,17 +19,22 @@ export const allChains: Record<string, Chain> = {
 /**
  * Primary chains for GrantFlow operations.
  *
- * We use Asset Hub chains because that's where treasury operations live:
- * - Bounties pallet (parent bounties)
- * - ChildBounties pallet (milestone payouts)
- * - Treasury pallet
- * - Multisig pallet (for committee approvals)
+ * Post-2025 Migration: Both Polkadot and Paseo have bounties/childBounties on Asset Hub.
  *
- * The relay chains (Polkadot/Paseo) no longer have active bounties.
+ * Asset Hub contains:
+ * - Treasury (pallet index 60)
+ * - Bounties (pallet index 65)
+ * - ChildBounties (pallet index 66)
+ * - Proxy (pallet index 42)
+ * - Utility (pallet index 40)
+ * - Multisig (pallet index 41)
+ *
+ * Source: https://github.com/paseo-network/runtimes (Asset Hub Paseo)
+ *         https://github.com/polkadot-fellows/runtimes (Asset Hub Polkadot)
  */
 export const chains: Record<string, Chain> = {
-  paseo: paseoAssetHub,
-  polkadot: polkadotAssetHub,
+  paseo: paseoAssetHub, // Asset Hub - has bounties/childBounties after migration
+  polkadot: polkadotAssetHub, // Asset Hub (post-2025 migration)
   // kusama: kusamaAssetHub, // Add when needed
 }
 
