@@ -6,7 +6,6 @@ import Resend from 'next-auth/providers/resend'
 import { db } from '@/lib/db/drizzle'
 import { users } from '@/lib/db/schema'
 import { CustomDrizzleAdapter } from './adapter'
-import { generateOTPCode, isTestAccount, TEST_OTP_CODE } from './otp'
 
 /**
  * Auth.js v5 Configuration
@@ -29,21 +28,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Resend({
       apiKey: process.env.RESEND_API_KEY,
       from: process.env.EMAIL_FROM ?? 'noreply@grantflow.dev',
-      // Custom OTP generation for 6-digit codes
-      generateVerificationToken: async () => {
-        return generateOTPCode()
-      },
-      // Custom email sending with OTP template
-      sendVerificationRequest: async ({ identifier, token, url, provider }) => {
-        // For test accounts in dev/preview, skip email sending
-        if (isTestAccount(identifier)) {
-          console.log(
-            `[Auth]: Test account ${identifier} - use OTP code: ${TEST_OTP_CODE}`
-          )
-          return
-        }
-
-        // Send actual email via Resend
+      // Custom email template with magic link
+      sendVerificationRequest: async ({ identifier, url, provider }) => {
         const { Resend: ResendClient } = await import('resend')
         const resend = new ResendClient(provider.apiKey)
 
@@ -51,29 +37,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const { error } = await resend.emails.send({
           from: fromEmail,
           to: identifier,
-          subject: `Your GrantFlow login code: ${token}`,
+          subject: 'Sign in to GrantFlow',
           html: `
             <!DOCTYPE html>
             <html>
               <head>
                 <meta charset="utf-8">
-                <title>Your Login Code</title>
+                <title>Sign in to GrantFlow</title>
               </head>
               <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
                 <div style="text-align: center; margin-bottom: 30px;">
                   <h1 style="color: #f97316; margin: 0;">GrantFlow</h1>
                 </div>
-                <h2 style="color: #1f2937; margin-bottom: 20px;">Your login code</h2>
+                <h2 style="color: #1f2937; margin-bottom: 20px;">Sign in to your account</h2>
                 <p style="color: #4b5563; margin-bottom: 20px;">
-                  Enter this code to sign in to your GrantFlow account:
+                  Click the button below to sign in to your GrantFlow account:
                 </p>
-                <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 20px;">
-                  <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #1f2937;">
-                    ${token}
-                  </span>
+                <div style="text-align: center; margin-bottom: 20px;">
+                  <a href="${url}" style="display: inline-block; background: #f97316; color: white; padding: 12px 32px; border-radius: 9999px; text-decoration: none; font-weight: 500;">
+                    Sign in to GrantFlow
+                  </a>
                 </div>
+                <p style="color: #6b7280; font-size: 14px; margin-bottom: 10px;">
+                  Or copy and paste this link into your browser:
+                </p>
+                <p style="color: #6b7280; font-size: 12px; word-break: break-all; margin-bottom: 20px;">
+                  ${url}
+                </p>
                 <p style="color: #6b7280; font-size: 14px; margin-bottom: 20px;">
-                  This code expires in 10 minutes. If you didn't request this code, you can safely ignore this email.
+                  This link expires in 10 minutes. If you didn't request this, you can safely ignore this email.
                 </p>
                 <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 20px 0;">
                 <p style="color: #9ca3af; font-size: 12px; text-align: center;">
@@ -85,8 +77,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         })
 
         if (error) {
-          console.error('[Auth]: Failed to send OTP email:', error)
-          throw new Error('Failed to send verification email')
+          console.error('[Auth]: Failed to send magic link email:', error)
+          throw new Error('Failed to send sign-in email')
         }
       },
     }),

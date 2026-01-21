@@ -5,11 +5,8 @@ import { Button } from '@/components/ui/button'
 /**
  * Verify Email Page
  *
- * This page is shown when Auth.js sends a verification email.
- * It instructs users to check their email and enter the OTP code.
- *
- * In the current flow, OTP verification happens inline on the sign-in page,
- * so this page primarily serves as a redirect/fallback for magic link flows.
+ * This page is shown after Auth.js sends a magic link verification email.
+ * It instructs users to check their email and click the sign-in link.
  */
 export default function VerifyEmailPage() {
   return (
@@ -32,18 +29,18 @@ export default function VerifyEmailPage() {
           </div>
 
           <p className="mb-4 text-center text-gray-600">
-            We&apos;ve sent a 6-digit verification code to your email address.
+            We&apos;ve sent a sign-in link to your email address.
           </p>
 
           <p className="mb-6 text-center text-sm text-gray-500">
-            Enter the code on the sign-in page to complete your authentication.
-            The code expires in 10 minutes.
+            Click the link in your email to sign in to your account. The link
+            expires in 10 minutes.
           </p>
 
           <div className="space-y-3">
             <Link href="/sign-in" className="block">
-              <Button className="w-full bg-orange-600 hover:bg-orange-700">
-                Go to Sign In
+              <Button variant="outline" className="w-full">
+                Use a different email
               </Button>
             </Link>
 
