@@ -91,6 +91,12 @@ export function ReviewerSubmissionView({
       ? committee.members.length
       : 0
 
+  // Helper to get reviewer name from reviews array
+  const getReviewerName = (userId: number): string | null => {
+    const review = submission.reviews?.find(r => r.reviewerId === userId)
+    return review?.reviewer?.name ?? null
+  }
+
   return (
     <div className="space-y-6">
       {/* Reviewer Action Hero - SUBMISSION REVIEW */}
@@ -449,6 +455,23 @@ export function ReviewerSubmissionView({
                       setSelectedMilestone(milestone)
                       setReviewDialogOpen(true)
                     }}
+                    currentUserId={currentUser?.id}
+                    pendingReviewers={
+                      milestone.status === 'in-review' && committee?.members
+                        ? committee.members
+                            .filter(member => {
+                              // Filter to members who haven't reviewed this milestone
+                              const hasReviewed = milestoneReviews.some(
+                                r => r.reviewerId === member.userId
+                              )
+                              return !hasReviewed && member.isActive
+                            })
+                            .map(member => ({
+                              id: member.userId,
+                              name: getReviewerName(member.userId),
+                            }))
+                        : []
+                    }
                   >
                     {isExpanded && (
                       <>

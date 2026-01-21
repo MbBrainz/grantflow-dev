@@ -1,6 +1,6 @@
 'use client'
 
-import { CircleIcon, Home, LogOut } from 'lucide-react'
+import { CircleIcon, Home, LogOut, Settings } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Suspense, useState } from 'react'
@@ -67,21 +67,33 @@ function UserMenu() {
           </AvatarFallback>
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="flex flex-col gap-1">
-        <DropdownMenuItem className="cursor-pointer">
-          <Link href="/dashboard" className="flex w-full items-center">
-            <Home className="mr-2 h-4 w-4" />
-            <span>Dashboard</span>
-          </Link>
-        </DropdownMenuItem>
-        <form action={handleSignOut} className="w-full">
-          <button type="submit" className="flex w-full">
-            <DropdownMenuItem className="w-full flex-1 cursor-pointer">
-              <LogOut className="mr-2 h-4 w-4" />
-              <span>Sign out</span>
-            </DropdownMenuItem>
-          </button>
-        </form>
+      <DropdownMenuContent align="end" className="w-56">
+        <div className="border-b border-gray-100 px-2 py-2">
+          <p className="text-sm font-medium text-gray-900">{user.name ?? 'User'}</p>
+          <p className="truncate text-xs text-gray-500">{user.email}</p>
+        </div>
+        <div className="flex flex-col gap-1 p-1">
+          <DropdownMenuItem className="cursor-pointer">
+            <Link href="/dashboard" className="flex w-full items-center">
+              <Home className="mr-2 h-4 w-4" />
+              <span>Dashboard</span>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="cursor-pointer">
+            <Link href="/dashboard/settings" className="flex w-full items-center">
+              <Settings className="mr-2 h-4 w-4" />
+              <span>Settings</span>
+            </Link>
+          </DropdownMenuItem>
+          <form action={handleSignOut} className="w-full">
+            <button type="submit" className="flex w-full">
+              <DropdownMenuItem className="w-full flex-1 cursor-pointer">
+                <LogOut className="mr-2 h-4 w-4" />
+                <span>Sign out</span>
+              </DropdownMenuItem>
+            </button>
+          </form>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -5,7 +5,9 @@ import {
   ChevronRight,
   Clock,
   DollarSign,
+  ExternalLink,
   GitBranch,
+  Users,
   XCircle,
 } from 'lucide-react'
 import type { ReactNode } from 'react'
@@ -15,6 +17,18 @@ import { MetadataGrid } from '@/components/ui/metadata-grid'
 import { StatusBadge } from '@/components/ui/status-badge'
 import type { Milestone } from '@/lib/db/schema'
 import { cn } from '@/lib/utils'
+
+interface ApprovalSignature {
+  signatoryAddress: string
+  signatoryName?: string | null
+  txHash: string
+  signedAt: Date | string
+}
+
+interface PendingReviewer {
+  id: number
+  name: string | null
+}
 
 interface MilestoneCardProps {
   milestone: Pick<
@@ -45,6 +59,10 @@ interface MilestoneCardProps {
   className?: string
   variant?: 'compact' | 'detailed' | 'list'
   children?: ReactNode
+  // New props for showing pending reviewers and approval signatures
+  pendingReviewers?: PendingReviewer[]
+  approvalSignatures?: ApprovalSignature[]
+  currentUserId?: number | null
 }
 
 export function MilestoneCard({
@@ -60,6 +78,9 @@ export function MilestoneCard({
   onReviewClick,
   className,
   variant = 'detailed',
+  pendingReviewers = [],
+  approvalSignatures = [],
+  currentUserId,
 }: MilestoneCardProps) {
   const isCompact = variant === 'compact'
   const isList = variant === 'list'
@@ -268,6 +289,75 @@ export function MilestoneCard({
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Approval Signatures with Transaction Hashes */}
+            {approvalSignatures.length > 0 && (
+              <div className="mb-4 rounded-lg border border-green-200 bg-green-50 p-4">
+                <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-green-800">
+                  <CheckCircle className="h-4 w-4" />
+                  Blockchain Approvals ({approvalSignatures.length})
+                </h4>
+                <div className="space-y-2">
+                  {approvalSignatures.map((sig, idx) => (
+                    <div
+                      key={idx}
+                      className="flex items-center justify-between rounded bg-white p-2 text-sm"
+                    >
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="h-3.5 w-3.5 text-green-600" />
+                        <span className="font-medium">
+                          {sig.signatoryName ?? `${sig.signatoryAddress.slice(0, 8)}...${sig.signatoryAddress.slice(-6)}`}
+                        </span>
+                      </div>
+                      <a
+                        href={`https://paseo.subscan.io/extrinsic/${sig.txHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-xs text-blue-600 hover:underline"
+                      >
+                        <code className="rounded bg-gray-100 px-1">
+                          {sig.txHash.slice(0, 10)}...
+                        </code>
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Awaiting Reviews Section */}
+            {milestone.status === 'in-review' && pendingReviewers.length > 0 && (
+              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-800">
+                  <Users className="h-4 w-4" />
+                  {pendingReviewers.some(r => r.id === currentUserId)
+                    ? 'Awaiting Your Review'
+                    : `Awaiting Reviews (${pendingReviewers.length})`}
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {pendingReviewers.map(reviewer => (
+                    <span
+                      key={reviewer.id}
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium',
+                        reviewer.id === currentUserId
+                          ? 'bg-amber-200 text-amber-900'
+                          : 'bg-white text-gray-700'
+                      )}
+                    >
+                      <Clock className="h-3 w-3" />
+                      {reviewer.id === currentUserId ? 'You' : reviewer.name ?? 'Unknown'}
+                    </span>
+                  ))}
+                </div>
+                {pendingReviewers.some(r => r.id === currentUserId) && (
+                  <p className="mt-2 text-xs text-amber-700">
+                    Your review is needed to proceed with this milestone.
+                  </p>
+                )}
               </div>
             )}
 
