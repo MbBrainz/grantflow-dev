@@ -414,13 +414,52 @@ export const createTeamAction = validatedActionWithUser(
 )
 
 // ============================================================================
+// Update User Profile (Name)
+// ============================================================================
+
+const UpdateUserNameSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, 'Name is required')
+    .max(100, 'Name must be less than 100 characters'),
+})
+
+export const updateUserNameAction = validatedActionWithUser(
+  UpdateUserNameSchema,
+  async (data, user) => {
+    console.log(
+      `[updateUserNameAction]: User ${user.id} updating name to "${data.name}"`
+    )
+
+    try {
+      await db
+        .update(users)
+        .set({
+          name: data.name,
+          updatedAt: new Date(),
+        })
+        .where(eq(users.id, user.id))
+
+      revalidatePath('/onboarding')
+      revalidatePath('/dashboard')
+
+      return { success: true }
+    } catch (error) {
+      console.error('[updateUserNameAction]: Error', error)
+      return { error: 'Failed to update name' }
+    }
+  }
+)
+
+// ============================================================================
 // Check Onboarding Status (Server function, not action)
 // ============================================================================
 
 export async function checkOnboardingStatus() {
   const user = await getUser()
   if (!user) {
-    return { needsOnboarding: false, user: null }
+    return { needsOnboarding: false, needsProfileCompletion: false, user: null }
   }
 
   const memberships = await db.query.groupMemberships.findMany({
@@ -432,8 +471,12 @@ export async function checkOnboardingStatus() {
 
   const activeMemberships = memberships.filter(m => m.isActive)
 
+  // User needs profile completion if they don't have a name set
+  const needsProfileCompletion = !user.name || user.name.trim() === ''
+
   return {
     needsOnboarding: activeMemberships.length === 0,
+    needsProfileCompletion,
     user: {
       id: user.id,
       name: user.name,

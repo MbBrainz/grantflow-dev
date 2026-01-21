@@ -119,12 +119,8 @@ export const updateAccountSchema = z.object({
     .trim()
     .min(1, 'Name is required')
     .max(100, 'Name must be less than 100 characters'),
-  email: z
-    .string()
-    .trim()
-    .min(3, 'Email must be at least 3 characters')
-    .max(255)
-    .email('Invalid email address'),
+  // Note: email is not included because the email field is disabled in the form
+  // and disabled inputs are not submitted with FormData
 })
 
 // Type exports for auth schemas
