@@ -11,7 +11,6 @@ import {
 } from 'drizzle-orm/pg-core'
 import { createSchemaFactory } from 'drizzle-zod'
 import { discussions } from './discussions'
-import { groups } from './groups'
 import { milestones } from './milestones'
 import { submissions } from './submissions'
 import { users } from './users'
@@ -28,15 +27,13 @@ const VOTE_OPTIONS = ['approve', 'reject', 'abstain'] as const
 export const voteEnum = pgEnum('vote', VOTE_OPTIONS)
 
 // Group reviews (committee members reviewing submissions/milestones)
+// Note: groupId removed - derive via submission.reviewerGroupId
 export const reviews = pgTable('reviews', {
   id: serial('id').primaryKey(),
   submissionId: integer('submission_id')
     .notNull()
     .references(() => submissions.id),
   milestoneId: integer('milestone_id').references(() => milestones.id),
-  groupId: integer('group_id')
-    .notNull()
-    .references(() => groups.id),
   reviewerId: integer('reviewer_id')
     .notNull()
     .references(() => users.id),
@@ -60,10 +57,6 @@ export const reviewsRelations = relations(reviews, ({ one }) => ({
   milestone: one(milestones, {
     fields: [reviews.milestoneId],
     references: [milestones.id],
-  }),
-  group: one(groups, {
-    fields: [reviews.groupId],
-    references: [groups.id],
   }),
   reviewer: one(users, {
     fields: [reviews.reviewerId],

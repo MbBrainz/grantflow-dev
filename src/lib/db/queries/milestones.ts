@@ -18,16 +18,22 @@ export async function getMilestonesBySubmission(
     .orderBy(desc(milestones.createdAt))
 }
 
-export async function getMilestoneById(
-  milestoneId: number
-): Promise<Milestone | null> {
-  const result = await db
-    .select()
-    .from(milestones)
-    .where(eq(milestones.id, milestoneId))
-    .limit(1)
+export async function getMilestoneById(milestoneId: number) {
+  const result = await db.query.milestones.findFirst({
+    where: eq(milestones.id, milestoneId),
+    with: {
+      submission: {
+        columns: {
+          id: true,
+          reviewerGroupId: true,
+          submitterGroupId: true,
+          submitterId: true,
+        },
+      },
+    },
+  })
 
-  return result.length > 0 ? result[0] : null
+  return result ?? null
 }
 
 export async function getSubmissionMilestonesOverview(submissionId: number) {

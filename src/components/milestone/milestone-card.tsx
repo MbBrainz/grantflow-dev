@@ -308,7 +308,8 @@ export function MilestoneCard({
                       <div className="flex items-center gap-2">
                         <CheckCircle className="h-3.5 w-3.5 text-green-600" />
                         <span className="font-medium">
-                          {sig.signatoryName ?? `${sig.signatoryAddress.slice(0, 8)}...${sig.signatoryAddress.slice(-6)}`}
+                          {sig.signatoryName ??
+                            `${sig.signatoryAddress.slice(0, 8)}...${sig.signatoryAddress.slice(-6)}`}
                         </span>
                       </div>
                       <a
@@ -329,37 +330,40 @@ export function MilestoneCard({
             )}
 
             {/* Awaiting Reviews Section */}
-            {milestone.status === 'in-review' && pendingReviewers.length > 0 && (
-              <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
-                <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-800">
-                  <Users className="h-4 w-4" />
-                  {pendingReviewers.some(r => r.id === currentUserId)
-                    ? 'Awaiting Your Review'
-                    : `Awaiting Reviews (${pendingReviewers.length})`}
-                </h4>
-                <div className="flex flex-wrap gap-2">
-                  {pendingReviewers.map(reviewer => (
-                    <span
-                      key={reviewer.id}
-                      className={cn(
-                        'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium',
-                        reviewer.id === currentUserId
-                          ? 'bg-amber-200 text-amber-900'
-                          : 'bg-white text-gray-700'
-                      )}
-                    >
-                      <Clock className="h-3 w-3" />
-                      {reviewer.id === currentUserId ? 'You' : reviewer.name ?? 'Unknown'}
-                    </span>
-                  ))}
+            {milestone.status === 'in-review' &&
+              pendingReviewers.length > 0 && (
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <h4 className="mb-2 flex items-center gap-2 text-sm font-semibold text-amber-800">
+                    <Users className="h-4 w-4" />
+                    {pendingReviewers.some(r => r.id === currentUserId)
+                      ? 'Awaiting Your Review'
+                      : `Awaiting Reviews (${pendingReviewers.length})`}
+                  </h4>
+                  <div className="flex flex-wrap gap-2">
+                    {pendingReviewers.map(reviewer => (
+                      <span
+                        key={reviewer.id}
+                        className={cn(
+                          'inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium',
+                          reviewer.id === currentUserId
+                            ? 'bg-amber-200 text-amber-900'
+                            : 'bg-white text-gray-700'
+                        )}
+                      >
+                        <Clock className="h-3 w-3" />
+                        {reviewer.id === currentUserId
+                          ? 'You'
+                          : (reviewer.name ?? 'Unknown')}
+                      </span>
+                    ))}
+                  </div>
+                  {pendingReviewers.some(r => r.id === currentUserId) && (
+                    <p className="mt-2 text-xs text-amber-700">
+                      Your review is needed to proceed with this milestone.
+                    </p>
+                  )}
                 </div>
-                {pendingReviewers.some(r => r.id === currentUserId) && (
-                  <p className="mt-2 text-xs text-amber-700">
-                    Your review is needed to proceed with this milestone.
-                  </p>
-                )}
-              </div>
-            )}
+              )}
 
             {showReviewButton && onReviewClick && (
               <div className="flex justify-end">

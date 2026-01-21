@@ -14,9 +14,7 @@ import { discussions } from './discussions'
 import { groupAnalytics } from './group-analytics'
 import { groupMemberships } from './group-memberships'
 import type { FocusAreas, GroupSettings } from './jsonTypes/GroupSettings'
-import { milestones } from './milestones'
 import { payouts } from './payouts'
-import { reviews } from './reviews'
 import { submissions } from './submissions'
 import { users } from './users'
 
@@ -57,8 +55,6 @@ export const groupsRelations = relations(groups, ({ many }) => ({
   submittedSubmissions: many(submissions, { relationName: 'submitterGroup' }),
   reviewingSubmissions: many(submissions, { relationName: 'reviewerGroup' }),
   discussions: many(discussions),
-  milestones: many(milestones, { relationName: 'milestoneGroup' }),
-  reviews: many(reviews),
   payouts: many(payouts),
   analytics: many(groupAnalytics),
   primaryUsers: many(users),

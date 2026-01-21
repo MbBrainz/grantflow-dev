@@ -12,7 +12,6 @@ import {
 } from 'drizzle-orm/pg-core'
 import { createSchemaFactory } from 'drizzle-zod'
 import { discussions } from './discussions'
-import { groups } from './groups'
 import { payouts } from './payouts'
 import { reviews } from './reviews'
 import { submissions } from './submissions'
@@ -51,9 +50,6 @@ export const milestones = pgTable('milestones', {
   submissionId: integer('submission_id')
     .notNull()
     .references(() => submissions.id),
-  groupId: integer('group_id')
-    .notNull()
-    .references(() => groups.id),
   title: varchar('title', { length: 255 }).notNull(),
   description: text('description'),
   requirements: jsonb('requirements').$type<string[]>().notNull().default([]), // What needs to be delivered
@@ -80,11 +76,6 @@ export const milestonesRelations = relations(milestones, ({ one, many }) => ({
   submission: one(submissions, {
     fields: [milestones.submissionId],
     references: [submissions.id],
-  }),
-  group: one(groups, {
-    fields: [milestones.groupId],
-    references: [groups.id],
-    relationName: 'milestoneGroup',
   }),
   discussions: many(discussions),
   reviews: many(reviews),

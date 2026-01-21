@@ -97,14 +97,16 @@ export async function getCommitteeFinancials(committeeId: number) {
     )
 
   // Get total spent (sum of completed milestones)
+  // Join through submissions since milestones no longer have direct groupId
   const spentResult = await db
     .select({
       total: sum(milestones.amount),
     })
     .from(milestones)
+    .innerJoin(submissions, eq(milestones.submissionId, submissions.id))
     .where(
       and(
-        eq(milestones.groupId, committeeId),
+        eq(submissions.reviewerGroupId, committeeId),
         eq(milestones.status, 'completed')
       )
     )

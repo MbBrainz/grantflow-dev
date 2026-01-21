@@ -342,7 +342,6 @@ export const createSubmission = async (
 
       const newMilestone: NewMilestone = {
         submissionId: createdSubmission.id,
-        groupId: user.primaryGroupId ?? 1, // Use user's primary group
         title: milestone.title,
         description: combinedDescription, // Include requirements in description
         requirements: requirementsArray,
@@ -453,13 +452,13 @@ async function findExistingReview(params: NewReview) {
   })
 }
 
-// Pure function: Build review record
+/// Pure function: Build review record
+// Note: groupId removed from reviews - derive via submission.reviewerGroupId
 function buildReviewRecord(params: NewReview): NewReview {
   return {
     submissionId: params.submissionId,
     milestoneId: params.milestoneId ?? null,
     reviewerId: params.reviewerId,
-    groupId: params.groupId,
     vote: params.vote,
     feedback: params.feedback ?? null,
     reviewType: 'standard',
@@ -610,6 +609,7 @@ async function checkQuorumAndUpdateStatus(params: {
               id: true,
               submitterId: true,
               title: true,
+              reviewerGroupId: true,
             },
           },
         },
@@ -676,7 +676,7 @@ async function checkQuorumAndUpdateStatus(params: {
             }),
             submissionId: milestone.submission.id,
             milestoneId,
-            groupId: milestone.groupId,
+            groupId: milestone.submission.reviewerGroupId,
           })
 
           console.log(
@@ -759,7 +759,6 @@ export const submitReview = validatedActionWithUser(
 
       // Check if user already has a review for this submission/milestone
       const existingReview = await findExistingReview({
-        groupId: submission.submitterGroupId,
         submissionId: data.submissionId,
         milestoneId: data.milestoneId,
         reviewerId: user.id,
@@ -771,12 +770,11 @@ export const submitReview = validatedActionWithUser(
       }
 
       // Build and create the review record
-      // Server determines groupId and reviewerId - client doesn't send these
+      // Server determines reviewerId - groupId derived via submission.reviewerGroupId
       const newReview = buildReviewRecord({
         submissionId: data.submissionId,
         milestoneId: data.milestoneId,
         reviewerId: user.id, // From authenticated user
-        groupId: submission.reviewerGroupId ?? 1, // From submission
         vote: data.vote,
         feedback: data.feedback,
       })

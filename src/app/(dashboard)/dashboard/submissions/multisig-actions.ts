@@ -107,9 +107,9 @@ export const initiateMultisigApproval = validatedActionWithUser(
         return { error: 'You are not authorized to initiate approvals' }
       }
 
-      // Get milestone details
+      // Get milestone details (includes submission for groupId)
       const milestone = await getMilestoneById(data.milestoneId)
-      if (!milestone) {
+      if (!milestone?.submission) {
         return { error: 'Milestone not found' }
       }
 
@@ -124,9 +124,9 @@ export const initiateMultisigApproval = validatedActionWithUser(
         }
       }
 
-      // Get committee/group details
+      // Get committee/group details (via submission.reviewerGroupId)
       const committee = await db.query.groups.findFirst({
-        where: eq(groups.id, milestone.groupId),
+        where: eq(groups.id, milestone.submission.reviewerGroupId),
       })
 
       if (!committee) {
@@ -165,7 +165,7 @@ export const initiateMultisigApproval = validatedActionWithUser(
       // Create approval record with child bounty tracking and price info
       const approval = await createMilestoneApproval({
         milestoneId: data.milestoneId,
-        groupId: milestone.groupId,
+        groupId: milestone.submission.reviewerGroupId,
         multisigCallHash: data.callHash,
         multisigCallData: data.callDataHex,
         timepoint: data.timepoint,

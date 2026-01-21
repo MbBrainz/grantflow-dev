@@ -46,13 +46,17 @@ export async function ensureDiscussionForMilestone(milestoneId: number) {
   })
 
   if (!existingDiscussion) {
-    const milestone = await db
-      .select({ groupId: milestones.groupId })
-      .from(milestones)
-      .where(eq(milestones.id, milestoneId))
-      .limit(1)
+    // Get groupId via submission relation (milestone.submission.reviewerGroupId)
+    const milestone = await db.query.milestones.findFirst({
+      where: eq(milestones.id, milestoneId),
+      with: {
+        submission: {
+          columns: { reviewerGroupId: true },
+        },
+      },
+    })
 
-    if (!milestone[0]) {
+    if (!milestone?.submission) {
       throw new Error('Milestone not found')
     }
 
@@ -60,7 +64,7 @@ export async function ensureDiscussionForMilestone(milestoneId: number) {
       .insert(discussions)
       .values({
         milestoneId,
-        groupId: milestone[0].groupId,
+        groupId: milestone.submission.reviewerGroupId,
         type: 'milestone',
       })
       .returning()

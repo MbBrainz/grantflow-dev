@@ -42,18 +42,19 @@ export const completeMilestone = validatedActionWithUser(
         }
       }
 
-      // Get milestone details for notification
+      // Get milestone details for notification (includes submission for groupId)
       const milestone = await getMilestoneById(data.milestoneId)
-      if (!milestone) {
+      if (!milestone?.submission) {
         return {
           error: 'Milestone not found',
         }
       }
 
       // Complete the milestone with payout
+      // groupId derived from submission.reviewerGroupId (no longer on milestone)
       const result = await completeMilestoneWithPayout({
         milestoneId: data.milestoneId,
-        groupId: milestone.groupId,
+        groupId: milestone.submission.reviewerGroupId,
         reviewerId: user.id,
         transactionHash: data.transactionHash,
         blockExplorerUrl: data.blockExplorerUrl,
@@ -70,12 +71,12 @@ export const completeMilestone = validatedActionWithUser(
       // Create notification for the submission owner
       try {
         await createNotification({
-          userId: milestone.submissionId, // This should be the submitter ID, need to get it properly
+          userId: milestone.submission.submitterId, // Notify the submitter
           type: 'milestone_completed',
           content: `Milestone "${milestone.title}" has been completed and payment has been processed.`,
           submissionId: milestone.submissionId,
           milestoneId: data.milestoneId,
-          groupId: milestone.groupId,
+          groupId: milestone.submission.reviewerGroupId,
         })
       } catch (notificationError) {
         console.log(
