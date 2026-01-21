@@ -12,6 +12,7 @@ import {
 import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { BudgetBar } from '@/components/budget-bar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -22,8 +23,6 @@ interface CommitteeFinancials {
   totalBudget: number
   allocated: number
   spent: number
-  remaining: number
-  available: number
 }
 
 interface CommitteeDetailViewProps {
@@ -198,7 +197,14 @@ export function CommitteeDetailView({
               />
             )}
             <div>
-              <h1 className="text-3xl font-bold">{committee.name}</h1>
+              <h1 className="text-3xl font-bold">
+                {committee.name}
+                {committee.settings?.multisig?.parentBountyId != null && (
+                  <span className="ml-3 text-xl font-normal text-gray-500">
+                    Bounty #{committee.settings.multisig.parentBountyId}
+                  </span>
+                )}
+              </h1>
               <div className="mt-1 flex items-center gap-2">
                 <Badge variant={committee.isActive ? 'default' : 'secondary'}>
                   {committee.isActive ? 'Active' : 'Inactive'}
@@ -296,45 +302,14 @@ export function CommitteeDetailView({
       {/* Budget Information (Committee IS the grant program) */}
       {(financials ?? committee.fundingAmount) && (
         <Card className="p-6">
-          <div className="mb-4 flex items-center gap-2">
-            <DollarSign className="h-5 w-5 text-gray-600" />
-            <h2 className="text-lg font-semibold">Budget Information</h2>
-          </div>
-
           {/* Financial Summary */}
           {financials && (
-            <div className="mb-4 grid grid-cols-2 gap-4 rounded-lg border border-gray-200 p-4 md:grid-cols-5 dark:border-gray-700">
-              <div>
-                <p className="text-muted-foreground text-sm">Total Budget</p>
-                <p className="text-lg font-semibold">
-                  ${financials.totalBudget.toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm">Allocated</p>
-                <p className="text-lg font-semibold">
-                  ${financials.allocated.toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm">Spent</p>
-                <p className="text-lg font-semibold">
-                  ${financials.spent.toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm">Remaining</p>
-                <p className="text-lg font-semibold text-green-600">
-                  ${financials.remaining.toLocaleString()}
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground text-sm">Available</p>
-                <p className="text-lg font-semibold text-blue-600">
-                  ${financials.available.toLocaleString()}
-                </p>
-              </div>
-            </div>
+            <BudgetBar
+              totalBudget={financials.totalBudget}
+              allocated={financials.allocated}
+              spent={financials.spent}
+              className="mb-4"
+            />
           )}
 
           {/* Grant Size Limits */}

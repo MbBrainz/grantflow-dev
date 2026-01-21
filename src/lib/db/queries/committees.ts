@@ -121,8 +121,17 @@ export async function getCommitteeFinancials(committeeId: number) {
   })
 
   const totalBudget = committee?.fundingAmount ?? 0
-  const remaining = totalBudget - allocated
-  const available = allocated - spent
+
+  // Remaining: how much budget is left to allocate to new grants (clamped to 0)
+  const remaining = Math.max(0, totalBudget - allocated)
+
+  // Available: actual funds that can be paid out on existing grants
+  // Constrained by both budget and allocated amounts
+  const effectiveAllocated = Math.min(totalBudget, allocated)
+  const available = Math.max(0, effectiveAllocated - spent)
+
+  // Flag for over-allocation (allocated more than budget allows)
+  const isOverAllocated = allocated > totalBudget
 
   return {
     totalBudget,
@@ -130,6 +139,7 @@ export async function getCommitteeFinancials(committeeId: number) {
     spent,
     remaining,
     available,
+    isOverAllocated,
   }
 }
 

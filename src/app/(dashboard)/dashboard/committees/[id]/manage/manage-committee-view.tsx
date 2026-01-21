@@ -13,6 +13,7 @@ import {
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useState, useTransition } from 'react'
+import { BudgetBar } from '@/components/budget-bar'
 import { BountyLinkSetup } from '@/components/committee/bounty-link-setup'
 import { AsyncButton } from '@/components/ui/async-button'
 import { Badge } from '@/components/ui/badge'
@@ -47,8 +48,6 @@ interface CommitteeFinancials {
   totalBudget: number
   allocated: number
   spent: number
-  remaining: number
-  available: number
 }
 
 interface ManageCommitteeViewProps {
@@ -337,7 +336,14 @@ export function ManageCommitteeView({
             <Settings className="h-8 w-8 text-gray-600" />
             <div>
               <h1 className="text-3xl font-bold">Manage Committee</h1>
-              <p className="text-gray-600">{committee.name}</p>
+              <p className="text-gray-600">
+                {committee.name}
+                {committee.settings?.multisig?.parentBountyId != null && (
+                  <span className="ml-2 text-gray-400">
+                    · Bounty #{committee.settings.multisig.parentBountyId}
+                  </span>
+                )}
+              </p>
             </div>
           </div>
         </div>
@@ -540,38 +546,12 @@ export function ManageCommitteeView({
 
         {/* Financial Summary */}
         {financials && (
-          <div className="mb-6 grid grid-cols-2 gap-4 rounded-lg border border-gray-200 p-4 md:grid-cols-5 dark:border-gray-700">
-            <div>
-              <p className="text-muted-foreground text-sm">Total Budget</p>
-              <p className="text-lg font-semibold">
-                ${financials.totalBudget.toLocaleString()}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-sm">Allocated</p>
-              <p className="text-lg font-semibold">
-                ${financials.allocated.toLocaleString()}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-sm">Spent</p>
-              <p className="text-lg font-semibold">
-                ${financials.spent.toLocaleString()}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-sm">Remaining</p>
-              <p className="text-lg font-semibold text-green-600">
-                ${financials.remaining.toLocaleString()}
-              </p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-sm">Available</p>
-              <p className="text-lg font-semibold text-blue-600">
-                ${financials.available.toLocaleString()}
-              </p>
-            </div>
-          </div>
+          <BudgetBar
+            totalBudget={financials.totalBudget}
+            allocated={financials.allocated}
+            spent={financials.spent}
+            className="mb-6 rounded-lg border border-gray-200 p-4 dark:border-gray-700"
+          />
         )}
 
         {/* Budget Configuration Form */}
