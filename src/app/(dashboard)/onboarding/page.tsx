@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { checkOnboardingStatus } from './actions'
+import { ProfileCompletion } from './components/profile-completion'
 import { RoleSelection } from './components/role-selection'
 
 export default async function OnboardingPage() {
@@ -13,6 +14,11 @@ export default async function OnboardingPage() {
   // If user already has groups, redirect to dashboard
   if (!status.needsOnboarding) {
     redirect('/dashboard')
+  }
+
+  // If user needs to complete their profile (set name), show that first
+  if (status.needsProfileCompletion) {
+    return <ProfileCompletion userEmail={status.user.email} />
   }
 
   return (
