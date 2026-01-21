@@ -345,12 +345,8 @@ describe('child-bounty module', () => {
       expect(result.callHex).toBe('0xbatchallcallhex')
       expect(result.callHash).toBe('0xbatchallcallhash')
 
-      // Verify all 5 calls are created
-      expect(result.calls.addChildBounty).toBeDefined()
-      expect(result.calls.proposeCurator).toBeDefined()
-      expect(result.calls.acceptCurator).toBeDefined()
-      expect(result.calls.awardChildBounty).toBeDefined()
-      expect(result.calls.claimChildBounty).toBeDefined()
+      // Verify the bundled call is created
+      expect(result.call).toBeDefined()
     })
 
     it('should call addChildBounty with correct parameters', async () => {
