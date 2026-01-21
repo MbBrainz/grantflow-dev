@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { Suspense, useState } from 'react'
 import useSWR, { mutate } from 'swr'
-import { signOut } from '@/app/(login)/actions'
+import { handleSignOut } from '@/app/(login)/actions'
 import { ClientLunoKitProvider } from '@/components/providers/lunokit-provider'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -25,12 +25,11 @@ function UserMenu() {
   const { data: user } = useSWR<User>('/api/user', fetcher<User>)
   const router = useRouter()
 
-  async function handleSignOut() {
-    await signOut()
+  async function onSignOut() {
+    await handleSignOut()
     await mutate('/api/user').catch(err => {
       console.error('[UserMenu]: Error mutating user', err)
     })
-    router.push('/')
   }
 
   if (!user) {
@@ -90,7 +89,7 @@ function UserMenu() {
               <span>Settings</span>
             </Link>
           </DropdownMenuItem>
-          <form action={handleSignOut} className="w-full">
+          <form action={onSignOut} className="w-full">
             <button type="submit" className="flex w-full">
               <DropdownMenuItem className="w-full flex-1 cursor-pointer">
                 <LogOut className="mr-2 h-4 w-4" />

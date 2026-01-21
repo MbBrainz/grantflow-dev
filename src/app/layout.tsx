@@ -4,7 +4,7 @@ import type { Metadata, Viewport } from 'next'
 import { SWRConfig } from 'swr'
 import { NotificationProvider } from '@/components/providers/notification-provider'
 import { SessionProvider } from '@/components/providers/session-provider'
-import { getSession } from '@/lib/auth/next-auth'
+import { auth } from '@/lib/auth'
 
 export const metadata: Metadata = {
   title: 'GrantFlow - Grant Management Platform',
@@ -21,7 +21,7 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode
 }) {
-  const session = await getSession()
+  const session = await auth()
 
   return (
     <html lang="en">

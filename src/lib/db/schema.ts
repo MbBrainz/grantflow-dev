@@ -1,5 +1,6 @@
 // Re-export all tables
 
+export * from './schema/auth'
 export * from './schema/discussions'
 export * from './schema/group-analytics'
 export * from './schema/group-memberships'

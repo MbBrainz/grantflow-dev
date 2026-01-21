@@ -29,6 +29,7 @@ export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   name: varchar('name', { length: 100 }),
   email: varchar('email', { length: 255 }).unique(),
+  emailVerified: timestamp('email_verified', { mode: 'date' }), // Required by Auth.js
   passwordHash: text('password_hash'),
   githubId: varchar('github_id', { length: 64 }),
   avatarUrl: text('avatar_url'),

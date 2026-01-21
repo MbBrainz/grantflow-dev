@@ -78,7 +78,7 @@ export function validatedActionWithUser<
       ? TData
       : never
   ): Promise<TOutput | { error: string }> => {
-    // 🛡️ Authentication
+    // 🛡️ Authentication - uses unified Auth.js v5 session
     const user = await getUser()
     if (!user) {
       throw new Error('User is not authenticated')
@@ -206,7 +206,7 @@ export function validatedActionWithUserState<
   >
 ) {
   return async (prevState: TState, formData: FormData): Promise<TState> => {
-    // 🛡️ Authentication
+    // 🛡️ Authentication - uses unified Auth.js v5 session
     const user = await getUser()
     if (!user) {
       return {

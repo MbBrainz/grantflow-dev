@@ -1,317 +1,238 @@
 'use server'
 
 import { eq } from 'drizzle-orm'
-import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
+import { z } from 'zod'
+import { signOut as authSignOut, signIn } from '@/lib/auth'
 import {
   validatedActionWithUser,
   validatedActionWithUserState,
 } from '@/lib/auth/middleware'
-import { comparePasswords, hashPassword, setSession } from '@/lib/auth/session'
 import { db } from '@/lib/db/drizzle'
 import { getUser } from '@/lib/db/queries'
 import {
   ActivityType,
-  type DeleteAccountInput,
-  deleteAccountSchema,
-  type SignInInput,
-  type SignUpInput,
-  signInSchema,
-  signUpSchema,
   type UpdateAccountInput,
-  type UpdatePasswordInput,
   updateAccountSchema,
-  updatePasswordSchema,
   users,
 } from '@/lib/db/schema'
 
 // Helper function for activity logging (simplified without team context)
 async function logActivity(userId: number, activityType: ActivityType) {
-  // For now, just log to console since we removed activityLogs table
   await Promise.resolve()
   console.log(`[Activity]: User ${userId} performed ${activityType}`)
 }
 
-// ✅ State-compatible versions for useActionState
+// ============================================================================
+// Email OTP Authentication Actions
+// ============================================================================
 
-export interface SignInState extends ActionState {
+const emailSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(3, 'Email must be at least 3 characters')
+    .max(255)
+    .email('Invalid email address'),
+})
+
+const otpSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  code: z.string().length(6, 'Code must be 6 digits'),
+})
+
+export interface EmailOTPState {
+  error?: string
+  success?: boolean
+  message?: string
   email?: string
-  password?: string
-  redirect?: string
-  priceId?: string
-  inviteId?: string
-}
-
-export interface SignUpState extends ActionState {
-  email?: string
-  password?: string
-  name?: string
+  step?: 'email' | 'code'
   redirect?: string
 }
 
-async function signInStateHandler(data: SignInInput): Promise<SignInState> {
-  const { email, password } = data
+/**
+ * Request an OTP code to be sent to the user's email
+ */
+export async function requestEmailOTP(
+  prevState: EmailOTPState,
+  formData: FormData
+): Promise<EmailOTPState> {
+  const data = Object.fromEntries(formData.entries())
+  const result = emailSchema.safeParse(data)
 
-  const foundUser = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1)
-
-  if (foundUser.length === 0) {
+  if (!result.success) {
     return {
-      error: 'Invalid email or password. Please try again.',
-      email,
-      password,
+      ...prevState,
+      error: result.error?.issues[0]?.message ?? 'Invalid email',
+      step: 'email',
     }
   }
 
-  const user = foundUser[0]
+  const { email } = result.data
 
-  // Check if user has a password hash (GitHub OAuth users might not have one)
-  if (!user.passwordHash) {
-    return {
-      error: 'Please sign in with GitHub for this account.',
+  try {
+    // Use Auth.js signIn with Resend provider
+    // This sends the OTP email via the configured sendVerificationRequest
+    await signIn('resend', {
       email,
-      password,
-    }
-  }
-
-  const isPasswordValid = await comparePasswords(password, user.passwordHash)
-
-  if (!isPasswordValid) {
-    return {
-      error: 'Invalid email or password. Please try again.',
-      email,
-      password,
-    }
-  }
-
-  await Promise.all([
-    setSession(user),
-    logActivity(user.id, ActivityType.SIGN_IN),
-  ])
-
-  // Return redirect URL in state instead of calling redirect()
-  // This works better with useActionState which expects return values
-  const redirectTo = data.redirect === 'checkout' ? '/pricing' : '/dashboard'
-  return { redirect: redirectTo }
-}
-
-async function signUpStateHandler(data: SignUpInput): Promise<SignUpState> {
-  const { email, password, name } = data
-
-  const existingUser = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1)
-
-  if (existingUser.length > 0) {
-    return { error: 'Failed to create user. Please try again.' }
-  }
-
-  const passwordHash = await hashPassword(password)
-
-  const [newUser] = await db
-    .insert(users)
-    .values({
-      email,
-      passwordHash,
-      name,
-      primaryRole: 'team', // Default role for new users
+      redirect: false,
+      callbackUrl: '/dashboard',
     })
-    .returning()
 
-  if (!newUser) {
-    return { error: 'Failed to create user. Please try again.' }
-  }
-
-  await Promise.all([
-    setSession(newUser),
-    logActivity(newUser.id, ActivityType.SIGN_UP),
-  ])
-
-  // Return redirect URL in state instead of calling redirect()
-  // This works better with useActionState which expects return values
-  return { redirect: '/dashboard' }
-}
-
-export async function signInState(
-  prevState: SignInState,
-  formData: FormData
-): Promise<SignInState> {
-  const data = Object.fromEntries(formData.entries())
-  const result = signInSchema.safeParse(data)
-
-  if (!result.success) {
-    console.error('[signInState]: Validation failed', result.error)
     return {
-      ...prevState,
-      error: result.error?.issues[0]?.message ?? 'Validation failed',
+      email,
+      step: 'code',
+      success: true,
+      message: 'Check your email for a 6-digit code',
     }
-  }
-
-  try {
-    return await signInStateHandler(result.data)
   } catch (error) {
-    console.error('[signInState]: Action failed', error)
+    console.error('[requestEmailOTP]: Error', error)
 
-    // Check for connection errors
-    if (error && typeof error === 'object' && 'code' in error) {
-      if (error.code === 'ECONNREFUSED') {
-        return {
-          ...prevState,
-          error:
-            'Database connection failed. Please ensure the database is running and try again.',
-        }
+    // Check if it's a redirect (which is expected behavior)
+    if (error instanceof Error && error.message.includes('NEXT_REDIRECT')) {
+      return {
+        email,
+        step: 'code',
+        success: true,
+        message: 'Check your email for a 6-digit code',
       }
     }
 
     return {
       ...prevState,
-      error:
-        error instanceof Error
-          ? error.message
-          : 'An unexpected error occurred. Please try again.',
+      error: 'Failed to send verification code. Please try again.',
+      step: 'email',
     }
   }
 }
 
-export async function signUpState(
-  prevState: SignUpState,
+/**
+ * Verify the OTP code and sign in the user
+ */
+export async function verifyEmailOTP(
+  prevState: EmailOTPState,
   formData: FormData
-): Promise<SignUpState> {
+): Promise<EmailOTPState> {
   const data = Object.fromEntries(formData.entries())
-  const result = signUpSchema.safeParse(data)
+  const result = otpSchema.safeParse(data)
 
   if (!result.success) {
-    console.error('[signUpState]: Validation failed', result.error)
     return {
       ...prevState,
-      error: result.error?.issues[0]?.message ?? 'Validation failed',
+      error: result.error?.issues[0]?.message ?? 'Invalid code',
+      step: 'code',
     }
   }
 
-  try {
-    return await signUpStateHandler(result.data)
-  } catch (error) {
-    console.error('[signUpState]: Action failed', error)
+  const { email, code } = result.data
 
-    // Check for connection errors
-    if (error && typeof error === 'object' && 'code' in error) {
-      if (error.code === 'ECONNREFUSED') {
-        return {
-          ...prevState,
-          error:
-            'Database connection failed. Please ensure the database is running and try again.',
-        }
+  try {
+    // Verify the OTP code with Auth.js
+    // The callback URL after verification
+    const callbackUrl = (formData.get('callbackUrl') as string) || '/dashboard'
+
+    await signIn('resend', {
+      email,
+      token: code,
+      redirect: false,
+      callbackUrl,
+    })
+
+    // Log activity for existing users
+    const existingUser = await db
+      .select()
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1)
+
+    if (existingUser.length > 0) {
+      await logActivity(existingUser[0].id, ActivityType.SIGN_IN)
+    } else {
+      // New user created via OTP
+      const [newUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.email, email))
+        .limit(1)
+
+      if (newUser) {
+        await logActivity(newUser.id, ActivityType.SIGN_UP)
+      }
+    }
+
+    return {
+      success: true,
+      redirect: callbackUrl,
+    }
+  } catch (error) {
+    console.error('[verifyEmailOTP]: Error', error)
+
+    // Check if it's a redirect (which is expected behavior for successful auth)
+    if (error instanceof Error && error.message.includes('NEXT_REDIRECT')) {
+      return {
+        success: true,
+        redirect: '/dashboard',
       }
     }
 
     return {
       ...prevState,
-      error:
-        error instanceof Error
-          ? error.message
-          : 'An unexpected error occurred. Please try again.',
+      error: 'Invalid or expired code. Please try again.',
+      step: 'code',
     }
   }
 }
 
-export async function signOut() {
+// ============================================================================
+// GitHub OAuth Actions
+// ============================================================================
+
+/**
+ * Initiate GitHub OAuth sign-in
+ */
+export async function signInWithGitHub(callbackUrl?: string) {
+  await signIn('github', {
+    redirectTo: callbackUrl ?? '/dashboard',
+  })
+}
+
+// ============================================================================
+// Sign Out Action
+// ============================================================================
+
+/**
+ * Sign out the current user
+ *
+ * Uses Auth.js signOut with redirectTo to avoid throwing redirect errors
+ * that would prevent SWR cache from being cleared on the client
+ */
+export async function handleSignOut() {
   const user = await getUser()
   if (user) {
     await logActivity(user.id, ActivityType.SIGN_OUT)
   }
 
-  // Delete both session cookies (custom JWT and NextAuth)
-  const cookieStore = await cookies()
-  cookieStore.delete('session') // Custom JWT session
-  cookieStore.delete('next-auth.session-token') // NextAuth session (development)
-  cookieStore.delete('__Secure-next-auth.session-token') // NextAuth session (production)
-
-  // Redirect to home page
-  redirect('/')
+  // Use Auth.js signOut - this handles the redirect properly
+  await authSignOut({ redirectTo: '/' })
 }
 
-export const updatePassword = validatedActionWithUser(
-  updatePasswordSchema,
-  async (data: UpdatePasswordInput, user) => {
-    const { currentPassword, newPassword } = data
+/**
+ * Legacy signOut function for backwards compatibility
+ * @deprecated Use handleSignOut instead
+ */
+export async function signOutAction() {
+  await handleSignOut()
+}
 
-    if (!user.passwordHash) {
-      return {
-        error: 'Cannot update password for GitHub OAuth users.',
-      }
-    }
+// ============================================================================
+// Account Management Actions (Preserved from original)
+// ============================================================================
 
-    const isCurrentPasswordValid = await comparePasswords(
-      currentPassword,
-      user.passwordHash
-    )
+import type { ActionState } from '@/lib/auth/middleware'
 
-    if (!isCurrentPasswordValid) {
-      return {
-        error: 'Current password is incorrect.',
-      }
-    }
-
-    if (currentPassword === newPassword) {
-      return {
-        error: 'New password must be different from the current password.',
-      }
-    }
-
-    const newPasswordHash = await hashPassword(newPassword)
-
-    await db
-      .update(users)
-      .set({
-        passwordHash: newPasswordHash,
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, user.id))
-
-    await logActivity(user.id, ActivityType.UPDATE_PASSWORD)
-
-    return { success: true, message: 'Password updated successfully.' }
-  }
-)
-
-export const deleteAccount = validatedActionWithUser(
-  deleteAccountSchema,
-  async (data: DeleteAccountInput, user) => {
-    const { password } = data
-
-    if (!user.passwordHash) {
-      return {
-        error: 'Cannot delete GitHub OAuth accounts through this method.',
-      }
-    }
-
-    const isPasswordValid = await comparePasswords(password, user.passwordHash)
-
-    if (!isPasswordValid) {
-      return {
-        error: 'Incorrect password.',
-      }
-    }
-
-    // Soft delete the user account
-    await db
-      .update(users)
-      .set({
-        deletedAt: new Date(),
-        email: `deleted_${user.id}_${user.email}`, // Prevent email conflicts
-      })
-      .where(eq(users.id, user.id))
-
-    await logActivity(user.id, ActivityType.DELETE_ACCOUNT)
-    ;(await cookies()).delete('session')
-    redirect('/sign-in')
-  }
-)
+export interface AccountFormState extends ActionState {
+  name?: string
+}
 
 export const updateAccount = validatedActionWithUser(
   updateAccountSchema,
@@ -331,106 +252,6 @@ export const updateAccount = validatedActionWithUser(
     return { success: true, message: 'Account updated successfully.' }
   }
 )
-
-// ✅ State-compatible versions for useActionState
-
-import type { ActionState } from '@/lib/auth/middleware'
-
-export interface PasswordState extends ActionState {
-  currentPassword?: string
-  newPassword?: string
-  confirmPassword?: string
-}
-
-export interface DeleteState extends ActionState {
-  password?: string
-  redirect?: string
-}
-
-export interface AccountFormState extends ActionState {
-  name?: string
-}
-
-export const updatePasswordState = validatedActionWithUserState<
-  typeof updatePasswordSchema,
-  PasswordState
->(updatePasswordSchema, async (data: UpdatePasswordInput, user) => {
-  const { currentPassword, newPassword } = data
-
-  if (!user.passwordHash) {
-    return {
-      error: 'Cannot update password for GitHub OAuth users.',
-    }
-  }
-
-  const isCurrentPasswordValid = await comparePasswords(
-    currentPassword,
-    user.passwordHash
-  )
-
-  if (!isCurrentPasswordValid) {
-    return {
-      error: 'Current password is incorrect.',
-    }
-  }
-
-  if (currentPassword === newPassword) {
-    return {
-      error: 'New password must be different from the current password.',
-    }
-  }
-
-  const newPasswordHash = await hashPassword(newPassword)
-
-  await db
-    .update(users)
-    .set({
-      passwordHash: newPasswordHash,
-      updatedAt: new Date(),
-    })
-    .where(eq(users.id, user.id))
-
-  await logActivity(user.id, ActivityType.UPDATE_PASSWORD)
-
-  return { success: true, message: 'Password updated successfully.' }
-})
-
-export const deleteAccountState = validatedActionWithUserState<
-  typeof deleteAccountSchema,
-  DeleteState
->(deleteAccountSchema, async (data: DeleteAccountInput, user) => {
-  const { password } = data
-
-  if (!user.passwordHash) {
-    return {
-      error: 'Cannot delete GitHub OAuth accounts through this method.',
-    }
-  }
-
-  const isPasswordValid = await comparePasswords(password, user.passwordHash)
-
-  if (!isPasswordValid) {
-    return {
-      error: 'Incorrect password.',
-    }
-  }
-
-  // Soft delete the user account
-  await db
-    .update(users)
-    .set({
-      deletedAt: new Date(),
-      email: `deleted_${user.id}_${user.email}`, // Prevent email conflicts
-    })
-    .where(eq(users.id, user.id))
-
-  await logActivity(user.id, ActivityType.DELETE_ACCOUNT)
-  ;(await cookies()).delete('session')
-
-  // Return redirect URL in state instead of calling redirect()
-  // This works better with useActionState which expects return values
-  return { redirect: '/sign-in' }
-})
 
 export const updateAccountState = validatedActionWithUserState<
   typeof updateAccountSchema,
@@ -452,10 +273,8 @@ export const updateAccountState = validatedActionWithUserState<
 })
 
 // ============================================================================
-// Wallet Linking Actions
+// Wallet Linking Actions (Preserved from original)
 // ============================================================================
-
-import { z } from 'zod'
 
 const linkWalletSchema = z.object({
   walletAddress: z
@@ -521,3 +340,54 @@ export const unlinkWallet = validatedActionWithUser(
     return { success: true, message: 'Wallet unlinked successfully.' }
   }
 )
+
+// ============================================================================
+// Legacy exports for backwards compatibility
+// ============================================================================
+
+// These types are kept for any code that might still reference them
+export interface SignInState extends ActionState {
+  email?: string
+  redirect?: string
+}
+
+export interface SignUpState extends ActionState {
+  email?: string
+  name?: string
+  redirect?: string
+}
+
+/**
+ * @deprecated Password-based sign-in removed. Use requestEmailOTP/verifyEmailOTP instead.
+ */
+export async function signInState(
+  prevState: SignInState,
+  _formData: FormData
+): Promise<SignInState> {
+  return {
+    ...prevState,
+    error:
+      'Password-based sign-in has been removed. Please use email OTP or GitHub.',
+  }
+}
+
+/**
+ * @deprecated Password-based sign-up removed. Use requestEmailOTP/verifyEmailOTP instead.
+ */
+export async function signUpState(
+  prevState: SignUpState,
+  _formData: FormData
+): Promise<SignUpState> {
+  return {
+    ...prevState,
+    error:
+      'Password-based sign-up has been removed. Please use email OTP or GitHub.',
+  }
+}
+
+/**
+ * @deprecated Use handleSignOut instead
+ */
+export async function signOut() {
+  return handleSignOut()
+}
