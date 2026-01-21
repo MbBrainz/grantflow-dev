@@ -7,6 +7,7 @@ import {
   DollarSign,
   ExternalLink,
   GitBranch,
+  MinusCircle,
   Users,
   XCircle,
 } from 'lucide-react'
@@ -28,6 +29,18 @@ interface ApprovalSignature {
 interface PendingReviewer {
   id: number
   name: string | null
+}
+
+export interface MilestoneVote {
+  id: number
+  reviewerId: number
+  vote: 'approve' | 'reject' | 'abstain'
+  feedback?: string | null
+  createdAt: Date | string
+  reviewer: {
+    id: number
+    name: string | null
+  }
 }
 
 interface MilestoneCardProps {
@@ -54,6 +67,7 @@ interface MilestoneCardProps {
   approvalCount?: number
   rejectionCount?: number
   totalCommitteeMembers?: number
+  votes?: MilestoneVote[]
   showReviewButton?: boolean
   onReviewClick?: () => void
   className?: string
@@ -74,6 +88,7 @@ export function MilestoneCard({
   approvalCount = 0,
   rejectionCount = 0,
   totalCommitteeMembers,
+  votes = [],
   showReviewButton = false,
   onReviewClick,
   className,
@@ -222,18 +237,6 @@ export function MilestoneCard({
                   value: `$${milestone.amount?.toLocaleString() ?? 0}`,
                 },
                 {
-                  icon: <CheckCircle className="h-4 w-4 text-green-600" />,
-                  label: 'Approvals',
-                  value: approvalCount,
-                  className: 'text-green-600',
-                },
-                {
-                  icon: <XCircle className="h-4 w-4 text-red-600" />,
-                  label: 'Rejections',
-                  value: rejectionCount,
-                  className: 'text-red-600',
-                },
-                {
                   icon: <Clock className="h-4 w-4 text-gray-500" />,
                   label: 'Submitted',
                   value: milestone.submittedAt
@@ -241,9 +244,58 @@ export function MilestoneCard({
                     : 'Not yet',
                 },
               ]}
-              columns={4}
+              columns={2}
               className="mb-4"
             />
+
+            {/* Votes Table */}
+            {votes.length > 0 && (
+              <div className="mb-4 rounded-lg border bg-white p-4">
+                <h4 className="mb-3 flex items-center gap-2 text-sm font-semibold">
+                  <Users className="h-4 w-4" />
+                  Votes ({votes.length})
+                </h4>
+                <div className="space-y-2">
+                  {votes.map(vote => (
+                    <div
+                      key={vote.id}
+                      className="flex items-center justify-between rounded-lg border p-3"
+                    >
+                      <div className="flex items-center gap-3">
+                        {vote.vote === 'approve' && (
+                          <CheckCircle className="h-4 w-4 text-green-600" />
+                        )}
+                        {vote.vote === 'reject' && (
+                          <XCircle className="h-4 w-4 text-red-600" />
+                        )}
+                        {vote.vote === 'abstain' && (
+                          <MinusCircle className="h-4 w-4 text-gray-500" />
+                        )}
+                        <div>
+                          <span className="font-medium">
+                            {vote.reviewer.name ?? 'Unknown'}
+                          </span>
+                          <span
+                            className={cn(
+                              'ml-2 text-sm',
+                              vote.vote === 'approve' && 'text-green-600',
+                              vote.vote === 'reject' && 'text-red-600',
+                              vote.vote === 'abstain' && 'text-gray-500'
+                            )}
+                          >
+                            {vote.vote.charAt(0).toUpperCase() +
+                              vote.vote.slice(1)}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {new Date(vote.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {(milestone.githubRepoUrl ??
               milestone.githubPrUrl ??

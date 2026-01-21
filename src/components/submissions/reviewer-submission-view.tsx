@@ -12,7 +12,10 @@ import {
 import { useState } from 'react'
 import { DiscussionThread } from '@/components/discussion/discussion-thread'
 import { ReviewerVoting } from '@/components/discussion/reviewer-voting'
-import { MilestoneCard } from '@/components/milestone/milestone-card'
+import {
+  MilestoneCard,
+  type MilestoneVote,
+} from '@/components/milestone/milestone-card'
 // import { CommitteeInfoCard } from '@/components/committee/committee-info-card'
 import { MilestoneVotingPanel } from '@/components/milestone/milestone-voting-panel'
 import { MilestoneReviewDialog } from '@/components/review/milestone-review-dialog'
@@ -423,6 +426,21 @@ export function ReviewerSubmissionView({
               ).length
               const isExpanded = expandedMilestones.has(milestone.id)
 
+              // Transform reviews to MilestoneVote format
+              const milestoneVotes: MilestoneVote[] = milestoneReviews
+                .filter(r => r.vote)
+                .map(r => ({
+                  id: r.id,
+                  reviewerId: r.reviewerId,
+                  vote: r.vote as 'approve' | 'reject' | 'abstain',
+                  feedback: r.feedback,
+                  createdAt: r.createdAt,
+                  reviewer: {
+                    id: r.reviewer.id,
+                    name: r.reviewer.name,
+                  },
+                }))
+
               return (
                 <div
                   key={milestone.id}
@@ -446,6 +464,7 @@ export function ReviewerSubmissionView({
                     approvalCount={milestoneApproves}
                     rejectionCount={milestoneRejects}
                     totalCommitteeMembers={activeMemberCount}
+                    votes={milestoneVotes}
                     showReviewButton={
                       milestone.status === 'in-review' &&
                       !userMilestoneReview &&
