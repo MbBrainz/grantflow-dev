@@ -24,7 +24,7 @@ async function logActivity(userId: number, activityType: ActivityType) {
 }
 
 // ============================================================================
-// Email OTP Authentication Actions
+// Email Magic Link Authentication Actions
 // ============================================================================
 
 const emailSchema = z.object({
@@ -36,10 +36,75 @@ const emailSchema = z.object({
     .email('Invalid email address'),
 })
 
-const otpSchema = z.object({
-  email: z.string().email('Invalid email address'),
-  code: z.string().length(6, 'Code must be 6 digits'),
-})
+/**
+ * State for magic link email flow
+ */
+export interface EmailLinkState {
+  error?: string
+  success?: boolean
+  message?: string
+  email?: string
+}
+
+/**
+ * Request a magic link to be sent to the user's email
+ *
+ * Uses Auth.js Resend provider which sends a clickable magic link.
+ * When clicked, the user is automatically signed in.
+ */
+export async function requestEmailLink(
+  prevState: EmailLinkState,
+  formData: FormData
+): Promise<EmailLinkState> {
+  const data = Object.fromEntries(formData.entries())
+  const result = emailSchema.safeParse(data)
+
+  if (!result.success) {
+    return {
+      ...prevState,
+      error: result.error?.issues[0]?.message ?? 'Invalid email',
+    }
+  }
+
+  const { email } = result.data
+  const callbackUrl = (formData.get('callbackUrl') as string) || '/dashboard'
+
+  try {
+    // Use Auth.js signIn with Resend provider
+    // This sends the magic link email via the configured sendVerificationRequest
+    await signIn('resend', {
+      email: email.toLowerCase(),
+      redirect: false,
+      redirectTo: callbackUrl,
+    })
+
+    return {
+      email,
+      success: true,
+      message: 'Check your email for a sign-in link',
+    }
+  } catch (error) {
+    console.error('[requestEmailLink]: Error', error)
+
+    // Check if it's a redirect (which can happen with some configurations)
+    if (error instanceof Error && error.message.includes('NEXT_REDIRECT')) {
+      return {
+        email,
+        success: true,
+        message: 'Check your email for a sign-in link',
+      }
+    }
+
+    return {
+      ...prevState,
+      error: 'Failed to send sign-in link. Please try again.',
+    }
+  }
+}
+
+// ============================================================================
+// Legacy OTP Types (kept for backwards compatibility)
+// ============================================================================
 
 export interface EmailOTPState {
   error?: string
@@ -51,135 +116,30 @@ export interface EmailOTPState {
 }
 
 /**
- * Request an OTP code to be sent to the user's email
+ * @deprecated Use requestEmailLink instead. OTP code entry has been replaced with magic links.
  */
 export async function requestEmailOTP(
   prevState: EmailOTPState,
-  formData: FormData
+  _formData: FormData
 ): Promise<EmailOTPState> {
-  const data = Object.fromEntries(formData.entries())
-  const result = emailSchema.safeParse(data)
-
-  if (!result.success) {
-    return {
-      ...prevState,
-      error: result.error?.issues[0]?.message ?? 'Invalid email',
-      step: 'email',
-    }
-  }
-
-  const { email } = result.data
-
-  try {
-    // Use Auth.js signIn with Resend provider
-    // This sends the OTP email via the configured sendVerificationRequest
-    await signIn('resend', {
-      email,
-      redirect: false,
-      callbackUrl: '/dashboard',
-    })
-
-    return {
-      email,
-      step: 'code',
-      success: true,
-      message: 'Check your email for a 6-digit code',
-    }
-  } catch (error) {
-    console.error('[requestEmailOTP]: Error', error)
-
-    // Check if it's a redirect (which is expected behavior)
-    if (error instanceof Error && error.message.includes('NEXT_REDIRECT')) {
-      return {
-        email,
-        step: 'code',
-        success: true,
-        message: 'Check your email for a 6-digit code',
-      }
-    }
-
-    return {
-      ...prevState,
-      error: 'Failed to send verification code. Please try again.',
-      step: 'email',
-    }
+  return {
+    ...prevState,
+    error:
+      'OTP verification has been replaced with magic links. Please use the sign-in link sent to your email.',
   }
 }
 
 /**
- * Verify the OTP code and sign in the user
+ * @deprecated Use magic links instead. OTP code entry has been replaced with magic links.
  */
 export async function verifyEmailOTP(
   prevState: EmailOTPState,
-  formData: FormData
+  _formData: FormData
 ): Promise<EmailOTPState> {
-  const data = Object.fromEntries(formData.entries())
-  const result = otpSchema.safeParse(data)
-
-  if (!result.success) {
-    return {
-      ...prevState,
-      error: result.error?.issues[0]?.message ?? 'Invalid code',
-      step: 'code',
-    }
-  }
-
-  const { email, code } = result.data
-
-  try {
-    // Verify the OTP code with Auth.js
-    // The callback URL after verification
-    const callbackUrl = (formData.get('callbackUrl') as string) || '/dashboard'
-
-    await signIn('resend', {
-      email,
-      token: code,
-      redirect: false,
-      callbackUrl,
-    })
-
-    // Log activity for existing users
-    const existingUser = await db
-      .select()
-      .from(users)
-      .where(eq(users.email, email))
-      .limit(1)
-
-    if (existingUser.length > 0) {
-      await logActivity(existingUser[0].id, ActivityType.SIGN_IN)
-    } else {
-      // New user created via OTP
-      const [newUser] = await db
-        .select()
-        .from(users)
-        .where(eq(users.email, email))
-        .limit(1)
-
-      if (newUser) {
-        await logActivity(newUser.id, ActivityType.SIGN_UP)
-      }
-    }
-
-    return {
-      success: true,
-      redirect: callbackUrl,
-    }
-  } catch (error) {
-    console.error('[verifyEmailOTP]: Error', error)
-
-    // Check if it's a redirect (which is expected behavior for successful auth)
-    if (error instanceof Error && error.message.includes('NEXT_REDIRECT')) {
-      return {
-        success: true,
-        redirect: '/dashboard',
-      }
-    }
-
-    return {
-      ...prevState,
-      error: 'Invalid or expired code. Please try again.',
-      step: 'code',
-    }
+  return {
+    ...prevState,
+    error:
+      'OTP verification has been replaced with magic links. Please use the sign-in link sent to your email.',
   }
 }
 
