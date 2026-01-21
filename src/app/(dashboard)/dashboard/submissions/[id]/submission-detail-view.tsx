@@ -197,7 +197,8 @@ export function SubmissionDetailView({
                 </div>
               </div>
               <p className="text-muted-foreground text-xs">
-                {metrics.totalVotes} total review{metrics.totalVotes !== 1 ? 's' : ''}
+                {metrics.totalVotes} total review
+                {metrics.totalVotes !== 1 ? 's' : ''}
               </p>
             </div>
 
@@ -340,16 +341,21 @@ export function SubmissionDetailView({
                       </div>
                       {submission.walletAddress && (
                         <div className="pt-2 border-t border-border/50">
-                          <span className="text-xs text-muted-foreground block mb-1">Beneficiary Address</span>
+                          <span className="text-xs text-muted-foreground block mb-1">
+                            Beneficiary Address
+                          </span>
                           <div className="flex items-center gap-2">
                             <Wallet className="h-3.5 w-3.5 text-muted-foreground" />
                             <span className="text-foreground font-mono text-xs">
-                              {submission.walletAddress.slice(0, 8)}...{submission.walletAddress.slice(-6)}
+                              {submission.walletAddress.slice(0, 8)}...
+                              {submission.walletAddress.slice(-6)}
                             </span>
                             <button
                               type="button"
                               onClick={() => {
-                                navigator.clipboard.writeText(submission.walletAddress!)
+                                navigator.clipboard.writeText(
+                                  submission.walletAddress!
+                                )
                               }}
                               className="text-muted-foreground hover:text-foreground transition-colors"
                               title="Copy address"

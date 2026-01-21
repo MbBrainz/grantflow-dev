@@ -69,7 +69,9 @@ function UserMenu() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <div className="border-b border-gray-100 px-2 py-2">
-          <p className="text-sm font-medium text-gray-900">{user.name ?? 'User'}</p>
+          <p className="text-sm font-medium text-gray-900">
+            {user.name ?? 'User'}
+          </p>
           <p className="truncate text-xs text-gray-500">{user.email}</p>
         </div>
         <div className="flex flex-col gap-1 p-1">
@@ -80,7 +82,10 @@ function UserMenu() {
             </Link>
           </DropdownMenuItem>
           <DropdownMenuItem className="cursor-pointer">
-            <Link href="/dashboard/settings" className="flex w-full items-center">
+            <Link
+              href="/dashboard/settings"
+              className="flex w-full items-center"
+            >
               <Settings className="mr-2 h-4 w-4" />
               <span>Settings</span>
             </Link>

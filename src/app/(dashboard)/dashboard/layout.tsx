@@ -54,13 +54,29 @@ export default function DashboardLayout({
     fetcher<UserCommittees>
   )
 
-  const isReviewer = user?.primaryRole === 'committee' || user?.primaryRole === 'admin'
+  const isReviewer =
+    user?.primaryRole === 'committee' || user?.primaryRole === 'admin'
 
   const navItems: NavItem[] = [
     { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { href: '/dashboard/submissions', icon: FileText, label: 'Submissions', visibleFor: ['team', 'admin'] },
-    { href: '/dashboard/review', icon: Gavel, label: 'Review', visibleFor: ['committee', 'admin'] },
-    { href: '/dashboard/my-committees', icon: Building2, label: 'My Committees', visibleFor: ['committee', 'admin'] },
+    {
+      href: '/dashboard/submissions',
+      icon: FileText,
+      label: 'Submissions',
+      visibleFor: ['team', 'admin'],
+    },
+    {
+      href: '/dashboard/review',
+      icon: Gavel,
+      label: 'Review',
+      visibleFor: ['committee', 'admin'],
+    },
+    {
+      href: '/dashboard/my-committees',
+      icon: Building2,
+      label: 'My Committees',
+      visibleFor: ['committee', 'admin'],
+    },
     { href: '/dashboard/settings', icon: Settings, label: 'Settings' },
     { href: '/dashboard/activity', icon: Activity, label: 'Activity' },
     { href: '/dashboard/security', icon: Shield, label: 'Security' },
@@ -70,7 +86,9 @@ export default function DashboardLayout({
   const filteredNavItems = navItems.filter(item => {
     if (!item.visibleFor) return true
     if (!user?.primaryRole) return true // Show all if role unknown
-    return item.visibleFor.includes(user.primaryRole as 'team' | 'committee' | 'admin')
+    return item.visibleFor.includes(
+      user.primaryRole as 'team' | 'committee' | 'admin'
+    )
   })
 
   // Handle My Committees navigation - redirect to committee if user has only one
@@ -133,7 +151,8 @@ export default function DashboardLayout({
             </div>
 
             {filteredNavItems.map(item => {
-              const isActive = pathname === item.href ||
+              const isActive =
+                pathname === item.href ||
                 (item.href !== '/dashboard' && pathname.startsWith(item.href))
               const isCommittees = item.href === '/dashboard/my-committees'
 
@@ -148,13 +167,17 @@ export default function DashboardLayout({
                     variant={isActive ? 'secondary' : 'ghost'}
                     className={cn(
                       'my-1 w-full shadow-none',
-                      sidebarExpanded ? 'justify-start px-3' : 'justify-center px-0',
+                      sidebarExpanded
+                        ? 'justify-start px-3'
+                        : 'justify-center px-0',
                       isActive ? 'bg-gray-100' : ''
                     )}
                     onClick={() => setIsSidebarOpen(false)}
                     title={!sidebarExpanded ? item.label : undefined}
                   >
-                    <item.icon className={cn('h-4 w-4', sidebarExpanded && 'mr-2')} />
+                    <item.icon
+                      className={cn('h-4 w-4', sidebarExpanded && 'mr-2')}
+                    />
                     {sidebarExpanded && <span>{item.label}</span>}
                   </Button>
                 </Link>

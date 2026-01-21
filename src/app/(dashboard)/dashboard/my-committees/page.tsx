@@ -1,7 +1,13 @@
 import { Building2 } from 'lucide-react'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card'
 import { getUser, getUserCommittees } from '@/lib/db/queries'
 
 export default async function MyCommitteesPage() {
@@ -64,7 +70,9 @@ export default async function MyCommitteesPage() {
                     </div>
                   )}
                   <div>
-                    <CardTitle className="text-base">{committee.name}</CardTitle>
+                    <CardTitle className="text-base">
+                      {committee.name}
+                    </CardTitle>
                     {committee.focusAreas && (
                       <CardDescription className="text-xs">
                         {committee.focusAreas}
