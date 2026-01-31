@@ -48,7 +48,33 @@ pnpm install
 
 ## Running Locally
 
-### 1. Database Setup
+### 1. Environment Setup (Required First!)
+
+Before running the database setup, you must create a `.env` file. The easiest way is to copy the example:
+
+```bash
+cp .env.example .env
+```
+
+The `.env.example` file contains the correct `DATABASE_URL` that matches the Docker Compose configuration:
+
+```env
+DATABASE_URL=postgresql://postgres:postgres@localhost:5433/grantflow
+```
+
+**Important configuration notes:**
+- Port `5433` is used (not the default `5432`) to avoid conflicts with local PostgreSQL instances
+- The credentials (`postgres:postgres`) match the Docker Compose configuration
+- Database name is `grantflow`
+
+**Generate AUTH_SECRET** (required for authentication):
+```bash
+openssl rand -base64 32
+```
+
+Then update your `.env` file with the generated secret.
+
+### 2. Database Setup
 
 The easiest way to set up the database is using the included setup script, which starts PostgreSQL via Docker and initializes the database:
 
@@ -77,35 +103,6 @@ pnpm db:push
 
 # Seed with test data
 pnpm db:seed
-```
-
-### 2. Environment Variables
-
-Create a `.env` file in the root directory:
-
-```env
-# Database (required)
-DATABASE_URL=postgresql://postgres:postgres@localhost:5433/grantflow
-
-# Authentication (required)
-AUTH_SECRET=your-secret-key-here
-NEXTAUTH_URL=http://localhost:3000
-
-# GitHub OAuth (required for GitHub integration)
-GITHUB_CLIENT_ID=your-github-client-id
-GITHUB_CLIENT_SECRET=your-github-client-secret
-
-# Optional: Polkadot Multisig Configuration
-MULTISIG_ADDRESS=5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty
-SIGNATORY_1_ADDRESS=5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY
-SIGNATORY_2_ADDRESS=5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y
-```
-
-**Note**: This project uses PostgreSQL port `5433` and database name `grantflow` to avoid conflicts with other local PostgreSQL instances.
-
-**Generate AUTH_SECRET**:
-```bash
-openssl rand -base64 32
 ```
 
 ### 3. Start Development Server
