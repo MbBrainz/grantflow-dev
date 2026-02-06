@@ -9,6 +9,7 @@ import {
   Users,
   Zap,
 } from 'lucide-react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { LottieAnimation } from '@/components/ui/lottie-animation'
 
@@ -38,19 +39,25 @@ export default function HomePage() {
               </p>
               <div className="mt-8 flex flex-col gap-4 sm:mx-auto sm:max-w-lg sm:flex-row lg:mx-0">
                 <Button
+                  asChild
                   size="lg"
                   className="rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-lg shadow-lg hover:from-blue-700 hover:to-purple-700"
                 >
-                  Explore Committees
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <Link href="/dashboard/committees">
+                    Explore Committees
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
                 </Button>
                 <Button
+                  asChild
                   size="lg"
                   variant="outline"
                   className="rounded-full border-2 text-lg hover:bg-gray-50"
                 >
-                  Submit Application
-                  <GitBranch className="ml-2 h-5 w-5" />
+                  <Link href="/dashboard/submissions/new">
+                    Submit Application
+                    <GitBranch className="ml-2 h-5 w-5" />
+                  </Link>
                 </Button>
               </div>
               <div className="mt-8 flex items-center justify-center space-x-6 text-sm text-gray-500 lg:justify-start">
@@ -292,18 +299,24 @@ export default function HomePage() {
                 </p>
                 <div className="space-y-3">
                   <Button
+                    asChild
                     size="lg"
                     variant="secondary"
                     className="w-full rounded-full"
                   >
-                    Create Committee Profile
+                    <Link href="/onboarding/reviewer/create">
+                      Create Committee Profile
+                    </Link>
                   </Button>
                   <Button
+                    asChild
                     size="lg"
                     variant="outline"
                     className="w-full rounded-full border-white text-white hover:bg-white hover:text-blue-600"
                   >
-                    Browse Grant Opportunities
+                    <Link href="/dashboard/committees">
+                      Browse Grant Opportunities
+                    </Link>
                   </Button>
                 </div>
               </div>
